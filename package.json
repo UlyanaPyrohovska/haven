@@ -1,9 +1,25 @@
 {
 	"name": "haven",
+	"scripts": {
+		"dev": "turbo dev",
+		"build": "turbo build",
+		"deploy": "turbo run deploy --affected",
+		"db:generate": "pnpm --filter api db:generate",
+		"db:migrate": "pnpm --filter api db:migrate",
+		"db:studio": "pnpm --filter api db:studio",
+		"types": "turbo types",
+		"lint": "pnpm dlx @biomejs/biome lint --write",
+		"format": "pnpm dlx @biomejs/biome format --write",
+		"check": "pnpm dlx @biomejs/biome check --write"
+	},
 	"private": true,
 	"packageManager": "pnpm@9.0.0",
 	"devDependencies": {
 		"@biomejs/biome": "2.5.1",
+		"@neondatabase/serverless": "^1.1.0",
+		"dotenv": "^17.4.2",
+		"drizzle-kit": "^0.31.10",
+		"drizzle-orm": "^0.45.2",
 		"turbo": "^2.10.0"
 	}
 }
