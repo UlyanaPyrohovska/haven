@@ -14,12 +14,6 @@
 		"indentStyle": "tab",
 		"lineWidth": 120
 	},
-	"linter": {
-		"enabled": true,
-		"rules": {
-			"recommended": true
-		}
-	},
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
