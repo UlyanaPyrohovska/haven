@@ -236,25 +236,54 @@ Sequential path from empty project to a seeded database with tables.
 
 ---
 
-### `[ ]` C3 — feat(api): minimal auth (signup, login, session token)
+### `[ ]` C3 — feat(api): set up Better Auth
 
 - **Labels**: `type:feature` `area:api` `prio:P1`
-- **Description**: Add a minimal authentication layer sufficient to identify participants during the evaluation.
+- **Description**: Install and configure Better Auth with the Drizzle adapter. Let Better Auth own the auth tables (`user`, `session`, `account`, `verification`), generated via its CLI. Wire the auth handler into Hono at `/api/auth/**`. Enable email + password by default; leave magic-link config drafted but disabled until the email-delivery decision (C3b) is made.
 
 **Acceptance criteria**
-- [ ] `POST /auth/signup` creates a new user row
-- [ ] `POST /auth/login` verifies password and issues a JWT
-- [ ] Session middleware validates the token on protected routes
-- [ ] Passwords hashed (bcrypt or argon2)
+- [ ] `better-auth` installed in `apps/api`
+- [ ] `apps/api/src/auth.ts` exports a `createAuth(databaseUrl)` factory
+- [ ] Hono forwards `/api/auth/**` to Better Auth's handler
+- [ ] `npx @better-auth/cli generate --database drizzle` produces auth tables in `schema.ts`
+- [ ] Migration applied to Neon; `user`, `session`, `account`, `verification` tables visible
+- [ ] `POST /api/auth/sign-up/email` creates a row in `user`
+- [ ] `POST /api/auth/sign-in/email` returns a valid session cookie/token
+- [ ] `GET /api/auth/session` returns the current session for authenticated requests
+- [ ] Profile fields (bio, interests, prefs) live as extra columns on Better Auth's `user` table
 
 **Out of scope**
-- OAuth / social login
-- Password reset flow
-- Refresh tokens
+- Magic-link email delivery (C3b)
+- OAuth providers (later)
+- Passkeys (later)
 
 **Notes**
-- Keep it minimal — this is a research prototype, not a security product
-- Use `hono/jwt` for signing
+- Adapter provider is `pg`
+- Better Auth manages session storage — no manual sessions table
+- Keep `BETTER_AUTH_SECRET` in `.env` (long random string)
+- Schema change: remove manual `passwordHash` field and the `sessions` table from `schema.ts` before this ticket
+
+---
+
+### `[ ]` C3b — feat(api): enable magic-link delivery
+
+- **Labels**: `type:feature` `area:api` `prio:P2`
+- **Description**: Turn on Better Auth's magic-link plugin and wire up email delivery via IPS Outlook SMTP (no third-party subprocessor added). Users can sign in by receiving a one-time link at their email address.
+
+**Acceptance criteria**
+- [ ] `magicLink()` plugin enabled in `apps/api/src/auth.ts`
+- [ ] `sendMagicLink` implementation uses `nodemailer` with IPS SMTP credentials from `.env`
+- [ ] End-to-end flow tested with a real IPS-institutional email address
+- [ ] Link deep-links back to the Expo app (custom scheme registered)
+- [ ] Token expiry configured (10 minutes default)
+
+**Out of scope**
+- Third-party ESP (Resend, Postmark) — not needed for evaluation scale
+- Domain purchase / DNS setup — not needed with IPS SMTP
+
+**Notes**
+- No domain purchase required if using `@estudantes.ips.pt` as the sender
+- Alternative: Resend + a cheap `.dev` domain if you want polished "from" address, but adds a subprocessor to DPO
 
 ---
 
