@@ -1,5 +1,20 @@
 import { relations } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+	boolean,
+	doublePrecision,
+	index,
+	integer,
+	pgTable,
+	primaryKey,
+	real,
+	serial,
+	smallint,
+	text,
+	timestamp,
+	uniqueIndex,
+	varchar,
+	vector,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),
@@ -91,3 +106,185 @@ export const accountRelations = relations(account, ({ one }) => ({
 		references: [user.id],
 	}),
 }));
+
+// Better Auth generates the `user` table automatically via CLI —
+// don't hand-write it. Just leave a comment placeholder or import
+// Better Auth's generated types when you need them.
+
+export const userProfiles = pgTable(
+	"user_profiles",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id"), // FK to Better Auth's user.id (uuid string)
+		// Not enforced as an FK in Drizzle because Better Auth manages that table
+		// — we manually maintain the reference.
+
+		isSynthetic: boolean("is_synthetic").notNull().default(false),
+
+		// Auth — nullable, only populated for real users
+		email: varchar("email", { length: 255 }).unique(),
+		passwordHash: varchar("password_hash", { length: 255 }),
+
+		// Demographic
+		gender: smallint("gender"), // 0 = female, 1 = male (per CSV)
+		age: smallint("age"),
+		ethnicity: varchar("ethnicity", { length: 100 }),
+		career: varchar("career", { length: 100 }),
+		goal: varchar("goal", { length: 100 }),
+
+		// Location
+		latitude: doublePrecision("latitude"),
+		longitude: doublePrecision("longitude"),
+
+		// Free text
+		bio: text("bio"),
+
+		// Interests (1–10 Likert)
+		interestSports: smallint("interest_sports"),
+		interestTvsports: smallint("interest_tvsports"),
+		interestExercise: smallint("interest_exercise"),
+		interestDining: smallint("interest_dining"),
+		interestMuseums: smallint("interest_museums"),
+		interestArt: smallint("interest_art"),
+		interestHiking: smallint("interest_hiking"),
+		interestGaming: smallint("interest_gaming"),
+		interestClubbing: smallint("interest_clubbing"),
+		interestReading: smallint("interest_reading"),
+		interestTv: smallint("interest_tv"),
+		interestTheater: smallint("interest_theater"),
+		interestMovies: smallint("interest_movies"),
+		interestConcerts: smallint("interest_concerts"),
+		interestMusic: smallint("interest_music"),
+		interestShopping: smallint("interest_shopping"),
+		interestYoga: smallint("interest_yoga"),
+
+		// Preferences — 6-dim (what the user is looking for)
+		prefAttr: real("pref_attr"),
+		prefSinc: real("pref_sinc"),
+		prefIntel: real("pref_intel"),
+		prefFun: real("pref_fun"),
+		prefAmb: real("pref_amb"),
+		prefShar: real("pref_shar"),
+
+		// Self-ratings — 6-dim (how the user rates themselves)
+		selfAttr: smallint("self_attr"),
+		selfSinc: smallint("self_sinc"),
+		selfIntel: smallint("self_intel"),
+		selfFun: smallint("self_fun"),
+		selfAmb: smallint("self_amb"),
+		selfShar: smallint("self_shar"),
+
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => [
+		index("user_profiles_user_id_idx").on(t.userId),
+		index("user_profiles_synthetic_idx").on(t.isSynthetic),
+		index("user_profiles_lat_lon_idx").on(t.latitude, t.longitude),
+	],
+);
+
+// ────────────────────────────────────────────────────────────────
+// user_embeddings — semantic vectors for the bio
+// ────────────────────────────────────────────────────────────────
+export const userEmbeddings = pgTable(
+	"user_embeddings",
+	{
+		userProfileId: integer("user_profile_id")
+			.primaryKey()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		bio: vector("bio", { dimensions: 384 }), // all-MiniLM-L6-v2
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => [
+		// HNSW index for cosine similarity — created empty, fills as rows arrive
+		index("user_embeddings_bio_hnsw").using("hnsw", t.bio.op("vector_cosine_ops")),
+	],
+);
+
+// ────────────────────────────────────────────────────────────────
+// interactions — one row per directed pair with decision + ratings
+// ────────────────────────────────────────────────────────────────
+export const interactions = pgTable(
+	"interactions",
+	{
+		id: serial("id").primaryKey(),
+		userA: integer("user_a")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		userB: integer("user_b")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		distanceKm: real("distance_km"),
+		scoreAToB: real("score_a_to_b"),
+		scoreBToA: real("score_b_to_a"),
+		decA: smallint("dec_a"), // 0 = reject, 1 = accept
+		decB: smallint("dec_b"),
+		match: boolean("match").notNull().default(false),
+
+		// Speed-dating-style ratings from A about B
+		attrA: smallint("attr_a"),
+		sincA: smallint("sinc_a"),
+		intelA: smallint("intel_a"),
+		funA: smallint("fun_a"),
+		likeA: smallint("like_a"),
+
+		// and from B about A
+		attrB: smallint("attr_b"),
+		sincB: smallint("sinc_b"),
+		intelB: smallint("intel_b"),
+		funB: smallint("fun_b"),
+		likeB: smallint("like_b"),
+
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => [
+		uniqueIndex("interactions_pair_uniq").on(t.userA, t.userB),
+		index("interactions_user_a_idx").on(t.userA),
+		index("interactions_user_b_idx").on(t.userB),
+		index("interactions_match_idx").on(t.match),
+	],
+);
+
+// ────────────────────────────────────────────────────────────────
+// friendships — undirected edges, stored with a < b
+// ────────────────────────────────────────────────────────────────
+export const friendships = pgTable(
+	"friendships",
+	{
+		userA: integer("user_a")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		userB: integer("user_b")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.userA, t.userB] }), index("friendships_user_b_idx").on(t.userB)],
+);
+
+// ────────────────────────────────────────────────────────────────
+// recommendations — audit log of what the system surfaced
+//   critical for the fairness / exposure metrics you'll report on
+// ────────────────────────────────────────────────────────────────
+export const recommendations = pgTable(
+	"recommendations",
+	{
+		id: serial("id").primaryKey(),
+		userId: integer("user_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		candidateId: integer("candidate_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		score: real("score"),
+		rank: smallint("rank"),
+		shownAt: timestamp("shown_at").defaultNow().notNull(),
+		actedOn: boolean("acted_on").notNull().default(false),
+	},
+	(t) => [
+		uniqueIndex("recommendations_user_candidate_uniq").on(t.userId, t.candidateId),
+		index("recommendations_user_id_idx").on(t.userId),
+		index("recommendations_candidate_id_idx").on(t.candidateId),
+	],
+);
