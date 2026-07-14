@@ -11,10 +11,18 @@
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {
-		"hono": "^4.12.27"
+		"@better-auth/expo": "^1.6.23",
+		"@hono/zod-openapi": "^1.4.0",
+		"@scalar/hono-api-reference": "^0.11.8",
+		"better-auth": "^1.6.23",
+		"drizzle-orm": "^0.45.2",
+		"hono": "^4.12.27",
+		"pg": "^8.22.0",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"@types/node": "^26.0.1",
+		"@types/pg": "^8.20.0",
 		"wrangler": "^4.4.0"
 	}
 }
