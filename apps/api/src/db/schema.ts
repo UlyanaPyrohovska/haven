@@ -222,19 +222,19 @@ export const interactions = pgTable(
 		decB: smallint("dec_b"),
 		match: boolean("match").notNull().default(false),
 
-		// Speed-dating-style ratings from A about B
-		attrA: smallint("attr_a"),
-		sincA: smallint("sinc_a"),
-		intelA: smallint("intel_a"),
-		funA: smallint("fun_a"),
-		likeA: smallint("like_a"),
+		// // Speed-dating-style ratings from A about B
+		// attrA: smallint("attr_a"),
+		// sincA: smallint("sinc_a"),
+		// intelA: smallint("intel_a"),
+		// funA: smallint("fun_a"),
+		// likeA: smallint("like_a"),
 
-		// and from B about A
-		attrB: smallint("attr_b"),
-		sincB: smallint("sinc_b"),
-		intelB: smallint("intel_b"),
-		funB: smallint("fun_b"),
-		likeB: smallint("like_b"),
+		// // and from B about A
+		// attrB: smallint("attr_b"),
+		// sincB: smallint("sinc_b"),
+		// intelB: smallint("intel_b"),
+		// funB: smallint("fun_b"),
+		// likeB: smallint("like_b"),
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
