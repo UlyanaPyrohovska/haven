@@ -335,6 +335,37 @@ Sequential path from empty project to a seeded database with tables.
 
 ## Track D — Mobile
 
+### `[ ]` D0 — feat(app): add splash screen with initial logo
+
+- **Labels**: `type:feature` `area:mobile` `prio:P1`
+- **Description**: Show the Haven brand on launch: a native splash (solid background) followed by a short animated intro with the boat logo and “Haven” wordmark, then fade into the app shell. This is the first branded moment users see and should run before any navigation or auth flows land.
+
+**Acceptance criteria**
+- [ ] Native splash configured via `expo-splash-screen` with brand background (`#dcdcdc`) on iOS and Android
+- [ ] App icon and Android adaptive icon updated to the Haven logo (replacing Expo template assets)
+- [ ] Animated splash overlay shows the Haven boat SVG + “Haven” wordmark (Kodchasan, ink `#484848`) on the same background
+- [ ] Logo elements animate in sequence (boat → birds → letter-by-letter wordmark); total duration ~3.6s before transition
+- [ ] Smooth handoff: native splash hides only once the app is ready; no white flash between native and animated splash
+- [ ] Overlay fades out (~350ms) and unmounts, revealing the root screen underneath
+- [ ] Respects **Reduce Motion**: animations skipped, static logo shown briefly, then proceeds
+- [ ] Brand tokens live in `constants/app-config.ts` (colors, font family/size) and are reused by splash HTML
+- [ ] Works in Expo Go on a physical device (iOS + Android)
+
+**Out of scope**
+- Tab navigation shell (D1)
+- Auth screens or onboarding (D2, D3)
+- Dark-mode splash variant (same background for now)
+- Splash replay / “show again” setting
+- Web splash behaviour
+
+**Notes**
+- Animated splash is implemented as inline HTML in a `WebView` (`components/animated-splash/`) so CSS keyframes can drive the logo sequence without pulling in Lottie or a video asset
+- Root layout keeps the splash as an absolute overlay above the router stack until `onFinish` fires
+- Suggested branch: `feat/<issue-number>-splash-screen`
+- Natural predecessor to D1 — establish launch branding before building the tab navigator
+
+---
+
 ### `[ ]` D1 — feat(mobile): set up Expo Router tab navigation
 
 - **Labels**: `type:feature` `area:mobile` `prio:P1`
