@@ -60,6 +60,9 @@ importers:
       '@types/pg':
         specifier: ^8.20.0
         version: 8.20.0
+      drizzle-lab:
+        specifier: ^0.11.0
+        version: 0.11.0
       wrangler:
         specifier: ^4.4.0
         version: 4.105.0
@@ -3014,6 +3017,11 @@ packages:
 
   drizzle-kit@0.31.10:
     resolution: {integrity: sha512-7OZcmQUrdGI+DUNNsKBn1aW8qSoKuTH7d0mYgSP8bAzdFzKoovxEFnoGQp2dVs82EOJeYycqRtciopszwUf8bw==}
+    hasBin: true
+
+  drizzle-lab@0.11.0:
+    resolution: {integrity: sha512-wjul1hEpQyqgn/OKiGsnelUEd/GcM2tHzFPAcjUQYKlwVlzUm5JaeaiQBzC4sC7LLG1xL4ULmqsPSkl7xnFnNA==}
+    engines: {node: '>=22.0.0'}
     hasBin: true
 
   drizzle-orm@0.45.2:
@@ -8655,6 +8663,8 @@ snapshots:
       '@esbuild-kit/esm-loader': 2.6.5
       esbuild: 0.25.12
       tsx: 4.22.4
+
+  drizzle-lab@0.11.0: {}
 
   drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@types/pg@8.20.0)(kysely@0.29.2)(pg@8.22.0):
     optionalDependencies:
