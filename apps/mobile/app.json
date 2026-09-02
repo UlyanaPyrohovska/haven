@@ -6,40 +6,41 @@
 		"orientation": "portrait",
 		"icon": "./assets/images/icon.png",
 		"scheme": "haven",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
+		"userInterfaceStyle": "automatic",
+		"newArchEnabled": true,
+		"ios": {
+			"supportsTablet": true,
 			"bundleIdentifier": "com.haven.app"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/android-icon-foreground.png"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
+		},
+		"android": {
+			"adaptiveIcon": {
+				"backgroundColor": "#ffffff",
+				"foregroundImage": "./assets/images/android-icon-foreground.png"
+			},
+			"edgeToEdgeEnabled": true,
+			"predictiveBackGestureEnabled": false,
 			"package": "com.haven.app"
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#dcdcdc",
-          "dark": {
-            "backgroundColor": "#dcdcdc"
-          }
-        }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
-  }
+		},
+		"web": {
+			"output": "static",
+			"favicon": "./assets/images/favicon.png"
+		},
+		"plugins": [
+			"expo-router",
+			[
+				"expo-splash-screen",
+				{
+					"backgroundColor": "#dcdcdc",
+					"dark": {
+						"backgroundColor": "#dcdcdc"
+					}
+				}
+			],
+			"expo-secure-store"
+		],
+		"experiments": {
+			"typedRoutes": true,
+			"reactCompiler": true
+		}
+	}
 }

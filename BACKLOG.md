@@ -382,13 +382,39 @@ Sequential path from empty project to a seeded database with tables.
 ### `[ ]` D2 — feat(mobile): auth screens (signup, login)
 
 - **Labels**: `type:feature` `area:mobile` `prio:P1`
-- **Description**: Login and signup forms that call the C3 endpoints and store the JWT in Expo SecureStore.
+- **Description**: Branded login and signup screens that authenticate against the Better Auth API (`/auth/**`) via the Expo client plugin. On success, persist the session in SecureStore and route the user into the app shell (tabs once D1 lands; placeholder home until then). This is the first interactive screen after the splash and the gate for all authenticated flows.
 
 **Acceptance criteria**
-- [ ] Form validation (email format, password length)
-- [ ] Loading state while waiting for API
-- [ ] Errors displayed clearly
-- [ ] Token persisted across app restarts
+- [ ] `@better-auth/expo`, `better-auth`, and `expo-secure-store` installed in `apps/mobile`
+- [ ] `lib/auth-client.ts` exports a configured Better Auth client pointing at `EXPO_PUBLIC_API_URL` with the Expo storage adapter
+- [ ] Expo Router auth group: `app/(auth)/login.tsx` and `app/(auth)/signup.tsx` with a shared `(auth)/_layout.tsx` (headerless stack)
+- [ ] Login form: email + password fields, submit calls `signIn.email`, navigates forward on success
+- [ ] Signup form: name (optional), email + password + confirm password, submit calls `signUp.email`, navigates forward on success
+- [ ] Client-side validation: valid email format, password ≥ 8 characters, confirm password matches
+- [ ] Loading state on submit (disabled button + spinner); errors from the API surfaced inline (e.g. wrong credentials, email already taken)
+- [ ] Cross-link between login ↔ signup (“Don't have an account?” / “Already have an account?”)
+- [ ] Session restored on cold start: `useSession()` (or equivalent) hydrates from SecureStore before routing
+- [ ] Root index (`app/index.tsx`) redirects unauthenticated users to `/login` and authenticated users to the main shell
+- [ ] Copy lives in `constants/strings.ts` under an `auth` namespace (title, labels, errors, links)
+- [ ] UI uses existing brand tokens (`Colors`, `TextStyles`, `ThemedText` / `ThemedView`) — ink on white, no one-off colours
+- [ ] Keyboard-safe layout (`KeyboardAvoidingView` or scroll) and accessible labels on inputs
+- [ ] Works in Expo Go against a running local API (`pnpm dev` in `apps/api`)
+
+**Out of scope**
+- Tab navigator shell and full auth guard wiring (D1 — D2 only needs index redirect for now)
+- Profile creation / onboarding (D3)
+- Magic-link sign-in (C3b)
+- OAuth / social login
+- “Forgot password” flow (later)
+- Biometric unlock (later)
+
+**Notes**
+- API already exposes Better Auth at `/auth` with the `expo()` plugin enabled (`apps/api/src/lib/auth.ts`); no API changes expected for this ticket
+- Set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` (document shape in `.env.example` if missing)
+- Better Auth manages session cookies/tokens — use the official Expo client + SecureStore adapter rather than hand-rolling JWT storage
+- Signup may require a `name` field depending on Better Auth config; align with whatever `signUp.email` accepts today
+- Suggested branch: `feat/<issue-number>-auth-screens`
+- Natural successor to D0 (splash); can land in parallel with or just before D1
 
 ---
 

@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
 	boolean,
+	date,
 	doublePrecision,
 	index,
 	integer,
@@ -127,7 +128,9 @@ export const userProfiles = pgTable(
 
 		// Demographic
 		gender: smallint("gender"), // 0 = female, 1 = male (per CSV)
-		age: smallint("age"),
+		// Stored instead of age so it never goes stale. The synthetic CSV only carries an
+		// age, so seeding derives a birth date from it.
+		birthDate: date("birth_date"),
 		ethnicity: varchar("ethnicity", { length: 100 }),
 		career: varchar("career", { length: 100 }),
 		goal: varchar("goal", { length: 100 }),
