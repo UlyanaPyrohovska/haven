@@ -1,20 +1,34 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1783292590874,
-      "tag": "0000_sparkling_dakota_north",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1784326670117,
-      "tag": "0001_robust_otto_octavius",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1783292590874,
+			"tag": "0000_sparkling_dakota_north",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1784326670117,
+			"tag": "0001_robust_otto_octavius",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1785331776480,
+			"tag": "0002_motionless_switch",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1785331786383,
+			"tag": "0003_tan_shape",
+			"breakpoints": true
+		}
+	]
 }
