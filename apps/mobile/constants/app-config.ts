@@ -21,6 +21,19 @@ export const Colors = {
 		tabIconDefault: "#687076",
 		tabIconSelected: "#484848",
 		link: "#484848",
+		/** Secondary copy: hints, helper text, step counters. */
+		muted: "#8a8a8a",
+		border: "#e4e4e4",
+		/** Fill for text inputs and unselected chips. */
+		field: "#f2f2f2",
+		placeholder: "#a8a8a8",
+		/** Inverted copy on a `tint`-filled surface. */
+		onTint: "#ffffff",
+		danger: "#A44A3F",
+		/** Unfilled portion of progress bars and rating scales. */
+		track: "#e4e4e4",
+		/** Dimmed backdrop behind modal dialogs. */
+		scrim: "rgba(30, 30, 30, 0.4)",
 	},
 	dark: {
 		text: "#ECEDEE",
@@ -31,10 +44,36 @@ export const Colors = {
 		tabIconDefault: "#9BA1A6",
 		tabIconSelected: "#dcdcdc",
 		link: "#dcdcdc",
+		muted: "#9BA1A6",
+		border: "#2d3132",
+		field: "#1f2122",
+		placeholder: "#6b7276",
+		onTint: "#151718",
+		danger: "#d3796c",
+		track: "#2d3132",
+		scrim: "rgba(0, 0, 0, 0.6)",
 	},
 } as const;
 
 export type ColorScheme = "light" | "dark";
+
+export type ThemeColorName = keyof typeof Colors.light & keyof typeof Colors.dark;
+
+export const Spacing = {
+	xs: 4,
+	sm: 8,
+	md: 12,
+	lg: 16,
+	xl: 24,
+	xxl: 32,
+} as const;
+
+export const Radius = {
+	sm: 8,
+	md: 12,
+	lg: 20,
+	pill: 999,
+} as const;
 
 export const FontFamily = {
 	brand: "Kodchasan",
@@ -58,6 +97,8 @@ export const FontSize = {
 	md: 16,
 	lg: 20,
 	xl: 32,
+	/** In-app brand wordmark; smaller than the splash treatment. */
+	wordmark: 36,
 	brand: 52,
 } as const;
 
@@ -98,6 +139,19 @@ export const TextStyles = {
 		fontWeight: FontWeight.bold,
 		fontFamily: FontFamily.body,
 	} satisfies TextStyle,
+	/** Field and section labels sitting above their control. */
+	label: {
+		fontSize: FontSize.sm,
+		lineHeight: LineHeight.sm,
+		fontWeight: FontWeight.medium,
+		fontFamily: FontFamily.body,
+	} satisfies TextStyle,
+	/** Helper text, validation messages, step counters. */
+	caption: {
+		fontSize: FontSize.xs,
+		lineHeight: LineHeight.sm,
+		fontFamily: FontFamily.body,
+	} satisfies TextStyle,
 	link: {
 		fontSize: FontSize.md,
 		lineHeight: LineHeight.lg,
@@ -105,6 +159,12 @@ export const TextStyles = {
 	} satisfies TextStyle,
 	brand: {
 		fontSize: FontSize.brand,
+		fontWeight: FontWeight.medium,
+		fontFamily: FontFamily.brand,
+	} satisfies TextStyle,
+	/** Brand wordmark inside the app, e.g. above the auth forms. */
+	wordmark: {
+		fontSize: FontSize.wordmark,
 		fontWeight: FontWeight.medium,
 		fontFamily: FontFamily.brand,
 	} satisfies TextStyle,

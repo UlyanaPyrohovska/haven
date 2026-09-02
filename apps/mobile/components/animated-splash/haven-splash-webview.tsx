@@ -11,11 +11,7 @@ type HavenSplashWebViewProps = {
 	replayKey?: number;
 };
 
-export function HavenSplashWebView({
-	reduceMotion = false,
-	onComplete,
-	replayKey = 0,
-}: HavenSplashWebViewProps) {
+export function HavenSplashWebView({ reduceMotion = false, onComplete, replayKey = 0 }: HavenSplashWebViewProps) {
 	const injectedJavaScript = reduceMotion
 		? `
       document.body.classList.add('reduced-motion');
