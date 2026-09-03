@@ -9,7 +9,8 @@
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
-		"db:visualizer": "drizzle-lab visualizer -c drizzle.config.ts -e .env --ts-config tsconfig.json"
+		"db:visualizer": "drizzle-lab visualizer -c drizzle.config.ts -e .env --ts-config tsconfig.json",
+		"db:seed": "tsx scripts/seed.ts"
 	},
 	"dependencies": {
 		"@better-auth/expo": "^1.6.23",
@@ -18,13 +19,17 @@
 		"better-auth": "^1.6.23",
 		"drizzle-orm": "^0.45.2",
 		"hono": "^4.12.27",
+		"papaparse": "^5.7.0",
 		"pg": "^8.22.0",
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"@types/node": "^26.0.1",
+		"@types/papaparse": "^5.5.2",
 		"@types/pg": "^8.20.0",
+		"dotenv": "^17.4.2",
 		"drizzle-lab": "^0.11.0",
+		"tsx": "^4.22.4",
 		"wrangler": "^4.4.0"
 	}
 }
