@@ -17,8 +17,8 @@ import { BackHomeButton } from "@/components/ui/back-home-button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { FontSize, Radius, Spacing } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import {
 	fetchRecommendation,
 	fetchRecommendations,
@@ -27,8 +27,6 @@ import {
 	recommendationsQueryKey,
 } from "@/lib/api/recommendations";
 import { useSession } from "@/lib/auth-client";
-
-const copy = Strings.connections;
 
 function profileInitials(name: string): string {
 	return name
@@ -59,6 +57,7 @@ function InterestTag({ label, inverted = false }: { label: string; inverted?: bo
 }
 
 export default function ConnectionDetailScreen() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const theme = useTheme();
 	const insets = useSafeAreaInsets();
@@ -86,7 +85,7 @@ export default function ConnectionDetailScreen() {
 	});
 
 	const viewerInitials = profileInitials(session?.user.name ?? "You");
-	const locationLabel = connection.data?.locationLabel ?? Strings.home.locationFallback;
+	const locationLabel = connection.data?.locationLabel ?? t("home.locationFallback");
 
 	const goToNext = useCallback(
 		async (remainingCount: number) => {
@@ -148,9 +147,9 @@ export default function ConnectionDetailScreen() {
 	if (connection.isError || !connection.data) {
 		return (
 			<View style={[styles.centered, { backgroundColor: theme.background, padding: Spacing.xl }]}>
-				<ErrorBanner message={Strings.auth.errors.network} />
+				<ErrorBanner message={t("auth.errors.network")} />
 				<ThemedText type="link" onPress={() => connection.refetch()}>
-					{Strings.common.retry}
+					{t("common.retry")}
 				</ThemedText>
 			</View>
 		);
@@ -200,7 +199,7 @@ export default function ConnectionDetailScreen() {
 				</View>
 
 				<ThemedText type="label" style={styles.sectionTitle}>
-					{copy.title}
+					{t("connections.title")}
 				</ThemedText>
 
 				<Animated.View style={cardStyle}>
@@ -228,7 +227,7 @@ export default function ConnectionDetailScreen() {
 					</View>
 
 					<View style={styles.block}>
-						<ThemedText type="label">{Strings.home.todaysQuestion}</ThemedText>
+						<ThemedText type="label">{t("home.todaysQuestion")}</ThemedText>
 						<ThemedText style={[styles.quote, { color: theme.muted }]}>{`"${data.dailyQuestion}"`}</ThemedText>
 						<View style={[styles.answerBubble, { backgroundColor: theme.surface, borderColor: theme.border }]}>
 							<ThemedText style={{ lineHeight: 22 }}>{data.questionAnswer}</ThemedText>
@@ -236,7 +235,7 @@ export default function ConnectionDetailScreen() {
 					</View>
 
 					<View style={styles.block}>
-						<ThemedText type="label">{copy.whyMatched}</ThemedText>
+						<ThemedText type="label">{t("connections.whyMatched")}</ThemedText>
 						<View style={styles.tagRow}>
 							{data.sharedInterests.map((interest) => (
 								<InterestTag key={interest} label={interest} />
@@ -245,7 +244,7 @@ export default function ConnectionDetailScreen() {
 					</View>
 
 					<ThemedText style={[styles.crossPaths, { color: theme.muted }]}>
-						{copy.crossPaths(data.crossPathsCount)}
+						{t("connections.crossPaths", { count: data.crossPathsCount })}
 					</ThemedText>
 				</Animated.View>
 			</ScrollView>
@@ -264,9 +263,9 @@ export default function ConnectionDetailScreen() {
 				visible={matchedDialog}
 				icon="heart-outline"
 				tone="default"
-				title={copy.matchedTitle}
-				message={copy.matchedMessage(matchedName)}
-				confirmLabel={copy.continueBrowsing}
+				title={t("connections.matchedTitle")}
+				message={t("connections.matchedMessage", { name: matchedName })}
+				confirmLabel={t("connections.continueBrowsing")}
 				onConfirm={() => {
 					setMatchedDialog(false);
 					void goToNext(decide.data?.remainingCount ?? 0);
@@ -276,9 +275,9 @@ export default function ConnectionDetailScreen() {
 			<Dialog
 				visible={messageDialog}
 				icon="chatbubble-ellipses-outline"
-				title={copy.message}
-				message={copy.messageSoon}
-				confirmLabel={Strings.common.continue}
+				title={t("connections.message")}
+				message={t("connections.messageSoon")}
+				confirmLabel={t("common.continue")}
 				onConfirm={() => setMessageDialog(false)}
 			/>
 		</View>

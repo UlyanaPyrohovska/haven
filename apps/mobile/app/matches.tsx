@@ -5,13 +5,12 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { FormScreen } from "@/components/ui/form-screen";
 import { MenuCard, MenuDivider, MenuRow } from "@/components/ui/menu-row";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { fetchMatches, matchesQueryKey } from "@/lib/api/recommendations";
 
-const copy = Strings.matches;
-
 export default function MatchesScreen() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const theme = useTheme();
 	const matches = useQuery({
@@ -31,13 +30,13 @@ export default function MatchesScreen() {
 
 	return (
 		<FormScreen
-			title={copy.title}
-			subtitle={copy.subtitle}
+			title={t("matches.title")}
+			subtitle={t("matches.subtitle")}
 			showBack
 			onBack={() => router.replace("/home")}
 		>
 			{rows.length === 0 ? (
-				<ThemedText style={{ color: theme.muted, textAlign: "center" }}>{copy.empty}</ThemedText>
+				<ThemedText style={{ color: theme.muted, textAlign: "center" }}>{t("matches.empty")}</ThemedText>
 			) : (
 				<MenuCard>
 					{rows.map((match, index) => (

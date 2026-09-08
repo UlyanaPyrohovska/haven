@@ -133,12 +133,12 @@ export function useDecisionCardStyle(kind: DecisionKind | null) {
 
 const styles = StyleSheet.create({
 	root: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		alignItems: "center",
 		justifyContent: "center",
 	},
 	flash: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: Colors.palette.honeySoft,
 	},
 	ring: {
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
 		borderColor: Colors.palette.honeyLight,
 	},
 	foldVeil: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: Colors.brand.ink,
 	},
 });

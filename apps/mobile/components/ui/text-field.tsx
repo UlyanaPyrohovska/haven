@@ -12,8 +12,8 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { FontFamily, FontSize, LineHeight, Radius, Spacing } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 
 export type TextFieldProps = TextInputProps & {
 	label: string;
@@ -39,13 +39,14 @@ export function TextField({
 	...rest
 }: TextFieldProps) {
 	const theme = useTheme();
+	const { t } = useTranslation();
 	const [focused, setFocused] = useState(false);
 	const [passwordVisible, setPasswordVisible] = useState(false);
 
 	const borderColor = error ? theme.danger : focused ? theme.tint : "transparent";
 	const isPasswordField = secureTextEntry === true;
 
-	const toggleLabel = passwordVisible ? Strings.auth.fields.hidePassword : Strings.auth.fields.showPassword;
+	const toggleLabel = passwordVisible ? t("auth.fields.hidePassword") : t("auth.fields.showPassword");
 
 	return (
 		<View style={[styles.root, containerStyle]}>

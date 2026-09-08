@@ -9,8 +9,8 @@ import { ErrorBanner } from "@/components/ui/error-banner";
 import { FormScreen } from "@/components/ui/form-screen";
 import { TextField } from "@/components/ui/text-field";
 import { Spacing, TextStyles } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { signUp } from "@/lib/auth-client";
 import { describeAuthError } from "@/lib/auth-errors";
 import { isAuthenticatedResult, refreshAuthSession } from "@/lib/auth-navigation";
@@ -22,8 +22,6 @@ import {
 	validatePassword,
 } from "@/lib/validation";
 
-const copy = Strings.auth;
-
 type RegisterErrors = {
 	name?: ValidationError;
 	email?: ValidationError;
@@ -32,6 +30,7 @@ type RegisterErrors = {
 };
 
 export default function RegisterScreen() {
+	const { t } = useTranslation();
 	const theme = useTheme();
 	const router = useRouter();
 
@@ -77,28 +76,28 @@ export default function RegisterScreen() {
 
 	return (
 		<FormScreen
-			title={copy.register.title}
-			subtitle={copy.register.subtitle}
-			hero={<BrandHero tagline={Strings.app.tagline} logoHeight={60} />}
+			title={t("auth.register.title")}
+			subtitle={t("auth.register.subtitle")}
+			hero={<BrandHero tagline={t("app.tagline")} logoHeight={60} />}
 			centered
 			footer={
 				<>
 					<ErrorBanner message={formError} />
-					<Button label={copy.register.submit} loading={submitting} onPress={onSubmit} />
+					<Button label={t("auth.register.submit")} loading={submitting} onPress={onSubmit} />
 					<View style={styles.footerRow}>
 						<ThemedText type="caption" style={{ color: theme.muted }}>
-							{copy.register.footerPrompt}
+							{t("auth.register.footerPrompt")}
 						</ThemedText>
 						<Link href="/login" replace style={[TextStyles.caption, styles.footerLink, { color: theme.link }]}>
-							{copy.register.footerAction}
+							{t("auth.register.footerAction")}
 						</Link>
 					</View>
 				</>
 			}
 		>
 			<TextField
-				label={copy.fields.name}
-				placeholder={copy.fields.namePlaceholder}
+				label={t("auth.fields.name")}
+				placeholder={t("auth.fields.namePlaceholder")}
 				value={name}
 				onChangeText={setName}
 				error={errors.name}
@@ -108,8 +107,8 @@ export default function RegisterScreen() {
 			/>
 
 			<TextField
-				label={copy.fields.email}
-				placeholder={copy.fields.emailPlaceholder}
+				label={t("auth.fields.email")}
+				placeholder={t("auth.fields.emailPlaceholder")}
 				value={email}
 				onChangeText={setEmail}
 				error={errors.email}
@@ -121,8 +120,8 @@ export default function RegisterScreen() {
 			/>
 
 			<TextField
-				label={copy.fields.password}
-				placeholder={copy.fields.passwordPlaceholder}
+				label={t("auth.fields.password")}
+				placeholder={t("auth.fields.passwordPlaceholder")}
 				value={password}
 				onChangeText={setPassword}
 				error={errors.password}
@@ -134,8 +133,8 @@ export default function RegisterScreen() {
 			/>
 
 			<TextField
-				label={copy.fields.confirmPassword}
-				placeholder={copy.fields.confirmPasswordPlaceholder}
+				label={t("auth.fields.confirmPassword")}
+				placeholder={t("auth.fields.confirmPasswordPlaceholder")}
 				value={confirmPassword}
 				onChangeText={setConfirmPassword}
 				error={errors.confirmPassword}

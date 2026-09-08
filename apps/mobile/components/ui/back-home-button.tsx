@@ -3,8 +3,8 @@ import { useRouter, type Href } from "expo-router";
 import { Pressable, StyleSheet } from "react-native";
 
 import { Radius, Spacing } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 
 type BackHomeButtonProps = {
 	/** Defaults to `/home`. */
@@ -15,11 +15,12 @@ type BackHomeButtonProps = {
 export function BackHomeButton({ href = "/home" }: BackHomeButtonProps) {
 	const router = useRouter();
 	const theme = useTheme();
+	const { t } = useTranslation();
 
 	return (
 		<Pressable
 			accessibilityRole="button"
-			accessibilityLabel={Strings.common.backHome}
+			accessibilityLabel={t("common.backHome")}
 			hitSlop={Spacing.sm}
 			onPress={() => router.replace(href)}
 			style={({ pressed }) => [

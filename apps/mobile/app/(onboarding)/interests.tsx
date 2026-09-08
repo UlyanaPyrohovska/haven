@@ -1,12 +1,12 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { MultiChipGroup } from "@/components/ui/chip-group";
 import { FormScreen } from "@/components/ui/form-screen";
 import { InterestCategories, type InterestKey, MIN_SELECTED_INTERESTS } from "@/constants/profile-taxonomy";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
 import { useProfileDraft } from "@/lib/onboarding/profile-draft";
 import {
@@ -16,8 +16,6 @@ import {
 	previousOnboardingRoute,
 } from "@/lib/onboarding/steps";
 
-const copy = Strings.onboarding.interests;
-
 /** Chip options keyed by column name, built once since the taxonomy is static. */
 const categories = InterestCategories.map((category) => ({
 	key: category.key,
@@ -26,6 +24,7 @@ const categories = InterestCategories.map((category) => ({
 }));
 
 export default function InterestsStep() {
+	const { t } = useTranslation();
 	const theme = useTheme();
 	const router = useRouter();
 	const { draft, toggleInterest } = useProfileDraft();
@@ -36,7 +35,7 @@ export default function InterestsStep() {
 
 	const onContinue = () => {
 		if (!hasEnough) {
-			setError(copy.tooFew(MIN_SELECTED_INTERESTS));
+			setError(t("onboarding.interests.tooFew", { count: MIN_SELECTED_INTERESTS }));
 			return;
 		}
 
@@ -50,17 +49,17 @@ export default function InterestsStep() {
 
 	return (
 		<FormScreen
-			title={copy.title}
-			subtitle={copy.subtitle}
+			title={t("onboarding.interests.title")}
+			subtitle={t("onboarding.interests.subtitle")}
 			showBack
 			onBack={() => router.replace(previousOnboardingRoute("interests"))}
 			progress={{ current: onboardingStepNumber("interests"), total: ONBOARDING_STEP_COUNT }}
 			footer={
 				<>
 					<ThemedText type="caption" style={{ color: error ? theme.danger : theme.muted }}>
-						{error ?? copy.selected(selectedCount)}
+						{error ?? t("onboarding.interests.selected", { count: selectedCount })}
 					</ThemedText>
-					<Button label={Strings.common.continue} onPress={onContinue} />
+					<Button label={t("common.continue")} onPress={onContinue} />
 				</>
 			}
 		>

@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,6 @@ import { FormScreen } from "@/components/ui/form-screen";
 import { ScaleLegend } from "@/components/ui/scale-legend";
 import { SliderScale } from "@/components/ui/slider-scale";
 import { TraitDimensions } from "@/constants/profile-taxonomy";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
 import { useProfileDraft } from "@/lib/onboarding/profile-draft";
 import {
@@ -17,9 +17,8 @@ import {
 	previousOnboardingRoute,
 } from "@/lib/onboarding/steps";
 
-const copy = Strings.onboarding.partner;
-
 export default function PartnerStep() {
+	const { t } = useTranslation();
 	const theme = useTheme();
 	const router = useRouter();
 	const { draft, setPartnerImportance } = useProfileDraft();
@@ -29,7 +28,7 @@ export default function PartnerStep() {
 
 	const onContinue = () => {
 		if (!allSet) {
-			setError(copy.incomplete);
+			setError(t("onboarding.partner.incomplete"));
 			return;
 		}
 
@@ -43,8 +42,8 @@ export default function PartnerStep() {
 
 	return (
 		<FormScreen
-			title={copy.title}
-			subtitle={copy.subtitle}
+			title={t("onboarding.partner.title")}
+			subtitle={t("onboarding.partner.subtitle")}
 			showBack
 			onBack={() => router.replace(previousOnboardingRoute("partner"))}
 			progress={{ current: onboardingStepNumber("partner"), total: ONBOARDING_STEP_COUNT }}
@@ -55,11 +54,11 @@ export default function PartnerStep() {
 							{error}
 						</ThemedText>
 					) : null}
-					<Button label={Strings.common.continue} onPress={onContinue} />
+					<Button label={t("common.continue")} onPress={onContinue} />
 				</>
 			}
 		>
-			<ScaleLegend low={copy.low} high={copy.high} />
+			<ScaleLegend low={t("onboarding.partner.low")} high={t("onboarding.partner.high")} />
 
 			{TraitDimensions.map((dimension) => (
 				<SliderScale

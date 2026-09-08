@@ -5,16 +5,17 @@ import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Spacing } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { useProfileQuery } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
 import { useSession } from "@/lib/auth-client";
+import { useTranslation } from "react-i18next";
 
 /**
  * Entry gate: sends signed-out users to login, users mid-signup to onboarding,
  * and everyone else into the app shell.
  */
 export default function IndexRoute() {
+	const { t } = useTranslation();
 	const { data: session, isPending: sessionPending, isRefetching: sessionRefetching } = useSession();
 	const hasSession = Boolean(session);
 	const profile = useProfileQuery(hasSession);
@@ -35,8 +36,8 @@ export default function IndexRoute() {
 		return (
 			<ThemedView style={styles.centered}>
 				<View style={styles.retry}>
-					<ErrorBanner message={Strings.auth.errors.network} />
-					<Button label={Strings.common.retry} onPress={() => profile.refetch()} />
+					<ErrorBanner message={t("auth.errors.network")} />
+					<Button label={t("common.retry")} onPress={() => profile.refetch()} />
 				</View>
 			</ThemedView>
 		);

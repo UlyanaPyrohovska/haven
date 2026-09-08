@@ -7,10 +7,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { ThemedText } from "@/components/themed-text";
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { Colors, FontFamily, FontSize, Radius, Spacing } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
 import { useSession } from "@/lib/auth-client";
 
@@ -109,6 +110,7 @@ function BottomDock({
 }
 
 export default function HomeScreen() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const theme = useTheme();
 	const colorScheme = useColorScheme();
@@ -123,7 +125,7 @@ export default function HomeScreen() {
 
 	const dock = dockColors(colorScheme);
 	const displayName = session?.user.name?.split(" ")[0] ?? "Uliana";
-	const initials = displayName.slice(0, 1).toUpperCase();
+	const photoUrl = session?.user.image?.trim() || null;
 	const newConnections = recommendations.data?.count ?? 0;
 	const dailyQuestion = recommendations.data?.dailyQuestion ?? DUMMY.dailyQuestion;
 	const dockClearance = DOCK.arcHeight + DOCK.fabSize / 2 + DOCK.fabLift + Spacing.lg;
@@ -143,7 +145,7 @@ export default function HomeScreen() {
 				<View style={styles.header}>
 					<Pressable
 						accessibilityRole="button"
-						accessibilityLabel={Strings.home.settingsAccessibilityLabel}
+						accessibilityLabel={t("home.settingsAccessibilityLabel")}
 						hitSlop={Spacing.sm}
 						onPress={() => router.push("/profile/settings")}
 						style={({ pressed }) => [styles.iconButton, { opacity: pressed ? 0.6 : 1 }]}
@@ -160,24 +162,17 @@ export default function HomeScreen() {
 
 					<Pressable
 						accessibilityRole="button"
-						accessibilityLabel={Strings.home.profileAccessibilityLabel}
+						accessibilityLabel={t("home.profileAccessibilityLabel")}
 						hitSlop={Spacing.sm}
 						onPress={() => router.push("/profile")}
-						style={({ pressed }) => [
-							styles.avatar,
-							{
-								backgroundColor: theme.accentSoft,
-								borderColor: theme.tint,
-								opacity: pressed ? 0.75 : 1,
-							},
-						]}
+						style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}
 					>
-						<ThemedText type="subtitle" style={{ color: theme.tint }}>{initials}</ThemedText>
+						<UserAvatar imageUrl={photoUrl} name={session?.user.name ?? displayName} size={44} />
 					</Pressable>
 				</View>
 
 				<ThemedText type="title" style={styles.greeting}>
-					{Strings.home.greeting(displayName)}
+					{t("home.greeting", { name: displayName })}
 				</ThemedText>
 
 				<Pressable
@@ -197,7 +192,7 @@ export default function HomeScreen() {
 							</ThemedText>
 						</View>
 						<ThemedText type="label" style={{ color: theme.muted }}>
-							{Strings.home.newConnections}
+							{t("home.newConnections")}
 						</ThemedText>
 					</View>
 				</Pressable>
@@ -213,18 +208,18 @@ export default function HomeScreen() {
 					]}
 				>
 					<ThemedText type="subtitle" style={styles.moodPrompt}>
-						{Strings.home.moodPrompt}
+						{t("home.moodPrompt")}
 					</ThemedText>
 				</Pressable>
 
 				<View style={styles.questionSection}>
-					<ThemedText type="label">{Strings.home.todaysQuestion}</ThemedText>
+					<ThemedText type="label">{t("home.todaysQuestion")}</ThemedText>
 					<ThemedText style={[styles.questionQuote, { color: theme.muted }]}>{`"${dailyQuestion}"`}</ThemedText>
 
 					<TextInput
 						value={response}
 						onChangeText={setResponse}
-						placeholder={Strings.home.responsePlaceholder}
+						placeholder={t("home.responsePlaceholder")}
 						placeholderTextColor={theme.placeholder}
 						selectionColor={theme.tint}
 						multiline
@@ -287,14 +282,6 @@ const styles = StyleSheet.create({
 	},
 	locationText: {
 		fontWeight: "500",
-	},
-	avatar: {
-		width: 40,
-		height: 40,
-		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
-		alignItems: "center",
-		justifyContent: "center",
 	},
 	greeting: {
 		marginTop: Spacing.sm,
