@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter, type Href } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,12 +11,12 @@ import { Colors, FontFamily, FontSize, Radius, Spacing } from "@/constants/app-c
 import { Strings } from "@/constants/strings";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
-import { signOut, useSession } from "@/lib/auth-client";
+import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
+import { useSession } from "@/lib/auth-client";
 
 /** Placeholder content until profile and feed APIs are wired up. */
 const DUMMY = {
 	location: "Setúbal, Portugal",
-	newConnections: 5,
 	unreadMessages: 5,
 	dailyQuestion: "What made you smile this week?",
 } as const;
@@ -31,8 +31,8 @@ const DOCK = {
 function dockColors(scheme: "light" | "dark" | null | undefined) {
 	if (scheme === "dark") {
 		return {
-			fill: "#2e3234",
-			border: "#454a4d",
+			fill: Colors.dark.surface,
+			border: Colors.dark.border,
 			shadow: "rgba(0, 0, 0, 0.35)",
 		};
 	}
@@ -40,7 +40,7 @@ function dockColors(scheme: "light" | "dark" | null | undefined) {
 	return {
 		fill: Colors.light.surface,
 		border: Colors.light.border,
-		shadow: "rgba(0, 0, 0, 0.08)",
+		shadow: "rgba(232, 146, 23, 0.12)",
 	};
 }
 
@@ -51,9 +51,26 @@ type BottomDockProps = {
 	border: string;
 	shadow: string;
 	unreadCount: number;
+	fabColor: string;
+	fabForeground: string;
+	badgeBackground: string;
+	badgeForeground: string;
+	onMessagesPress?: () => void;
 };
 
-function BottomDock({ width, bottomInset, fill, border, shadow, unreadCount }: BottomDockProps) {
+function BottomDock({
+	width,
+	bottomInset,
+	fill,
+	border,
+	shadow,
+	unreadCount,
+	fabColor,
+	fabForeground,
+	badgeBackground,
+	badgeForeground,
+	onMessagesPress,
+}: BottomDockProps) {
 	const totalHeight = DOCK.arcHeight + bottomInset;
 
 	// Semi-ellipse arc peaking at y = 0, baseline at y = arcHeight.
@@ -70,18 +87,19 @@ function BottomDock({ width, bottomInset, fill, border, shadow, unreadCount }: B
 			<Pressable
 				accessibilityRole="button"
 				accessibilityLabel="Messages"
+				onPress={onMessagesPress}
 				style={({ pressed }) => [
 					styles.fab,
 					{
 						bottom: bottomInset + DOCK.fabLift,
-						backgroundColor: Colors.brand.ink,
+						backgroundColor: fabColor,
 						opacity: pressed ? 0.9 : 1,
 					},
 				]}
 			>
-				<Ionicons name="chatbubble-ellipses" size={28} color={Colors.brand.white} />
-				<View style={[styles.fabBadge, { backgroundColor: fill, borderColor: border }]}>
-					<ThemedText type="caption" style={styles.fabBadgeText}>
+				<Ionicons name="chatbubble-ellipses" size={28} color={fabForeground} />
+				<View style={[styles.fabBadge, { backgroundColor: badgeBackground, borderColor: border }]}>
+					<ThemedText type="caption" style={[styles.fabBadgeText, { color: badgeForeground }]}>
 						{unreadCount}
 					</ThemedText>
 				</View>
@@ -92,24 +110,23 @@ function BottomDock({ width, bottomInset, fill, border, shadow, unreadCount }: B
 
 export default function HomeScreen() {
 	const router = useRouter();
-	const queryClient = useQueryClient();
 	const theme = useTheme();
 	const colorScheme = useColorScheme();
 	const insets = useSafeAreaInsets();
 	const { width } = useWindowDimensions();
 	const { data: session } = useSession();
+	const recommendations = useQuery({
+		queryKey: recommendationsQueryKey,
+		queryFn: fetchRecommendations,
+	});
 	const [response, setResponse] = useState("");
 
 	const dock = dockColors(colorScheme);
 	const displayName = session?.user.name?.split(" ")[0] ?? "Uliana";
 	const initials = displayName.slice(0, 1).toUpperCase();
+	const newConnections = recommendations.data?.count ?? 0;
+	const dailyQuestion = recommendations.data?.dailyQuestion ?? DUMMY.dailyQuestion;
 	const dockClearance = DOCK.arcHeight + DOCK.fabSize / 2 + DOCK.fabLift + Spacing.lg;
-
-	const onSignOut = async () => {
-		await signOut();
-		queryClient.clear();
-		router.replace("/login");
-	};
 
 	return (
 		<View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -126,12 +143,12 @@ export default function HomeScreen() {
 				<View style={styles.header}>
 					<Pressable
 						accessibilityRole="button"
-						accessibilityLabel={Strings.common.signOut}
+						accessibilityLabel={Strings.home.settingsAccessibilityLabel}
 						hitSlop={Spacing.sm}
-						onPress={onSignOut}
+						onPress={() => router.push("/profile/settings")}
 						style={({ pressed }) => [styles.iconButton, { opacity: pressed ? 0.6 : 1 }]}
 					>
-						<Ionicons name="options-outline" size={24} color={theme.text} />
+						<Ionicons name="settings-outline" size={24} color={theme.text} />
 					</Pressable>
 
 					<View style={[styles.locationPill, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -141,30 +158,56 @@ export default function HomeScreen() {
 						</ThemedText>
 					</View>
 
-					<View style={[styles.avatar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-						<ThemedText type="subtitle">{initials}</ThemedText>
-					</View>
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel={Strings.home.profileAccessibilityLabel}
+						hitSlop={Spacing.sm}
+						onPress={() => router.push("/profile")}
+						style={({ pressed }) => [
+							styles.avatar,
+							{
+								backgroundColor: theme.accentSoft,
+								borderColor: theme.tint,
+								opacity: pressed ? 0.75 : 1,
+							},
+						]}
+					>
+						<ThemedText type="subtitle" style={{ color: theme.tint }}>{initials}</ThemedText>
+					</Pressable>
 				</View>
 
 				<ThemedText type="title" style={styles.greeting}>
 					{Strings.home.greeting(displayName)}
 				</ThemedText>
 
-				<View style={styles.connectionsBlock}>
-					<View style={[styles.connectionsCircle, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-						<ThemedText style={styles.connectionsCount}>{DUMMY.newConnections}</ThemedText>
+				<Pressable
+					accessibilityRole="button"
+					onPress={() => router.push((newConnections > 0 ? "/connections" : "/matches") as Href)}
+					style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+				>
+					<View style={styles.connectionsBlock}>
+						<View
+							style={[
+								styles.connectionsCircle,
+								{ backgroundColor: theme.accentSoft, borderColor: theme.tint, borderWidth: 2 },
+							]}
+						>
+							<ThemedText style={[styles.connectionsCount, { color: theme.tint }]}>
+								{newConnections}
+							</ThemedText>
+						</View>
+						<ThemedText type="label" style={{ color: theme.muted }}>
+							{Strings.home.newConnections}
+						</ThemedText>
 					</View>
-					<ThemedText type="label" style={{ color: theme.muted }}>
-						{Strings.home.newConnections}
-					</ThemedText>
-				</View>
+				</Pressable>
 
 				<Pressable
 					style={({ pressed }) => [
 						styles.moodCard,
 						{
-							backgroundColor: theme.surface,
-							borderColor: theme.border,
+							backgroundColor: theme.accentSoft,
+							borderColor: theme.tint,
 							opacity: pressed ? 0.85 : 1,
 						},
 					]}
@@ -176,7 +219,7 @@ export default function HomeScreen() {
 
 				<View style={styles.questionSection}>
 					<ThemedText type="label">{Strings.home.todaysQuestion}</ThemedText>
-					<ThemedText style={[styles.questionQuote, { color: theme.muted }]}>{`"${DUMMY.dailyQuestion}"`}</ThemedText>
+					<ThemedText style={[styles.questionQuote, { color: theme.muted }]}>{`"${dailyQuestion}"`}</ThemedText>
 
 					<TextInput
 						value={response}
@@ -204,6 +247,11 @@ export default function HomeScreen() {
 				border={dock.border}
 				shadow={dock.shadow}
 				unreadCount={DUMMY.unreadMessages}
+				fabColor={theme.tint}
+				fabForeground={theme.onTint}
+				badgeBackground={theme.background}
+				badgeForeground={theme.tint}
+				onMessagesPress={() => router.push("/matches" as Href)}
 			/>
 		</View>
 	);

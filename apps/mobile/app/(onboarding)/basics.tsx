@@ -1,13 +1,24 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { DateField } from "@/components/ui/date-field";
 import { Dialog } from "@/components/ui/dialog";
 import { FormScreen } from "@/components/ui/form-screen";
+import { IntentPicker } from "@/components/ui/intent-picker";
 import { TextField } from "@/components/ui/text-field";
-import { GenderOptions, type GenderValue, GoalOptions, type GoalValue } from "@/constants/profile-taxonomy";
+import {
+	EthnicityOptions,
+	type EthnicityValue,
+	GenderOptions,
+	type GenderValue,
+	type GoalValue,
+	goalOptionsForLookingFor,
+	isGoalValidForLookingFor,
+	LookingForOptions,
+	type LookingForValue,
+} from "@/constants/profile-taxonomy";
 import { Strings } from "@/constants/strings";
 import {
 	type DateOfBirthParts,
@@ -25,8 +36,6 @@ import {
 } from "@/lib/onboarding/steps";
 
 const copy = Strings.onboarding.basics;
-
-const goalOptions = GoalOptions.map((goal) => ({ value: goal, label: goal }));
 
 function dateOfBirthMessage(status: DateOfBirthResult["status"]): string | undefined {
 	switch (status) {
@@ -46,8 +55,19 @@ export default function BasicsStep() {
 	const { draft, updateDraft } = useProfileDraft();
 
 	const [dateOfBirth, setDateOfBirth] = useState<DateOfBirthParts>(() => splitIsoDate(draft.birthDate));
-	const [errors, setErrors] = useState<{ dateOfBirth?: string; gender?: string; goal?: string }>({});
+	const [errors, setErrors] = useState<{
+		dateOfBirth?: string;
+		gender?: string;
+		ethnicity?: string;
+		lookingFor?: string;
+		goal?: string;
+	}>({});
 	const [underageVisible, setUnderageVisible] = useState(false);
+
+	const goalOptions = useMemo(
+		() => (draft.lookingFor === undefined ? [] : goalOptionsForLookingFor(draft.lookingFor)),
+		[draft.lookingFor],
+	);
 
 	const onContinue = () => {
 		const result = evaluateDateOfBirth(dateOfBirth);
@@ -63,6 +83,8 @@ export default function BasicsStep() {
 		const nextErrors = {
 			dateOfBirth: dateOfBirthMessage(result.status),
 			gender: draft.gender === undefined ? copy.genderInvalid : undefined,
+			ethnicity: draft.ethnicity === undefined ? copy.ethnicityInvalid : undefined,
+			lookingFor: draft.lookingFor === undefined ? copy.intentInvalid : undefined,
 			goal: draft.goal === undefined ? copy.goalInvalid : undefined,
 		};
 		setErrors(nextErrors);
@@ -77,6 +99,14 @@ export default function BasicsStep() {
 		if (next) {
 			router.replace(next);
 		}
+	};
+
+	const onLookingForChange = (lookingFor: LookingForValue) => {
+		const goal =
+			draft.goal && isGoalValidForLookingFor(draft.goal, lookingFor) ? draft.goal : undefined;
+
+		updateDraft({ lookingFor, goal });
+		setErrors((current) => ({ ...current, lookingFor: undefined, goal: undefined }));
 	};
 
 	return (
@@ -111,13 +141,35 @@ export default function BasicsStep() {
 					error={errors.gender}
 				/>
 
-				<ChipGroup<GoalValue>
-					label={copy.goalLabel}
-					options={goalOptions}
-					value={draft.goal}
-					onChange={(goal) => updateDraft({ goal })}
-					error={errors.goal}
+				<ChipGroup<EthnicityValue>
+					label={copy.ethnicityLabel}
+					options={EthnicityOptions}
+					value={draft.ethnicity}
+					onChange={(ethnicity) => updateDraft({ ethnicity })}
+					error={errors.ethnicity}
 				/>
+
+				<IntentPicker
+					label={copy.intentLabel}
+					hint={copy.intentHint}
+					options={LookingForOptions}
+					value={draft.lookingFor}
+					onChange={onLookingForChange}
+					error={errors.lookingFor}
+				/>
+
+				{draft.lookingFor !== undefined ? (
+					<ChipGroup<GoalValue>
+						label={copy.goalLabel}
+						options={goalOptions}
+						value={draft.goal}
+						onChange={(goal) => {
+							updateDraft({ goal });
+							setErrors((current) => ({ ...current, goal: undefined }));
+						}}
+						error={errors.goal}
+					/>
+				) : null}
 
 				<TextField
 					label={copy.careerLabel}

@@ -40,6 +40,7 @@ export type ChipGroupOption<T> = {
 
 export type ChipGroupProps<T> = {
 	label: string;
+	hideLabel?: boolean;
 	options: readonly ChipGroupOption<T>[];
 	value: T | undefined;
 	onChange: (value: T) => void;
@@ -47,12 +48,19 @@ export type ChipGroupProps<T> = {
 };
 
 /** Single-select pill group, used for gender and goal in onboarding. */
-export function ChipGroup<T extends string | number>({ label, options, value, onChange, error }: ChipGroupProps<T>) {
+export function ChipGroup<T extends string | number>({
+	label,
+	hideLabel = false,
+	options,
+	value,
+	onChange,
+	error,
+}: ChipGroupProps<T>) {
 	const theme = useTheme();
 
 	return (
-		<View style={styles.group}>
-			<ThemedText type="label">{label}</ThemedText>
+		<View style={styles.group} accessibilityLabel={hideLabel ? label : undefined}>
+			{hideLabel ? null : <ThemedText type="label">{label}</ThemedText>}
 
 			<View style={styles.chips}>
 				{options.map((option) => (
