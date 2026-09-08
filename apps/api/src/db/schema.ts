@@ -17,6 +17,8 @@ import {
 	vector,
 } from "drizzle-orm/pg-core";
 
+import { LookingFor } from "@/lib/looking-for";
+
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
@@ -133,6 +135,8 @@ export const userProfiles = pgTable(
 		birthDate: date("birth_date"),
 		ethnicity: varchar("ethnicity", { length: 100 }),
 		career: varchar("career", { length: 100 }),
+		/** 0 = friends, 1 = dating. Matching only surfaces same-mode profiles. */
+		lookingFor: smallint("looking_for").notNull().default(LookingFor.friends),
 		goal: varchar("goal", { length: 100 }),
 
 		// Location
@@ -183,6 +187,7 @@ export const userProfiles = pgTable(
 	(t) => [
 		index("user_profiles_user_id_idx").on(t.userId),
 		index("user_profiles_synthetic_idx").on(t.isSynthetic),
+		index("user_profiles_looking_for_idx").on(t.lookingFor),
 		index("user_profiles_lat_lon_idx").on(t.latitude, t.longitude),
 	],
 );
