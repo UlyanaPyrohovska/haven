@@ -95,6 +95,37 @@ export function profileAge(profile: ProfileRecord): number | undefined {
 	return ageFromBirthDateString(birthDate);
 }
 
+/** Vague age band for public profile cards, matching the API helper. */
+export function profileAgeLabel(profile: ProfileRecord): string | undefined {
+	const age = profileAge(profile);
+
+	if (age === undefined) {
+		return undefined;
+	}
+
+	if (age < 20) {
+		return "late teens";
+	}
+
+	if (age < 25) {
+		return "early 20s";
+	}
+
+	if (age < 30) {
+		return "mid-20s";
+	}
+
+	if (age < 35) {
+		return "early 30s";
+	}
+
+	if (age < 40) {
+		return "late 30s";
+	}
+
+	return String(age);
+}
+
 export function profileSelectedInterests(profile: ProfileRecord): string[] {
 	return InterestFields.filter((field) => profile[field.key] === INTEREST_SELECTED).map((field) => field.label);
 }

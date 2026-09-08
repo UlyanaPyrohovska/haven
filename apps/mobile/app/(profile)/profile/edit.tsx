@@ -31,19 +31,12 @@ import {
 	type SelfKey,
 	TraitDimensions,
 } from "@/constants/profile-taxonomy";
-import { Strings } from "@/constants/strings";
 import { profileQueryKey, useProfileQuery } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { saveProfile } from "@/lib/api/profile";
 import { profileRecordToDraft } from "@/lib/profile-draft-from-record";
 import type { ProfileDraft } from "@/lib/onboarding/profile-draft";
-
-const copy = Strings.profile.editScreen;
-const basicsCopy = Strings.onboarding.basics;
-const bioCopy = Strings.onboarding.bio;
-const interestsCopy = Strings.onboarding.interests;
-const partnerCopy = Strings.onboarding.partner;
-const selfCopy = Strings.onboarding.self;
 
 const BIO_MIN_LENGTH = 20;
 
@@ -54,6 +47,7 @@ const interestCategories = InterestCategories.map((category) => ({
 }));
 
 export default function ProfileEditScreen() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const theme = useTheme();
@@ -141,10 +135,10 @@ export default function ProfileEditScreen() {
 
 	const onSave = () => {
 		const nextErrors = {
-			bio: draft.bio.trim().length < BIO_MIN_LENGTH ? bioCopy.tooShort : undefined,
+			bio: draft.bio.trim().length < BIO_MIN_LENGTH ? t("onboarding.bio.tooShort") : undefined,
 			interests:
 				draft.interests.length < MIN_SELECTED_INTERESTS
-					? interestsCopy.tooFew(MIN_SELECTED_INTERESTS)
+					? t("onboarding.interests.tooFew", { count: MIN_SELECTED_INTERESTS })
 					: undefined,
 		};
 
@@ -164,14 +158,14 @@ export default function ProfileEditScreen() {
 
 	return (
 		<FormScreen
-			title={copy.title}
-			subtitle={copy.subtitle}
+			title={t("profile.editScreen.title")}
+			subtitle={t("profile.editScreen.subtitle")}
 			showBack
 			footer={
 				<>
-					<ErrorBanner message={submit.isError ? Strings.profile.editScreen.saveError : undefined} />
+					<ErrorBanner message={submit.isError ? t("profile.editScreen.saveError") : undefined} />
 					<Button
-						label={copy.save}
+						label={t("profile.editScreen.save")}
 						loading={submit.isPending}
 						disabled={!partnerComplete || !selfComplete}
 						onPress={onSave}
@@ -180,22 +174,22 @@ export default function ProfileEditScreen() {
 			}
 		>
 			<ChipGroup<GenderValue>
-				label={basicsCopy.genderLabel}
+				label={t("onboarding.basics.genderLabel")}
 				options={GenderOptions}
 				value={draft.gender}
 				onChange={(gender) => updateDraft({ gender })}
 			/>
 
 			<ChipGroup<EthnicityValue>
-				label={basicsCopy.ethnicityLabel}
+				label={t("onboarding.basics.ethnicityLabel")}
 				options={EthnicityOptions}
 				value={draft.ethnicity}
 				onChange={(ethnicity) => updateDraft({ ethnicity })}
 			/>
 
 			<IntentPicker
-				label={basicsCopy.intentLabel}
-				hint={basicsCopy.intentHint}
+				label={t("onboarding.basics.intentLabel")}
+				hint={t("onboarding.basics.intentHint")}
 				options={LookingForOptions}
 				value={draft.lookingFor}
 				onChange={onLookingForChange}
@@ -203,7 +197,7 @@ export default function ProfileEditScreen() {
 
 			{draft.lookingFor !== undefined ? (
 				<ChipGroup<GoalValue>
-					label={basicsCopy.goalLabel}
+					label={t("onboarding.basics.goalLabel")}
 					options={goalOptions}
 					value={draft.goal}
 					onChange={(goal) => updateDraft({ goal })}
@@ -211,17 +205,17 @@ export default function ProfileEditScreen() {
 			) : null}
 
 			<TextField
-				label={basicsCopy.careerLabel}
-				placeholder={basicsCopy.careerPlaceholder}
-				hint={Strings.common.optional}
+				label={t("onboarding.basics.careerLabel")}
+				placeholder={t("onboarding.basics.careerPlaceholder")}
+				hint={t("common.optional")}
 				value={draft.career}
 				onChangeText={(career) => updateDraft({ career })}
 				maxLength={100}
 			/>
 
 			<TextField
-				label={bioCopy.label}
-				placeholder={bioCopy.placeholder}
+				label={t("onboarding.bio.label")}
+				placeholder={t("onboarding.bio.placeholder")}
 				value={draft.bio}
 				onChangeText={(bio) => {
 					updateDraft({ bio });
@@ -233,9 +227,9 @@ export default function ProfileEditScreen() {
 				multiline
 			/>
 
-			<ThemedText type="label">{interestsCopy.title}</ThemedText>
+			<ThemedText type="label">{t("onboarding.interests.title")}</ThemedText>
 			<ThemedText type="caption" style={{ color: theme.muted }}>
-				{interestsCopy.selected(draft.interests.length)}
+				{t("onboarding.interests.selected", { count: draft.interests.length })}
 			</ThemedText>
 			{errors.interests ? (
 				<ThemedText type="caption" style={{ color: theme.danger }}>
@@ -253,8 +247,8 @@ export default function ProfileEditScreen() {
 				/>
 			))}
 
-			<ThemedText type="label">{partnerCopy.title}</ThemedText>
-			<ScaleLegend low={partnerCopy.low} high={partnerCopy.high} />
+			<ThemedText type="label">{t("onboarding.partner.title")}</ThemedText>
+			<ScaleLegend low={t("onboarding.partner.low")} high={t("onboarding.partner.high")} />
 			{TraitDimensions.map((dimension) => (
 				<SliderScale
 					key={dimension.prefKey}
@@ -264,8 +258,8 @@ export default function ProfileEditScreen() {
 				/>
 			))}
 
-			<ThemedText type="label">{selfCopy.title}</ThemedText>
-			<ScaleLegend low={selfCopy.low} high={selfCopy.high} />
+			<ThemedText type="label">{t("onboarding.self.title")}</ThemedText>
+			<ScaleLegend low={t("onboarding.self.low")} high={t("onboarding.self.high")} />
 			{SelfDimensions.map((dimension) => (
 				<SliderScale
 					key={dimension.selfKey}

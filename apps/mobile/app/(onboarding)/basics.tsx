@@ -19,7 +19,7 @@ import {
 	LookingForOptions,
 	type LookingForValue,
 } from "@/constants/profile-taxonomy";
-import { Strings } from "@/constants/strings";
+import { useTranslation } from "react-i18next";
 import {
 	type DateOfBirthParts,
 	type DateOfBirthResult,
@@ -35,24 +35,23 @@ import {
 	previousOnboardingRoute,
 } from "@/lib/onboarding/steps";
 
-const copy = Strings.onboarding.basics;
-
-function dateOfBirthMessage(status: DateOfBirthResult["status"]): string | undefined {
-	switch (status) {
-		case "incomplete":
-			return copy.dobIncomplete;
-		case "invalid":
-			return copy.dobInvalid;
-		case "unrealistic":
-			return copy.dobUnrealistic;
-		default:
-			return undefined;
-	}
-}
-
 export default function BasicsStep() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const { draft, updateDraft } = useProfileDraft();
+
+	const dateOfBirthMessage = (status: DateOfBirthResult["status"]): string | undefined => {
+		switch (status) {
+			case "incomplete":
+				return t("onboarding.basics.dobIncomplete");
+			case "invalid":
+				return t("onboarding.basics.dobInvalid");
+			case "unrealistic":
+				return t("onboarding.basics.dobUnrealistic");
+			default:
+				return undefined;
+		}
+	};
 
 	const [dateOfBirth, setDateOfBirth] = useState<DateOfBirthParts>(() => splitIsoDate(draft.birthDate));
 	const [errors, setErrors] = useState<{
@@ -82,10 +81,10 @@ export default function BasicsStep() {
 
 		const nextErrors = {
 			dateOfBirth: dateOfBirthMessage(result.status),
-			gender: draft.gender === undefined ? copy.genderInvalid : undefined,
-			ethnicity: draft.ethnicity === undefined ? copy.ethnicityInvalid : undefined,
-			lookingFor: draft.lookingFor === undefined ? copy.intentInvalid : undefined,
-			goal: draft.goal === undefined ? copy.goalInvalid : undefined,
+			gender: draft.gender === undefined ? t("onboarding.basics.genderInvalid") : undefined,
+			ethnicity: draft.ethnicity === undefined ? t("onboarding.basics.ethnicityInvalid") : undefined,
+			lookingFor: draft.lookingFor === undefined ? t("onboarding.basics.intentInvalid") : undefined,
+			goal: draft.goal === undefined ? t("onboarding.basics.goalInvalid") : undefined,
 		};
 		setErrors(nextErrors);
 
@@ -112,29 +111,29 @@ export default function BasicsStep() {
 	return (
 		<>
 			<FormScreen
-				title={copy.title}
-				subtitle={copy.subtitle}
+				title={t("onboarding.basics.title")}
+				subtitle={t("onboarding.basics.subtitle")}
 				showBack
 				onBack={() => router.replace(previousOnboardingRoute("basics"))}
 				progress={{ current: onboardingStepNumber("basics"), total: ONBOARDING_STEP_COUNT }}
-				footer={<Button label={Strings.common.continue} onPress={onContinue} />}
+				footer={<Button label={t("common.continue")} onPress={onContinue} />}
 			>
 				<DateField
-					label={copy.dobLabel}
-					dayLabel={copy.dobDayLabel}
-					monthLabel={copy.dobMonthLabel}
-					yearLabel={copy.dobYearLabel}
+					label={t("onboarding.basics.dobLabel")}
+					dayLabel={t("onboarding.basics.dobDayLabel")}
+					monthLabel={t("onboarding.basics.dobMonthLabel")}
+					yearLabel={t("onboarding.basics.dobYearLabel")}
 					value={dateOfBirth}
 					onChange={(value) => {
 						setDateOfBirth(value);
 						setErrors((current) => ({ ...current, dateOfBirth: undefined }));
 					}}
 					error={errors.dateOfBirth}
-					hint={copy.dobHint}
+					hint={t("onboarding.basics.dobHint")}
 				/>
 
 				<ChipGroup<GenderValue>
-					label={copy.genderLabel}
+					label={t("onboarding.basics.genderLabel")}
 					options={GenderOptions}
 					value={draft.gender}
 					onChange={(gender) => updateDraft({ gender })}
@@ -142,7 +141,7 @@ export default function BasicsStep() {
 				/>
 
 				<ChipGroup<EthnicityValue>
-					label={copy.ethnicityLabel}
+					label={t("onboarding.basics.ethnicityLabel")}
 					options={EthnicityOptions}
 					value={draft.ethnicity}
 					onChange={(ethnicity) => updateDraft({ ethnicity })}
@@ -150,8 +149,8 @@ export default function BasicsStep() {
 				/>
 
 				<IntentPicker
-					label={copy.intentLabel}
-					hint={copy.intentHint}
+					label={t("onboarding.basics.intentLabel")}
+					hint={t("onboarding.basics.intentHint")}
 					options={LookingForOptions}
 					value={draft.lookingFor}
 					onChange={onLookingForChange}
@@ -160,7 +159,7 @@ export default function BasicsStep() {
 
 				{draft.lookingFor !== undefined ? (
 					<ChipGroup<GoalValue>
-						label={copy.goalLabel}
+						label={t("onboarding.basics.goalLabel")}
 						options={goalOptions}
 						value={draft.goal}
 						onChange={(goal) => {
@@ -172,9 +171,9 @@ export default function BasicsStep() {
 				) : null}
 
 				<TextField
-					label={copy.careerLabel}
-					placeholder={copy.careerPlaceholder}
-					hint={Strings.common.optional}
+					label={t("onboarding.basics.careerLabel")}
+					placeholder={t("onboarding.basics.careerPlaceholder")}
+					hint={t("common.optional")}
 					value={draft.career}
 					onChangeText={(career) => updateDraft({ career })}
 					maxLength={100}
@@ -185,9 +184,9 @@ export default function BasicsStep() {
 				visible={underageVisible}
 				icon="hourglass-outline"
 				tone="danger"
-				title={copy.underage.title(MIN_AGE)}
-				message={copy.underage.message(MIN_AGE)}
-				confirmLabel={copy.underage.dismiss}
+				title={t("onboarding.basics.underage.title", { minAge: MIN_AGE })}
+				message={t("onboarding.basics.underage.message", { minAge: MIN_AGE })}
+				confirmLabel={t("onboarding.basics.underage.dismiss")}
 				onConfirm={() => setUnderageVisible(false)}
 			/>
 		</>

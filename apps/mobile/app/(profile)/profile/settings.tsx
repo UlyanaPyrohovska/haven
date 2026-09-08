@@ -8,28 +8,27 @@ import { ChipGroup } from "@/components/ui/chip-group";
 import { FormScreen } from "@/components/ui/form-screen";
 import { MenuCard, MenuDivider, MenuRow } from "@/components/ui/menu-row";
 import { Spacing } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { signOut } from "@/lib/auth-client";
+import { useTranslation } from "react-i18next";
 import {
 	ThemePreference,
 	type ThemePreferenceValue,
 	useThemePreference,
 } from "@/lib/theme-preference";
 
-const copy = Strings.profile.settingsScreen;
-
 export default function ProfileSettingsScreen() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const { preference, setPreference } = useThemePreference();
 
 	const appearanceOptions = useMemo(
 		() => [
-			{ value: ThemePreference.system, label: copy.appearance.system },
-			{ value: ThemePreference.light, label: copy.appearance.light },
-			{ value: ThemePreference.dark, label: copy.appearance.dark },
+			{ value: ThemePreference.system, label: t("profile.settingsScreen.appearance.system") },
+			{ value: ThemePreference.light, label: t("profile.settingsScreen.appearance.light") },
+			{ value: ThemePreference.dark, label: t("profile.settingsScreen.appearance.dark") },
 		],
-		[],
+		[t],
 	);
 
 	const onSignOut = async () => {
@@ -39,16 +38,16 @@ export default function ProfileSettingsScreen() {
 	};
 
 	return (
-		<FormScreen title={copy.title} subtitle={copy.subtitle} showBack>
+		<FormScreen title={t("profile.settingsScreen.title")} subtitle={t("profile.settingsScreen.subtitle")} showBack>
 			<MenuCard>
 				<View style={styles.appearance}>
 					<View style={styles.appearanceCopy}>
-						<ThemedText type="label">{copy.appearance.title}</ThemedText>
-						<ThemedText type="caption">{copy.appearance.subtitle}</ThemedText>
+						<ThemedText type="label">{t("profile.settingsScreen.appearance.title")}</ThemedText>
+						<ThemedText type="caption">{t("profile.settingsScreen.appearance.subtitle")}</ThemedText>
 					</View>
 					<ChipGroup<ThemePreferenceValue>
 						hideLabel
-						label={copy.appearance.title}
+						label={t("profile.settingsScreen.appearance.title")}
 						options={appearanceOptions}
 						value={preference}
 						onChange={setPreference}
@@ -58,23 +57,23 @@ export default function ProfileSettingsScreen() {
 
 			<MenuCard>
 				<MenuRow
-					label={copy.privacy.title}
-					subtitle={`${copy.privacy.subtitle} · ${copy.comingSoon}`}
+					label={t("profile.settingsScreen.privacy.title")}
+					subtitle={`${t("profile.settingsScreen.privacy.subtitle")} · ${t("profile.settingsScreen.comingSoon")}`}
 				/>
 				<MenuDivider />
 				<MenuRow
-					label={copy.visibility.title}
-					subtitle={`${copy.visibility.subtitle} · ${copy.comingSoon}`}
+					label={t("profile.settingsScreen.visibility.title")}
+					subtitle={`${t("profile.settingsScreen.visibility.subtitle")} · ${t("profile.settingsScreen.comingSoon")}`}
 				/>
 				<MenuDivider />
 				<MenuRow
-					label={copy.location.title}
-					subtitle={`${copy.location.subtitle} · ${copy.comingSoon}`}
+					label={t("profile.settingsScreen.location.title")}
+					subtitle={`${t("profile.settingsScreen.location.subtitle")} · ${t("profile.settingsScreen.comingSoon")}`}
 				/>
 			</MenuCard>
 
 			<MenuCard>
-				<MenuRow label={Strings.common.signOut} onPress={onSignOut} destructive />
+				<MenuRow label={t("common.signOut")} onPress={onSignOut} destructive />
 			</MenuCard>
 		</FormScreen>
 	);

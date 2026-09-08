@@ -5,13 +5,12 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
 
-const copy = Strings.connections;
-
 export default function ConnectionsIndexScreen() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const theme = useTheme();
 	const recommendations = useQuery({
@@ -29,9 +28,9 @@ export default function ConnectionsIndexScreen() {
 
 	if (recommendations.isError) {
 		return (
-			<FormScreen title={copy.title} showBack onBack={() => router.replace("/home")}>
+			<FormScreen title={t("connections.title")} showBack onBack={() => router.replace("/home")}>
 				<ThemedText type="link" onPress={() => recommendations.refetch()}>
-					{Strings.common.retry}
+					{t("common.retry")}
 				</ThemedText>
 			</FormScreen>
 		);
@@ -42,12 +41,12 @@ export default function ConnectionsIndexScreen() {
 	if (!first) {
 		return (
 			<FormScreen
-				title={copy.emptyTitle}
-				subtitle={copy.emptySubtitle}
+				title={t("connections.emptyTitle")}
+				subtitle={t("connections.emptySubtitle")}
 				showBack
 				onBack={() => router.replace("/home")}
 			>
-				<Button label={copy.backHome} onPress={() => router.replace("/home")} />
+				<Button label={t("connections.backHome")} onPress={() => router.replace("/home")} />
 			</FormScreen>
 		);
 	}

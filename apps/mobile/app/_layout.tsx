@@ -13,6 +13,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AnimatedSplash, getReduceMotionEnabled } from "@/components/animated-splash";
 import { Colors, FontFamily } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import "@/lib/i18n";
 import { ThemePreferenceProvider } from "@/lib/theme-preference";
 
 SplashScreen.preventAutoHideAsync();

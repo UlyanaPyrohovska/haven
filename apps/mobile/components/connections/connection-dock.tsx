@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import { ThemedText } from "@/components/themed-text";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -21,13 +20,7 @@ export type ConnectionDockProps = {
 	disabled?: boolean;
 };
 
-export function ConnectionDock({
-	bottomInset,
-	onAccept,
-	onDecline,
-	onMessage,
-	disabled = false,
-}: ConnectionDockProps) {
+export function ConnectionDock({ bottomInset, onAccept, onDecline, onMessage, disabled = false }: ConnectionDockProps) {
 	const theme = useTheme();
 	const { width } = useWindowDimensions();
 	const totalHeight = DOCK.arcHeight + bottomInset;
@@ -38,12 +31,7 @@ export function ConnectionDock({
 		<View pointerEvents="box-none" style={styles.root}>
 			<View style={[styles.shadow, { shadowColor: theme.tint }]}>
 				<Svg width={width} height={totalHeight}>
-					<Path
-						d={path}
-						fill={theme.surface}
-						stroke={theme.border}
-						strokeWidth={StyleSheet.hairlineWidth}
-					/>
+					<Path d={path} fill={theme.surface} stroke={theme.border} strokeWidth={StyleSheet.hairlineWidth} />
 				</Svg>
 			</View>
 
