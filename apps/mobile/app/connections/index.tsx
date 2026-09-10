@@ -1,7 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { Redirect, useRouter } from "expo-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { type Href, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ConnectionCandidateScreen } from "@/components/connections/connection-candidate-screen";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
@@ -12,10 +14,53 @@ export default function ConnectionsIndexScreen() {
 	const { t } = useTranslation();
 	const router = useRouter();
 	const theme = useTheme();
+	const queryClient = useQueryClient();
+	const [candidateId, setCandidateId] = useState<number | null>(null);
+
 	const recommendations = useQuery({
 		queryKey: recommendationsQueryKey,
 		queryFn: fetchRecommendations,
 	});
+
+	useEffect(() => {
+		const first = recommendations.data?.recommendations[0];
+
+		if (!first) {
+			setCandidateId(null);
+			return;
+		}
+
+		setCandidateId((current) => {
+			const stillPending =
+				current !== null &&
+				recommendations.data?.recommendations.some((item) => item.candidateId === current);
+
+			return stillPending ? current : first.candidateId;
+		});
+	}, [recommendations.data]);
+
+	const onAdvance = useCallback(
+		async (remainingCount: number) => {
+			const refreshed = await queryClient.fetchQuery({
+				queryKey: recommendationsQueryKey,
+				queryFn: fetchRecommendations,
+			});
+
+			const next = refreshed.recommendations[0];
+
+			if (next) {
+				setCandidateId(next.candidateId);
+				return;
+			}
+
+			setCandidateId(null);
+
+			if (remainingCount === 0) {
+				router.replace("/home" as Href);
+			}
+		},
+		[queryClient, router],
+	);
 
 	if (recommendations.isPending) {
 		return (
@@ -35,9 +80,7 @@ export default function ConnectionsIndexScreen() {
 		);
 	}
 
-	const first = recommendations.data.recommendations[0];
-
-	if (!first) {
+	if (candidateId === null) {
 		return (
 			<FormScreen
 				title={t("connections.emptyTitle")}
@@ -50,7 +93,7 @@ export default function ConnectionsIndexScreen() {
 		);
 	}
 
-	return <Redirect href={`/connections/${first.candidateId}`} />;
+	return <ConnectionCandidateScreen key={candidateId} candidateId={candidateId} onAdvance={onAdvance} />;
 }
 
 const styles = StyleSheet.create({

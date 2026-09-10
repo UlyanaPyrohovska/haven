@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, type Href } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
@@ -141,6 +141,15 @@ export default function HomeScreen() {
 					},
 				]}
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl
+						refreshing={recommendations.isRefetching}
+						onRefresh={() => recommendations.refetch()}
+						tintColor={theme.tint}
+						colors={[theme.tint]}
+						progressViewOffset={insets.top}
+					/>
+				}
 			>
 				<View style={styles.header}>
 					<Pressable
@@ -177,7 +186,9 @@ export default function HomeScreen() {
 
 				<Pressable
 					accessibilityRole="button"
-					onPress={() => router.push((newConnections > 0 ? "/connections" : "/matches") as Href)}
+					onPress={() =>
+						router.replace((newConnections > 0 ? "/connections" : "/matches") as Href)
+					}
 					style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
 				>
 					<View style={styles.connectionsBlock}>
