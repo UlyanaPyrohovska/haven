@@ -145,6 +145,8 @@ export const userProfiles = pgTable(
 
 		// Free text
 		bio: text("bio"),
+		/** Optional portrait URL (e.g. Unsplash CDN). Null when derived at read time. */
+		photoUrl: text("photo_url"),
 
 		// Interests (1–10 Likert)
 		interestSports: smallint("interest_sports"),

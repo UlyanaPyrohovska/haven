@@ -1,24 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams, useRouter, type Href } from "expo-router";
+import { Image } from "expo-image";
+import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import {
-	DecisionOverlay,
-	type DecisionKind,
-	useDecisionCardStyle,
-} from "@/components/connections/decision-animation";
 import { ConnectionDock, connectionDockClearance } from "@/components/connections/connection-dock";
+import { type DecisionKind, DecisionOverlay, useDecisionCardStyle } from "@/components/connections/decision-animation";
 import { ThemedText } from "@/components/themed-text";
 import { BackHomeButton } from "@/components/ui/back-home-button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { FontSize, Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
 import {
 	fetchRecommendation,
 	fetchRecommendations,
@@ -204,20 +200,14 @@ export default function ConnectionDetailScreen() {
 
 				<Animated.View style={cardStyle}>
 					<View style={[styles.photoCard, { backgroundColor: theme.field, borderColor: theme.border }]}>
-						<View style={[styles.photoPlaceholder, { backgroundColor: theme.accentSoft }]}>
-							<ThemedText type="title" style={{ color: theme.tint, fontSize: 56 }}>
-								{profileInitials(data.displayName)}
-							</ThemedText>
-						</View>
+						<Image source={{ uri: data.photoUrl }} style={styles.photoImage} contentFit="cover" />
 						<View style={styles.photoScrim} />
 
 						<View style={styles.photoOverlay}>
 							<ThemedText type="title" style={styles.photoOverlayText}>
 								{data.displayName}
 							</ThemedText>
-							{data.ageLabel ? (
-								<ThemedText style={styles.photoOverlaySubtext}>{data.ageLabel}</ThemedText>
-							) : null}
+							{data.ageLabel ? <ThemedText style={styles.photoOverlaySubtext}>{data.ageLabel}</ThemedText> : null}
 							<View style={styles.tagRow}>
 								{photoInterests.map((interest) => (
 									<InterestTag key={interest} label={interest} inverted />
@@ -338,10 +328,9 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		overflow: "hidden",
 	},
-	photoPlaceholder: {
+	photoImage: {
 		height: 320,
-		alignItems: "center",
-		justifyContent: "center",
+		width: "100%",
 	},
 	photoScrim: {
 		position: "absolute",

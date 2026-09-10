@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemedText } from "@/components/themed-text";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
@@ -9,16 +10,25 @@ import { useTheme } from "@/hooks/use-theme";
 export type MenuRowProps = {
 	label: string;
 	subtitle?: string;
+	photoUrl?: string;
 	onPress?: () => void;
 	destructive?: boolean;
 	disabled?: boolean;
 };
 
-export function MenuRow({ label, subtitle, onPress, destructive = false, disabled = false }: MenuRowProps) {
+export function MenuRow({
+	label,
+	subtitle,
+	photoUrl,
+	onPress,
+	destructive = false,
+	disabled = false,
+}: MenuRowProps) {
 	const theme = useTheme();
 
 	const content = (
 		<>
+			{photoUrl ? <UserAvatar imageUrl={photoUrl} name={label} size={44} /> : null}
 			<View style={styles.copy}>
 				<ThemedText
 					type="label"
