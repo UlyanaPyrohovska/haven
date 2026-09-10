@@ -1,5 +1,9 @@
 import { z } from "@hono/zod-openapi";
 
+const moodSlugValues = ["happy", "calm", "excited", "tired", "low", "stressed"] as const;
+
+export const MoodSlugSchema = z.enum(moodSlugValues).openapi("CandidateMood");
+
 export const ErrorSchema = z
 	.object({
 		code: z.string(),
@@ -49,6 +53,8 @@ export const RecommendationDetailSchema = z
 		distanceKm: z.number().optional(),
 		locationLabel: z.string().optional(),
 		actedOn: z.boolean(),
+		mood: MoodSlugSchema.nullable(),
+		isSynthetic: z.boolean(),
 	})
 	.openapi("RecommendationDetail");
 

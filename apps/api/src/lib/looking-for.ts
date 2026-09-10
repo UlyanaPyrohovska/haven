@@ -7,12 +7,7 @@ export const LookingFor = {
 export type LookingForValue = (typeof LookingFor)[keyof typeof LookingFor];
 
 /** Exact `goal` strings from the synthetic dataset. */
-export const FriendsGoals = [
-	"To meet new people",
-	"Seemed like fun",
-	"To say I did it",
-	"Other",
-] as const;
+export const FriendsGoals = ["To meet new people", "Seemed like fun", "To say I did it", "Other"] as const;
 
 export const DatingGoals = ["To get a date", "Looking for a serious relationship"] as const;
 

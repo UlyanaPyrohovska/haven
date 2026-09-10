@@ -1,14 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { ThemedText } from "@/components/themed-text";
 import { StepProgress } from "@/components/ui/step-progress";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
 
 export type FormScreenHeaderButtonProps = {
 	accessibilityLabel: string;
@@ -25,10 +24,7 @@ export function FormScreenHeaderButton({ accessibilityLabel, onPress, children }
 			accessibilityLabel={accessibilityLabel}
 			hitSlop={Spacing.md}
 			onPress={onPress}
-			style={({ pressed }) => [
-				styles.headerButton,
-				{ backgroundColor: theme.field, opacity: pressed ? 0.6 : 1 },
-			]}
+			style={({ pressed }) => [styles.headerButton, { backgroundColor: theme.field, opacity: pressed ? 0.6 : 1 }]}
 		>
 			{children}
 		</Pressable>
@@ -89,17 +85,14 @@ export function FormScreen({
 			>
 				{showBack || headerRight ? (
 					<View style={styles.headerRow}>
-						<View style={styles.headerSide}>
+						<View style={styles.headerSideStart}>
 							{showBack ? (
-								<FormScreenHeaderButton
-									accessibilityLabel={t("common.back")}
-									onPress={onBack ?? (() => router.back())}
-								>
+								<FormScreenHeaderButton accessibilityLabel={t("common.back")} onPress={onBack ?? (() => router.back())}>
 									<Ionicons name="chevron-back" size={20} color={theme.text} />
 								</FormScreenHeaderButton>
 							) : null}
 						</View>
-						<View style={[styles.headerSide, styles.headerSideEnd]}>{headerRight}</View>
+						<View style={styles.headerSideEnd}>{headerRight}</View>
 					</View>
 				) : null}
 
@@ -167,12 +160,14 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		marginBottom: Spacing.md,
 	},
-	headerSide: {
+	headerSideStart: {
 		width: 40,
 		height: 40,
 		justifyContent: "center",
 	},
 	headerSideEnd: {
+		minHeight: 40,
+		justifyContent: "center",
 		alignItems: "flex-end",
 	},
 	title: {

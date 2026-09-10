@@ -1,14 +1,17 @@
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 
-import { updateUser } from "@/lib/auth-client";
+import { updateUser } from "@/lib/auth/client";
 
 export const PROFILE_PHOTO_MAX_EDGE = 512;
 
 export type ProfilePhotoErrorCode = "permission_denied" | "processing_failed" | "upload_failed";
 
 export class ProfilePhotoError extends Error {
-	constructor(readonly code: ProfilePhotoErrorCode, message?: string) {
+	constructor(
+		readonly code: ProfilePhotoErrorCode,
+		message?: string,
+	) {
 		super(message ?? code);
 		this.name = "ProfilePhotoError";
 	}

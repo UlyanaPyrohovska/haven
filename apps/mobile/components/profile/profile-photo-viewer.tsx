@@ -54,12 +54,7 @@ export function ProfilePhotoViewer({
 
 					<View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.lg, paddingHorizontal: Spacing.xl }]}>
 						<Button label={t("profile.photo.change")} onPress={onChangePhoto} loading={busy} disabled={busy} />
-						<Button
-							label={t("profile.photo.remove")}
-							variant="ghost"
-							onPress={onRemovePhoto}
-							disabled={busy}
-						/>
+						<Button label={t("profile.photo.remove")} variant="ghost" onPress={onRemovePhoto} disabled={busy} />
 					</View>
 				</View>
 			</View>

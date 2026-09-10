@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, type Href } from "expo-router";
+import { type Href, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet } from "react-native";
-
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
 
 type BackHomeButtonProps = {
 	/** Defaults to `/home`. */
@@ -25,10 +24,7 @@ export function BackHomeButton({ href = "/home", onPress, accessibilityLabel }: 
 			accessibilityLabel={accessibilityLabel ?? t("common.backHome")}
 			hitSlop={Spacing.sm}
 			onPress={onPress ?? (() => router.replace(href))}
-			style={({ pressed }) => [
-				styles.button,
-				{ backgroundColor: theme.field, opacity: pressed ? 0.6 : 1 },
-			]}
+			style={({ pressed }) => [styles.button, { backgroundColor: theme.field, opacity: pressed ? 0.6 : 1 }]}
 		>
 			<Ionicons name="chevron-back" size={20} color={theme.text} />
 		</Pressable>

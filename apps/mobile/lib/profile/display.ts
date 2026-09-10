@@ -32,17 +32,12 @@ export function ageFromBirthDateString(birthDate: string, today: Date = new Date
 	const day = Number(match[3]);
 	const parsed = new Date(Date.UTC(year, month - 1, day));
 
-	if (
-		parsed.getUTCFullYear() !== year ||
-		parsed.getUTCMonth() !== month - 1 ||
-		parsed.getUTCDate() !== day
-	) {
+	if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
 		return undefined;
 	}
 
 	const monthDelta = today.getUTCMonth() - parsed.getUTCMonth();
-	const beforeBirthday =
-		monthDelta < 0 || (monthDelta === 0 && today.getUTCDate() < parsed.getUTCDate());
+	const beforeBirthday = monthDelta < 0 || (monthDelta === 0 && today.getUTCDate() < parsed.getUTCDate());
 
 	return today.getUTCFullYear() - parsed.getUTCFullYear() - (beforeBirthday ? 1 : 0);
 }

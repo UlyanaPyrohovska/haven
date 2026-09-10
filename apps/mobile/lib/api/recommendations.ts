@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
+import type { MoodSlug } from "@/lib/mood";
 
 export type RecommendationSummary = {
 	recommendationId: number;
@@ -22,6 +23,8 @@ export type RecommendationDetail = RecommendationSummary & {
 	distanceKm?: number;
 	locationLabel?: string;
 	actedOn: boolean;
+	mood: MoodSlug | null;
+	isSynthetic: boolean;
 };
 
 export type MatchSummary = {

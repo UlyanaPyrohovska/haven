@@ -1,10 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-
 import { HavenLogo } from "@/components/haven-logo";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
 
 export type BrandHeroProps = {
 	tagline: string;

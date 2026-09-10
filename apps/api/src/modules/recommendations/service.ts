@@ -1,6 +1,7 @@
 import type { Context } from "hono";
-import { getDb, type Db } from "@/db";
+import { type Db, getDb } from "@/db";
 import { resolveProfilePhotoUrl } from "@/lib/avatar-url";
+import { resolveCandidateMood } from "@/lib/candidate-mood";
 import { errors } from "@/lib/errors";
 import {
 	ageLabel,
@@ -12,8 +13,8 @@ import {
 } from "@/lib/profile-view";
 import { DEMO_DAILY_QUESTION, demoPresentation, displayNameForCandidate } from "@/lib/recommendation-demo-data";
 import { getSessionUserId } from "@/lib/session";
-import type { DecisionBody } from "./schemas";
 import * as repository from "./repository";
+import type { DecisionBody } from "./schemas";
 
 export type ViewerContext = {
 	db: Db;
@@ -104,6 +105,8 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 	}
 
 	const candidate = row.candidate as repository.ViewerProfile;
+	const isSynthetic = Boolean(candidate.isSynthetic);
+	const mood = await resolveCandidateMood(db, candidate.id, isSynthetic);
 	const summary = summariseCandidate(viewer, candidate, row.recommendation);
 	const distance = haversineKm(
 		viewer.latitude as number | null,
@@ -130,6 +133,8 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 		distanceKm: distance,
 		locationLabel: locationLabel(viewer, candidate),
 		actedOn: row.recommendation.actedOn,
+		mood,
+		isSynthetic,
 	};
 }
 

@@ -1,9 +1,8 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-
 import { ThemedText } from "@/components/themed-text";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
 
 export type StepProgressProps = {
 	current: number;

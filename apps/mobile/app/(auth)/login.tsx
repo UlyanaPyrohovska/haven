@@ -1,7 +1,7 @@
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-
 import { BrandHero } from "@/components/brand-hero";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,10 @@ import { FormScreen } from "@/components/ui/form-screen";
 import { TextField } from "@/components/ui/text-field";
 import { Spacing, TextStyles } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
-import { signIn } from "@/lib/auth-client";
-import { describeAuthError } from "@/lib/auth-errors";
-import { navigateAfterAuth } from "@/lib/auth-navigation";
-import { type ValidationError, validateEmail, validatePassword } from "@/lib/validation";
+import { signIn } from "@/lib/auth/client";
+import { describeAuthError } from "@/lib/auth/errors";
+import { navigateAfterAuth } from "@/lib/auth/navigation";
+import { type ValidationError, validateEmail, validatePassword } from "@/lib/utils/validation";
 
 export default function LoginScreen() {
 	const { t } = useTranslation();

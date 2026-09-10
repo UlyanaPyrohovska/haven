@@ -1,19 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
+	Pressable,
 	type StyleProp,
 	StyleSheet,
 	TextInput,
 	type TextInputProps,
-	Pressable,
 	View,
 	type ViewStyle,
 } from "react-native";
-
 import { ThemedText } from "@/components/themed-text";
 import { FontFamily, FontSize, LineHeight, Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
 
 export type TextFieldProps = TextInputProps & {
 	label: string;

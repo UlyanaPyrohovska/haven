@@ -14,7 +14,7 @@ import { MenuCard, MenuDivider, MenuRow } from "@/components/ui/menu-row";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useProfileQuery } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
-import { useSession } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth/client";
 import {
 	profileAge,
 	profileAgeLabel,
@@ -23,8 +23,8 @@ import {
 	profileLookingForLabel,
 	profileSelectedInterests,
 	profileSelfRatings,
-} from "@/lib/profile-display";
-import { ProfilePhotoError, pickProfilePhotoDataUrl, removeProfilePhoto, saveProfilePhoto } from "@/lib/profile-photo";
+} from "@/lib/profile/display";
+import { ProfilePhotoError, pickProfilePhotoDataUrl, removeProfilePhoto, saveProfilePhoto } from "@/lib/profile/photo";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
 	const theme = useTheme();

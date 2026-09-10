@@ -16,14 +16,7 @@ export type MenuRowProps = {
 	disabled?: boolean;
 };
 
-export function MenuRow({
-	label,
-	subtitle,
-	photoUrl,
-	onPress,
-	destructive = false,
-	disabled = false,
-}: MenuRowProps) {
+export function MenuRow({ label, subtitle, photoUrl, onPress, destructive = false, disabled = false }: MenuRowProps) {
 	const theme = useTheme();
 
 	const content = (
@@ -65,11 +58,7 @@ export function MenuRow({
 export function MenuCard({ children }: { children: ReactNode }) {
 	const theme = useTheme();
 
-	return (
-		<View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-			{children}
-		</View>
-	);
+	return <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>{children}</View>;
 }
 
 export function MenuDivider() {

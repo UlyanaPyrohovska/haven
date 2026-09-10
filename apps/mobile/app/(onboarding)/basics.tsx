@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { DateField } from "@/components/ui/date-field";
@@ -19,14 +19,6 @@ import {
 	LookingForOptions,
 	type LookingForValue,
 } from "@/constants/profile-taxonomy";
-import { useTranslation } from "react-i18next";
-import {
-	type DateOfBirthParts,
-	type DateOfBirthResult,
-	evaluateDateOfBirth,
-	MIN_AGE,
-	splitIsoDate,
-} from "@/lib/date-of-birth";
 import { useProfileDraft } from "@/lib/onboarding/profile-draft";
 import {
 	nextOnboardingRoute,
@@ -34,6 +26,13 @@ import {
 	onboardingStepNumber,
 	previousOnboardingRoute,
 } from "@/lib/onboarding/steps";
+import {
+	type DateOfBirthParts,
+	type DateOfBirthResult,
+	evaluateDateOfBirth,
+	MIN_AGE,
+	splitIsoDate,
+} from "@/lib/utils/date-of-birth";
 
 export default function BasicsStep() {
 	const { t } = useTranslation();
@@ -101,8 +100,7 @@ export default function BasicsStep() {
 	};
 
 	const onLookingForChange = (lookingFor: LookingForValue) => {
-		const goal =
-			draft.goal && isGoalValidForLookingFor(draft.goal, lookingFor) ? draft.goal : undefined;
+		const goal = draft.goal && isGoalValidForLookingFor(draft.goal, lookingFor) ? draft.goal : undefined;
 
 		updateDraft({ lookingFor, goal });
 		setErrors((current) => ({ ...current, lookingFor: undefined, goal: undefined }));

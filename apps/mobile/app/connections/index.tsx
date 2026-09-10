@@ -32,8 +32,7 @@ export default function ConnectionsIndexScreen() {
 
 		setCandidateId((current) => {
 			const stillPending =
-				current !== null &&
-				recommendations.data?.recommendations.some((item) => item.candidateId === current);
+				current !== null && recommendations.data?.recommendations.some((item) => item.candidateId === current);
 
 			return stillPending ? current : first.candidateId;
 		});

@@ -1,14 +1,13 @@
 import { Redirect } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { Spacing } from "@/constants/app-config";
 import { useProfileQuery } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
-import { useSession } from "@/lib/auth-client";
-import { useTranslation } from "react-i18next";
+import { useSession } from "@/lib/auth/client";
 
 /**
  * Entry gate: sends signed-out users to login, users mid-signup to onboarding,

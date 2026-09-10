@@ -62,12 +62,7 @@ export const LookingForOptions = [
 ] as const;
 
 /** Exact `goal` values from the synthetic dataset, grouped by mode. */
-export const FriendsGoalOptions = [
-	"To meet new people",
-	"Seemed like fun",
-	"To say I did it",
-	"Other",
-] as const;
+export const FriendsGoalOptions = ["To meet new people", "Seemed like fun", "To say I did it", "Other"] as const;
 
 export const DatingGoalOptions = ["To get a date", "Looking for a serious relationship"] as const;
 

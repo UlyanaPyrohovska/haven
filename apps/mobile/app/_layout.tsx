@@ -14,7 +14,7 @@ import { AnimatedSplash, getReduceMotionEnabled } from "@/components/animated-sp
 import { Colors, FontFamily } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import "@/lib/i18n";
-import { ThemePreferenceProvider } from "@/lib/theme-preference";
+import { ThemePreferenceProvider } from "@/lib/theme/preference";
 
 SplashScreen.preventAutoHideAsync();
 
