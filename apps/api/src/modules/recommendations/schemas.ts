@@ -58,6 +58,8 @@ export const DecisionBodySchema = z
 	})
 	.openapi("DecisionBody");
 
+export type DecisionBody = z.infer<typeof DecisionBodySchema>;
+
 export const DecisionResponseSchema = z
 	.object({
 		matched: z.boolean(),
