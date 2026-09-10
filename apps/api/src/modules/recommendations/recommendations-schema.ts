@@ -14,6 +14,7 @@ export const RecommendationSummarySchema = z
 		rank: z.number().int(),
 		score: z.number(),
 		displayName: z.string(),
+		photoUrl: z.string().url(),
 		ageLabel: z.string().optional(),
 		career: z.string().nullable(),
 		topInterests: z.array(z.string()),
@@ -36,6 +37,7 @@ export const RecommendationDetailSchema = z
 		rank: z.number().int(),
 		score: z.number(),
 		displayName: z.string(),
+		photoUrl: z.string().url(),
 		ageLabel: z.string().optional(),
 		career: z.string().nullable(),
 		bio: z.string().nullable(),
@@ -67,6 +69,7 @@ export const MatchSummarySchema = z
 	.object({
 		candidateId: z.number().int(),
 		displayName: z.string(),
+		photoUrl: z.string().url(),
 		ageLabel: z.string().optional(),
 		topInterests: z.array(z.string()),
 		matchedAt: z.string(),

@@ -2,20 +2,17 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { and, asc, eq, getTableColumns, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { interactions, recommendations, userProfiles } from "@/db/schema";
+import { resolveProfilePhotoUrl } from "@/lib/avatar-url";
 import { createOpenAPIApp } from "@/lib/openapi";
 import {
 	ageLabel,
 	haversineKm,
 	interestLabels,
+	type ProfileRow,
 	profileAge,
 	sharedInterestLabels,
-	type ProfileRow,
 } from "@/lib/profile-view";
-import {
-	DEMO_DAILY_QUESTION,
-	demoPresentation,
-	displayNameForCandidate,
-} from "@/lib/recommendation-demo-data";
+import { DEMO_DAILY_QUESTION, demoPresentation, displayNameForCandidate } from "@/lib/recommendation-demo-data";
 import { getSessionUserId, UNAUTHORIZED } from "@/lib/session";
 import {
 	DecisionBodySchema,
@@ -70,6 +67,7 @@ function summariseCandidate(
 		rank: recommendation.rank ?? 0,
 		score: recommendation.score ?? 0,
 		displayName: displayNameForCandidate(candidate.id),
+		photoUrl: resolveProfilePhotoUrl(candidate),
 		ageLabel: age === undefined ? undefined : ageLabel(age),
 		career: typeof candidate.career === "string" ? candidate.career : null,
 		topInterests: interests.slice(0, 3),
@@ -190,11 +188,7 @@ recommendationsModule.openapi(getRecommendation, async (c) => {
 		return c.json(NOT_FOUND, 404);
 	}
 
-	const summary = summariseCandidate(
-		viewer,
-		row.candidate as ProfileRow & { id: number },
-		row.recommendation,
-	);
+	const summary = summariseCandidate(viewer, row.candidate as ProfileRow & { id: number }, row.recommendation);
 	const distance = haversineKm(
 		viewer.latitude as number | null,
 		viewer.longitude as number | null,
@@ -209,6 +203,7 @@ recommendationsModule.openapi(getRecommendation, async (c) => {
 			rank: summary.rank,
 			score: summary.score,
 			displayName: summary.displayName,
+			photoUrl: summary.photoUrl,
 			ageLabel: summary.ageLabel,
 			career: summary.career,
 			bio: typeof row.candidate.bio === "string" ? row.candidate.bio : null,
@@ -327,10 +322,7 @@ recommendationsModule.openapi(postDecision, async (c) => {
 		});
 	}
 
-	await db
-		.update(recommendations)
-		.set({ actedOn: true })
-		.where(eq(recommendations.id, pending.id));
+	await db.update(recommendations).set({ actedOn: true }).where(eq(recommendations.id, pending.id));
 
 	const [{ count }] = await db
 		.select({ count: sql<number>`count(*)::int` })
@@ -363,12 +355,7 @@ recommendationsModule.openapi(listMatches, async (c) => {
 	const interactionRows = await db
 		.select()
 		.from(interactions)
-		.where(
-			and(
-				eq(interactions.match, true),
-				or(eq(interactions.userA, viewer.id), eq(interactions.userB, viewer.id)),
-			),
-		);
+		.where(and(eq(interactions.match, true), or(eq(interactions.userA, viewer.id), eq(interactions.userB, viewer.id))));
 
 	const matches = await Promise.all(
 		interactionRows.map(async (interaction) => {
@@ -388,6 +375,7 @@ recommendationsModule.openapi(listMatches, async (c) => {
 			return {
 				candidateId,
 				displayName: displayNameForCandidate(candidateId),
+				photoUrl: resolveProfilePhotoUrl({ ...candidate, id: candidateId }),
 				ageLabel: age === undefined ? undefined : ageLabel(age),
 				topInterests: interestLabels(candidate as ProfileRow).slice(0, 3),
 				matchedAt: interaction.createdAt.toISOString(),

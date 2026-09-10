@@ -43,6 +43,7 @@ export default function MatchesScreen() {
 						<View key={match.candidateId}>
 							<MenuRow
 								label={match.displayName}
+								photoUrl={match.photoUrl}
 								subtitle={
 									match.ageLabel
 										? `${match.ageLabel} · ${match.topInterests.join(", ")}`

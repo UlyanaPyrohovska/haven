@@ -6,6 +6,7 @@ export type RecommendationSummary = {
 	rank: number;
 	score: number;
 	displayName: string;
+	photoUrl: string;
 	ageLabel?: string;
 	career: string | null;
 	topInterests: string[];
@@ -26,6 +27,7 @@ export type RecommendationDetail = RecommendationSummary & {
 export type MatchSummary = {
 	candidateId: number;
 	displayName: string;
+	photoUrl: string;
 	ageLabel?: string;
 	topInterests: string[];
 	matchedAt: string;
