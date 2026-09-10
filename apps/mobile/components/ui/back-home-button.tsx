@@ -9,10 +9,12 @@ import { useTranslation } from "react-i18next";
 type BackHomeButtonProps = {
 	/** Defaults to `/home`. */
 	href?: Href;
+	onPress?: () => void;
+	accessibilityLabel?: string;
 };
 
 /** Returns to the home screen — used where the stack has no reliable `router.back()` target. */
-export function BackHomeButton({ href = "/home" }: BackHomeButtonProps) {
+export function BackHomeButton({ href = "/home", onPress, accessibilityLabel }: BackHomeButtonProps) {
 	const router = useRouter();
 	const theme = useTheme();
 	const { t } = useTranslation();
@@ -20,9 +22,9 @@ export function BackHomeButton({ href = "/home" }: BackHomeButtonProps) {
 	return (
 		<Pressable
 			accessibilityRole="button"
-			accessibilityLabel={t("common.backHome")}
+			accessibilityLabel={accessibilityLabel ?? t("common.backHome")}
 			hitSlop={Spacing.sm}
-			onPress={() => router.replace(href)}
+			onPress={onPress ?? (() => router.replace(href))}
 			style={({ pressed }) => [
 				styles.button,
 				{ backgroundColor: theme.field, opacity: pressed ? 0.6 : 1 },
