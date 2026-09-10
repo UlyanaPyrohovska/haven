@@ -1,5 +1,5 @@
-import { authClient } from "@/lib/auth-client";
-import { API_URL } from "@/lib/env";
+import { authClient } from "@/lib/auth/client";
+import { API_URL } from "@/lib/config/env";
 
 /**
  * Fetch against the Haven API with the Better Auth session attached. The cookie is set

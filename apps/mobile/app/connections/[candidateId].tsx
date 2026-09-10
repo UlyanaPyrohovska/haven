@@ -6,11 +6,5 @@ export default function ConnectionDetailScreen() {
 	const params = useLocalSearchParams<{ candidateId: string }>();
 	const candidateId = Number(params.candidateId);
 
-	return (
-		<ConnectionCandidateScreen
-			candidateId={candidateId}
-			exitMode="back"
-			onAdvance={async () => {}}
-		/>
-	);
+	return <ConnectionCandidateScreen candidateId={candidateId} exitMode="back" onAdvance={async () => {}} />;
 }

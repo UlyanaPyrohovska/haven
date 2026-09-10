@@ -1,6 +1,6 @@
 import { useColorScheme as useRNColorScheme } from "react-native";
 
-import { ThemePreference, useThemePreferenceValue } from "@/lib/theme-preference";
+import { ThemePreference, useThemePreferenceValue } from "@/lib/theme/preference";
 
 /** Resolved light/dark scheme after applying the user's appearance preference. */
 export function useColorScheme(): "light" | "dark" {

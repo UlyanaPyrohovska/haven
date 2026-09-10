@@ -1,19 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter, type Href } from "expo-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { type Href, useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-
-import { ThemedText } from "@/components/themed-text";
+import { MoodCard } from "@/components/home/mood-card";
 import { UserAvatar } from "@/components/profile/user-avatar";
+import { ThemedText } from "@/components/themed-text";
 import { Colors, FontFamily, FontSize, Radius, Spacing } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
+import { todayMoodQueryKey } from "@/lib/api/mood";
 import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
-import { useSession } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth/client";
 
 /** Placeholder content until profile and feed APIs are wired up. */
 const DUMMY = {
@@ -116,6 +117,7 @@ export default function HomeScreen() {
 	const colorScheme = useColorScheme();
 	const insets = useSafeAreaInsets();
 	const { width } = useWindowDimensions();
+	const queryClient = useQueryClient();
 	const { data: session } = useSession();
 	const recommendations = useQuery({
 		queryKey: recommendationsQueryKey,
@@ -143,8 +145,13 @@ export default function HomeScreen() {
 				showsVerticalScrollIndicator={false}
 				refreshControl={
 					<RefreshControl
-						refreshing={recommendations.isRefetching}
-						onRefresh={() => recommendations.refetch()}
+						refreshing={recommendations.isRefetching || queryClient.isFetching({ queryKey: todayMoodQueryKey }) > 0}
+						onRefresh={() => {
+							void Promise.all([
+								recommendations.refetch(),
+								queryClient.invalidateQueries({ queryKey: todayMoodQueryKey }),
+							]);
+						}}
 						tintColor={theme.tint}
 						colors={[theme.tint]}
 						progressViewOffset={insets.top}
@@ -186,9 +193,7 @@ export default function HomeScreen() {
 
 				<Pressable
 					accessibilityRole="button"
-					onPress={() =>
-						router.replace((newConnections > 0 ? "/connections" : "/matches") as Href)
-					}
+					onPress={() => router.replace((newConnections > 0 ? "/connections" : "/matches") as Href)}
 					style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
 				>
 					<View style={styles.connectionsBlock}>
@@ -198,9 +203,7 @@ export default function HomeScreen() {
 								{ backgroundColor: theme.accentSoft, borderColor: theme.tint, borderWidth: 2 },
 							]}
 						>
-							<ThemedText style={[styles.connectionsCount, { color: theme.tint }]}>
-								{newConnections}
-							</ThemedText>
+							<ThemedText style={[styles.connectionsCount, { color: theme.tint }]}>{newConnections}</ThemedText>
 						</View>
 						<ThemedText type="label" style={{ color: theme.muted }}>
 							{t("home.newConnections")}
@@ -208,20 +211,7 @@ export default function HomeScreen() {
 					</View>
 				</Pressable>
 
-				<Pressable
-					style={({ pressed }) => [
-						styles.moodCard,
-						{
-							backgroundColor: theme.accentSoft,
-							borderColor: theme.tint,
-							opacity: pressed ? 0.85 : 1,
-						},
-					]}
-				>
-					<ThemedText type="subtitle" style={styles.moodPrompt}>
-						{t("home.moodPrompt")}
-					</ThemedText>
-				</Pressable>
+				<MoodCard />
 
 				<View style={styles.questionSection}>
 					<ThemedText type="label">{t("home.todaysQuestion")}</ThemedText>
@@ -315,18 +305,6 @@ const styles = StyleSheet.create({
 		lineHeight: 64,
 		fontWeight: "600",
 		fontFamily: FontFamily.body,
-	},
-	moodCard: {
-		minHeight: 120,
-		borderRadius: Radius.lg,
-		borderWidth: StyleSheet.hairlineWidth,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: Spacing.xl,
-		paddingVertical: Spacing.xl,
-	},
-	moodPrompt: {
-		textAlign: "center",
 	},
 	questionSection: {
 		gap: Spacing.sm,

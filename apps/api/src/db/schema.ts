@@ -274,6 +274,24 @@ export const friendships = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
+// mood_checkins — one mood per user per calendar day (UTC)
+// ────────────────────────────────────────────────────────────────
+export const moodCheckins = pgTable(
+	"mood_checkins",
+	{
+		id: serial("id").primaryKey(),
+		userProfileId: integer("user_profile_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		mood: smallint("mood").notNull(),
+		checkinDate: date("checkin_date").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => [uniqueIndex("mood_checkins_profile_date_uniq").on(t.userProfileId, t.checkinDate)],
+);
+
+// ────────────────────────────────────────────────────────────────
 // recommendations — audit log of what the system surfaced
 //   critical for the fairness / exposure metrics you'll report on
 // ────────────────────────────────────────────────────────────────

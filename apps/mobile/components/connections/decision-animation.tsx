@@ -40,10 +40,7 @@ export function DecisionOverlay({ kind, onFinished }: DecisionOverlayProps) {
 				runOnJS(onFinished)();
 			}),
 		);
-		ringTwo.value = withDelay(
-			120,
-			withTiming(1, { duration: 560, easing: Easing.out(Easing.cubic) }),
-		);
+		ringTwo.value = withDelay(120, withTiming(1, { duration: 560, easing: Easing.out(Easing.cubic) }));
 		flash.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.quad) });
 	}, [flash, kind, onFinished, ringOne, ringTwo]);
 

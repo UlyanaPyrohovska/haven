@@ -2,8 +2,8 @@ import type { Context } from "hono";
 import { getDb } from "@/db";
 import { errors } from "@/lib/errors";
 import { getSessionUserId } from "@/lib/session";
-import type { ProfileUpdate } from "./schemas";
 import * as repository from "./repository";
+import type { ProfileUpdate } from "./schemas";
 
 export async function requireUserId(c: Context<{ Bindings: CloudflareBindings }>) {
 	const userId = await getSessionUserId(c);

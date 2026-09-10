@@ -1,6 +1,6 @@
 import {
-	type EthnicityValue,
 	EthnicityOptions,
+	type EthnicityValue,
 	type GenderValue,
 	type GoalValue,
 	IMPORTANCE_MAX,
@@ -11,8 +11,8 @@ import {
 	LookingFor,
 	type LookingForValue,
 	lookingForFromGoal,
-	ProfileGoalOptions,
 	type PrefKey,
+	ProfileGoalOptions,
 	SelfDimensions,
 	type SelfKey,
 	TraitDimensions,
@@ -41,9 +41,7 @@ function readEthnicity(value: unknown): EthnicityValue | undefined {
 		return undefined;
 	}
 
-	return EthnicityOptions.some((option) => option.value === ethnicity)
-		? (ethnicity as EthnicityValue)
-		: undefined;
+	return EthnicityOptions.some((option) => option.value === ethnicity) ? (ethnicity as EthnicityValue) : undefined;
 }
 
 function readGoal(value: unknown): GoalValue | undefined {

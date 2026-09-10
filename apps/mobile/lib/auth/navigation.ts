@@ -1,7 +1,7 @@
 import type { Router } from "expo-router";
 
 import { fetchProfile } from "@/lib/api/profile";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth/client";
 
 const SESSION_RETRY_ATTEMPTS = 10;
 const SESSION_RETRY_DELAY_MS = 50;

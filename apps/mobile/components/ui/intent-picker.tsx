@@ -52,10 +52,7 @@ export function IntentPicker({ label, hint, options, value, onChange, error }: I
 								},
 							]}
 						>
-							<ThemedText
-								type="label"
-								style={{ color: selected ? theme.onTint : theme.text, textAlign: "center" }}
-							>
+							<ThemedText type="label" style={{ color: selected ? theme.onTint : theme.text, textAlign: "center" }}>
 								{option.label}
 							</ThemedText>
 							<ThemedText

@@ -4,11 +4,13 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionDock, connectionDockClearance } from "@/components/connections/connection-dock";
 import { type DecisionKind, DecisionOverlay, useDecisionCardStyle } from "@/components/connections/decision-animation";
+import { ProfileBadges } from "@/components/connections/profile-badges";
+import { ProfileHeaderButton } from "@/components/profile/profile-header-button";
 import { ThemedText } from "@/components/themed-text";
 import { BackHomeButton } from "@/components/ui/back-home-button";
 import { Dialog } from "@/components/ui/dialog";
@@ -22,15 +24,6 @@ import {
 	recommendationQueryKey,
 	recommendationsQueryKey,
 } from "@/lib/api/recommendations";
-import { useSession } from "@/lib/auth-client";
-
-function profileInitials(name: string): string {
-	return name
-		.split(/\s+/)
-		.slice(0, 2)
-		.map((part) => part[0]?.toUpperCase() ?? "")
-		.join("");
-}
 
 function InterestTag({ label, inverted = false }: { label: string; inverted?: boolean }) {
 	const theme = useTheme();
@@ -70,8 +63,6 @@ export function ConnectionCandidateScreen({
 	const theme = useTheme();
 	const insets = useSafeAreaInsets();
 	const queryClient = useQueryClient();
-	const { data: session } = useSession();
-
 	const [decisionKind, setDecisionKind] = useState<DecisionKind | null>(null);
 	const [matchedDialog, setMatchedDialog] = useState(false);
 	const [messageDialog, setMessageDialog] = useState(false);
@@ -90,7 +81,6 @@ export function ConnectionCandidateScreen({
 		mutationFn: (decision: DecisionKind) => postRecommendationDecision(candidateId, decision),
 	});
 
-	const viewerInitials = profileInitials(session?.user.name ?? "You");
 	const locationLabel = connection.data?.locationLabel ?? t("home.locationFallback");
 
 	const prefetchNextCandidate = useCallback(async () => {
@@ -203,22 +193,7 @@ export function ConnectionCandidateScreen({
 						</ThemedText>
 					</View>
 
-					<Pressable
-						accessibilityRole="button"
-						onPress={() => router.push("/profile")}
-						style={({ pressed }) => [
-							styles.avatar,
-							{
-								backgroundColor: theme.accentSoft,
-								borderColor: theme.tint,
-								opacity: pressed ? 0.75 : 1,
-							},
-						]}
-					>
-						<ThemedText type="subtitle" style={{ color: theme.tint }}>
-							{viewerInitials.slice(0, 1)}
-						</ThemedText>
-					</Pressable>
+					<ProfileHeaderButton size={40} />
 				</View>
 
 				<ThemedText type="label" style={styles.sectionTitle}>
@@ -235,6 +210,7 @@ export function ConnectionCandidateScreen({
 								{data.displayName}
 							</ThemedText>
 							{data.ageLabel ? <ThemedText style={styles.photoOverlaySubtext}>{data.ageLabel}</ThemedText> : null}
+							<ProfileBadges mood={data.mood} isSynthetic={data.isSynthetic} inverted />
 							<View style={styles.tagRow}>
 								{photoInterests.map((interest) => (
 									<InterestTag key={interest} label={interest} inverted />
@@ -332,14 +308,6 @@ const styles = StyleSheet.create({
 	},
 	locationText: {
 		fontWeight: "500",
-	},
-	avatar: {
-		width: 40,
-		height: 40,
-		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
-		alignItems: "center",
-		justifyContent: "center",
 	},
 	sectionTitle: {
 		marginTop: Spacing.sm,

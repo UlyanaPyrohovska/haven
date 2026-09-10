@@ -1,20 +1,15 @@
-import { StyleSheet, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
-
+import { useTranslation } from "react-i18next";
+import { StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { FormScreen } from "@/components/ui/form-screen";
 import { MenuCard, MenuDivider, MenuRow } from "@/components/ui/menu-row";
 import { Spacing } from "@/constants/app-config";
-import { signOut } from "@/lib/auth-client";
-import { useTranslation } from "react-i18next";
-import {
-	ThemePreference,
-	type ThemePreferenceValue,
-	useThemePreference,
-} from "@/lib/theme-preference";
+import { signOut } from "@/lib/auth/client";
+import { ThemePreference, type ThemePreferenceValue, useThemePreference } from "@/lib/theme/preference";
 
 export default function ProfileSettingsScreen() {
 	const { t } = useTranslation();

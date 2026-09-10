@@ -4,7 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Radius } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { profileInitials } from "@/lib/profile-display";
+import { profileInitials } from "@/lib/profile/display";
 
 type UserAvatarProps = {
 	imageUrl?: string | null;
@@ -31,14 +31,7 @@ export function UserAvatar({ imageUrl, name, size = 88, style }: UserAvatarProps
 	}
 
 	return (
-		<View
-			style={[
-				styles.avatar,
-				dimension,
-				{ backgroundColor: theme.accentSoft, borderColor: theme.tint },
-				style,
-			]}
-		>
+		<View style={[styles.avatar, dimension, { backgroundColor: theme.accentSoft, borderColor: theme.tint }, style]}>
 			<ThemedText type="title" style={{ color: theme.tint, fontSize: Math.round(size * 0.32) }}>
 				{initials}
 			</ThemedText>

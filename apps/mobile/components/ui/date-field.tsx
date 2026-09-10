@@ -4,7 +4,7 @@ import { type StyleProp, StyleSheet, TextInput, type TextStyle, View } from "rea
 import { ThemedText } from "@/components/themed-text";
 import { FontFamily, FontSize, LineHeight, Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import type { DateOfBirthParts } from "@/lib/date-of-birth";
+import type { DateOfBirthParts } from "@/lib/utils/date-of-birth";
 
 export type DateFieldProps = {
 	label: string;

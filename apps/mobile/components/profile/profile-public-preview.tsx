@@ -1,13 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { ThemedText } from "@/components/themed-text";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { profileInitials } from "@/lib/profile-display";
-import { useTranslation } from "react-i18next";
+import { profileInitials } from "@/lib/profile/display";
 
 type ProfilePublicPreviewProps = {
 	visible: boolean;
@@ -74,10 +73,7 @@ export function ProfilePublicPreview({
 							accessibilityRole="button"
 							accessibilityLabel={t("profile.preview.close")}
 							onPress={onClose}
-							style={({ pressed }) => [
-								styles.iconButton,
-								{ backgroundColor: theme.field, opacity: pressed ? 0.7 : 1 },
-							]}
+							style={({ pressed }) => [styles.iconButton, { backgroundColor: theme.field, opacity: pressed ? 0.7 : 1 }]}
 						>
 							<Ionicons name="close" size={22} color={theme.text} />
 						</Pressable>

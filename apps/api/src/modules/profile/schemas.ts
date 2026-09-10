@@ -5,8 +5,8 @@ import {
 	FriendsGoals,
 	isGoalValidForLookingFor,
 	LookingFor,
-	ProfileGoals,
 	type LookingForValue,
+	ProfileGoals,
 } from "@/lib/looking-for";
 
 /** `interest_*` and `self_*` columns are 1–10 Likert values; null means "not answered". */

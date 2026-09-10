@@ -8,6 +8,21 @@
 		"greeting": "Hello {{name}}",
 		"newConnections": "New Connections",
 		"moodPrompt": "What is your mood today?",
+		"mood": {
+			"accessibilityLabel": "Check in with your mood",
+			"checkInHint": "Tap to check in",
+			"updateHint": "Tap to update",
+			"save": "Save mood",
+			"saveError": "Couldn't save your mood. Try again.",
+			"options": {
+				"happy": "Happy",
+				"calm": "Calm",
+				"excited": "Excited",
+				"tired": "Tired",
+				"low": "Low",
+				"stressed": "Stressed"
+			}
+		},
 		"todaysQuestion": "Today's Question",
 		"responsePlaceholder": "Write your response...",
 		"profileAccessibilityLabel": "View profile",
@@ -16,6 +31,8 @@
 	},
 	"connections": {
 		"title": "Profile Details",
+		"aiAgentBadge": "AI agent",
+		"realPersonBadge": "Real person",
 		"whyMatched": "Why you've matched?",
 		"crossPaths_one": "You have crossed paths {{count}} time this week!",
 		"crossPaths_other": "You have crossed paths {{count}} times this week!",
@@ -106,6 +123,7 @@
 		"continue": "Continue",
 		"finish": "Finish",
 		"optional": "Optional",
+		"close": "Close",
 		"retry": "Try again",
 		"signOut": "Sign out",
 		"skip": "Skip for now"

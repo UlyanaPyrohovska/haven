@@ -1,7 +1,7 @@
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-
 import { BrandHero } from "@/components/brand-hero";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,16 @@ import { FormScreen } from "@/components/ui/form-screen";
 import { TextField } from "@/components/ui/text-field";
 import { Spacing, TextStyles } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
-import { signUp } from "@/lib/auth-client";
-import { describeAuthError } from "@/lib/auth-errors";
-import { isAuthenticatedResult, refreshAuthSession } from "@/lib/auth-navigation";
+import { signUp } from "@/lib/auth/client";
+import { describeAuthError } from "@/lib/auth/errors";
+import { isAuthenticatedResult, refreshAuthSession } from "@/lib/auth/navigation";
 import {
 	type ValidationError,
 	validateConfirmPassword,
 	validateEmail,
 	validateName,
 	validatePassword,
-} from "@/lib/validation";
+} from "@/lib/utils/validation";
 
 type RegisterErrors = {
 	name?: ValidationError;

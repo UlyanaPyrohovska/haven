@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { ChipGroup, MultiChipGroup } from "@/components/ui/chip-group";
@@ -33,10 +33,9 @@ import {
 } from "@/constants/profile-taxonomy";
 import { profileQueryKey, useProfileQuery } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
 import { saveProfile } from "@/lib/api/profile";
-import { profileRecordToDraft } from "@/lib/profile-draft-from-record";
 import type { ProfileDraft } from "@/lib/onboarding/profile-draft";
+import { profileRecordToDraft } from "@/lib/profile/draft-from-record";
 
 const BIO_MIN_LENGTH = 20;
 
@@ -52,10 +51,7 @@ export default function ProfileEditScreen() {
 	const queryClient = useQueryClient();
 	const theme = useTheme();
 	const profile = useProfileQuery(true);
-	const initialDraft = useMemo(
-		() => (profile.data ? profileRecordToDraft(profile.data) : null),
-		[profile.data],
-	);
+	const initialDraft = useMemo(() => (profile.data ? profileRecordToDraft(profile.data) : null), [profile.data]);
 	const [draft, setDraft] = useState<ProfileDraft | null>(null);
 	const [errors, setErrors] = useState<{ bio?: string; interests?: string }>({});
 
@@ -102,8 +98,7 @@ export default function ProfileEditScreen() {
 				return current;
 			}
 
-			const goal =
-				current.goal && isGoalValidForLookingFor(current.goal, lookingFor) ? current.goal : undefined;
+			const goal = current.goal && isGoalValidForLookingFor(current.goal, lookingFor) ? current.goal : undefined;
 
 			return { ...current, lookingFor, goal };
 		});
@@ -124,9 +119,7 @@ export default function ProfileEditScreen() {
 	};
 
 	const setPartnerImportance = (key: PrefKey, value: number) => {
-		setDraft((current) =>
-			current ? { ...current, partner: { ...current.partner, [key]: value } } : current,
-		);
+		setDraft((current) => (current ? { ...current, partner: { ...current.partner, [key]: value } } : current));
 	};
 
 	const setSelfRating = (key: SelfKey, value: number) => {
@@ -151,9 +144,7 @@ export default function ProfileEditScreen() {
 		submit.mutate();
 	};
 
-	const partnerComplete = TraitDimensions.every(
-		(dimension) => draft.partner[dimension.prefKey] !== undefined,
-	);
+	const partnerComplete = TraitDimensions.every((dimension) => draft.partner[dimension.prefKey] !== undefined);
 	const selfComplete = SelfDimensions.every((dimension) => draft.self[dimension.selfKey] !== undefined);
 
 	return (
