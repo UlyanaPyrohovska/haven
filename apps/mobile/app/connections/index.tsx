@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Redirect, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
 import { useTheme } from "@/hooks/use-theme";
-import { useTranslation } from "react-i18next";
 import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
 
 export default function ConnectionsIndexScreen() {

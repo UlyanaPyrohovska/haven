@@ -125,3 +125,9 @@ export const ErrorSchema = z
 		message: z.string(),
 	})
 	.openapi("Error");
+
+export const ProfileResponseSchema = z
+	.object({
+		profile: z.record(z.string(), z.unknown()).nullable(),
+	})
+	.openapi("ProfileResponse");

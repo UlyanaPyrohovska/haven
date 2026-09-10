@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { createAuth } from "@/lib/auth";
+import { errorHandler } from "@/lib/http/errors";
 import { validationErrorHook } from "./validation";
 
 const OPEN_API_CONFIG = {
@@ -10,9 +11,19 @@ const OPEN_API_CONFIG = {
 };
 
 export function createOpenAPIApp() {
-	return new OpenAPIHono<{ Bindings: CloudflareBindings }>({
+	const app = new OpenAPIHono<{ Bindings: CloudflareBindings }>({
 		defaultHook: validationErrorHook,
 	});
+
+	app.use("*", async (c, next) => {
+		try {
+			await next();
+		} catch (err) {
+			return errorHandler(err, c);
+		}
+	});
+
+	return app;
 }
 
 export type App = ReturnType<typeof createOpenAPIApp>;
