@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
@@ -49,17 +48,10 @@ type ConnectionCandidateScreenProps = {
 	candidateId: number;
 	/** Called after the decision animation (or match dialog) when browsing should advance. */
 	onAdvance: (remainingCount: number) => Promise<void>;
-	/** When opened from matches, back returns to the previous screen instead of home. */
-	exitMode?: "home" | "back";
 };
 
-export function ConnectionCandidateScreen({
-	candidateId,
-	onAdvance,
-	exitMode = "home",
-}: ConnectionCandidateScreenProps) {
+export function ConnectionCandidateScreen({ candidateId, onAdvance }: ConnectionCandidateScreenProps) {
 	const { t } = useTranslation();
-	const router = useRouter();
 	const theme = useTheme();
 	const insets = useSafeAreaInsets();
 	const queryClient = useQueryClient();
@@ -136,15 +128,6 @@ export function ConnectionCandidateScreen({
 		});
 	};
 
-	const onBack = () => {
-		if (exitMode === "back") {
-			router.back();
-			return;
-		}
-
-		router.replace("/home");
-	};
-
 	if (connection.isPending || !Number.isFinite(candidateId)) {
 		return (
 			<View style={[styles.centered, { backgroundColor: theme.background }]}>
@@ -180,11 +163,7 @@ export function ConnectionCandidateScreen({
 				showsVerticalScrollIndicator={false}
 			>
 				<View style={styles.header}>
-					{exitMode === "back" ? (
-						<BackHomeButton onPress={onBack} accessibilityLabel={t("common.back")} />
-					) : (
-						<BackHomeButton />
-					)}
+					<BackHomeButton accessibilityLabel={t("common.back")} />
 
 					<View style={[styles.locationPill, { backgroundColor: theme.surface, borderColor: theme.border }]}>
 						<Ionicons name="location-outline" size={14} color={theme.icon} />

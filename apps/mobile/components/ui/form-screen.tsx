@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useNavigation } from "expo-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -8,7 +8,6 @@ import { ThemedText } from "@/components/themed-text";
 import { StepProgress } from "@/components/ui/step-progress";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-
 export type FormScreenHeaderButtonProps = {
 	accessibilityLabel: string;
 	onPress: () => void;
@@ -38,7 +37,7 @@ export type FormScreenProps = {
 	hero?: ReactNode;
 	/** Vertically centres the content and centre-aligns its text. Used by login and register. */
 	centered?: boolean;
-	/** Renders a back chevron; defaults to `router.back()` when no handler is given. */
+	/** Renders a back chevron; defaults to a native stack pop when no handler is given. */
 	showBack?: boolean;
 	onBack?: () => void;
 	/** Optional action rendered opposite the back button, e.g. a preview icon. */
@@ -65,7 +64,7 @@ export function FormScreen({
 }: FormScreenProps) {
 	const theme = useTheme();
 	const insets = useSafeAreaInsets();
-	const router = useRouter();
+	const navigation = useNavigation();
 	const { t } = useTranslation();
 
 	return (
@@ -87,7 +86,7 @@ export function FormScreen({
 					<View style={styles.headerRow}>
 						<View style={styles.headerSideStart}>
 							{showBack ? (
-								<FormScreenHeaderButton accessibilityLabel={t("common.back")} onPress={onBack ?? (() => router.back())}>
+								<FormScreenHeaderButton accessibilityLabel={t("common.back")} onPress={onBack ?? (() => navigation.goBack())}>
 									<Ionicons name="chevron-back" size={20} color={theme.text} />
 								</FormScreenHeaderButton>
 							) : null}

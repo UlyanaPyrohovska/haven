@@ -193,7 +193,7 @@ export default function HomeScreen() {
 
 				<Pressable
 					accessibilityRole="button"
-					onPress={() => router.replace((newConnections > 0 ? "/connections" : "/matches") as Href)}
+					onPress={() => router.push((newConnections > 0 ? "/connections" : "/matches") as Href)}
 					style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
 				>
 					<View style={styles.connectionsBlock}>

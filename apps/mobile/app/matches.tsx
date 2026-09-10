@@ -25,7 +25,6 @@ export default function MatchesScreen() {
 			title={t("matches.title")}
 			subtitle={t("matches.subtitle")}
 			showBack
-			onBack={() => router.replace("/home")}
 			headerRight={<ProfileHeaderButton />}
 		>
 			{matches.isPending ? (

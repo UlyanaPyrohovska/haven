@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type Href, useRouter } from "expo-router";
+import { useNavigation } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
@@ -9,10 +9,9 @@ import { Button } from "@/components/ui/button";
 import { FormScreen } from "@/components/ui/form-screen";
 import { useTheme } from "@/hooks/use-theme";
 import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
-
 export default function ConnectionsIndexScreen() {
 	const { t } = useTranslation();
-	const router = useRouter();
+	const navigation = useNavigation();
 	const theme = useTheme();
 	const queryClient = useQueryClient();
 	const [candidateId, setCandidateId] = useState<number | null>(null);
@@ -55,10 +54,10 @@ export default function ConnectionsIndexScreen() {
 			setCandidateId(null);
 
 			if (remainingCount === 0) {
-				router.replace("/home" as Href);
+				navigation.goBack();
 			}
 		},
-		[queryClient, router],
+		[navigation, queryClient],
 	);
 
 	if (recommendations.isPending) {
@@ -71,7 +70,7 @@ export default function ConnectionsIndexScreen() {
 
 	if (recommendations.isError) {
 		return (
-			<FormScreen title={t("connections.title")} showBack onBack={() => router.replace("/home")}>
+			<FormScreen title={t("connections.title")} showBack>
 				<ThemedText type="link" onPress={() => recommendations.refetch()}>
 					{t("common.retry")}
 				</ThemedText>
@@ -85,9 +84,8 @@ export default function ConnectionsIndexScreen() {
 				title={t("connections.emptyTitle")}
 				subtitle={t("connections.emptySubtitle")}
 				showBack
-				onBack={() => router.replace("/home")}
 			>
-				<Button label={t("connections.backHome")} onPress={() => router.replace("/home")} />
+				<Button label={t("connections.backHome")} onPress={() => navigation.goBack()} />
 			</FormScreen>
 		);
 	}
