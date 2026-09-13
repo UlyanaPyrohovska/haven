@@ -36,6 +36,8 @@ export function buildProfilePayload(draft: ProfileDraft): ProfilePayload {
 	const payload: ProfilePayload = {
 		birthDate: draft.birthDate ?? null,
 		gender: draft.gender ?? null,
+		ethnicity: draft.ethnicity ?? null,
+		lookingFor: draft.lookingFor ?? null,
 		career: draft.career.trim() || null,
 		goal: draft.goal ?? null,
 		bio: draft.bio.trim() || null,

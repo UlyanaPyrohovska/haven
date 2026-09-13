@@ -105,7 +105,7 @@ the email before anything else this week.
 
 Sequential path from empty project to a seeded database with tables.
 
-### `[~]` B1 — chore(db): create Neon project + DATABASE_URL in .env
+### `[x]` B1 — chore(db): create Neon project + DATABASE_URL in .env
 
 - **Labels**: `type:chore` `area:db` `prio:P0`
 - **Description**: Provision a Neon Postgres project in EU region and record the connection string.
@@ -127,7 +127,7 @@ Sequential path from empty project to a seeded database with tables.
 
 ---
 
-### `[ ]` B2 — chore(db): set up Drizzle ORM with migrations
+### `[~]` B2 — chore(db): set up Drizzle ORM with migrations
 
 - **Labels**: `type:chore` `area:db` `prio:P0`
 - **Description**: Install and configure Drizzle ORM against Neon, with a factory client for use inside Cloudflare Workers.
@@ -152,7 +152,7 @@ Sequential path from empty project to a seeded database with tables.
 
 ---
 
-### `[ ]` B3 — feat(db): design initial schema
+### `[x]` B3 — feat(db): design initial schema
 
 - **Labels**: `type:feature` `area:db` `prio:P0`
 - **Description**: Define the core tables that mirror the synthetic CSV structure plus a table for embeddings.
@@ -177,7 +177,7 @@ Sequential path from empty project to a seeded database with tables.
 
 ---
 
-### `[ ]` B4 — chore(db): seed database from synthetic CSVs
+### `[x]` B4 — chore(db): seed database from synthetic CSVs
 
 - **Labels**: `type:chore` `area:db` `prio:P0`
 - **Description**: Load the three CSVs (users, interactions, friendships) into Neon in one script.
@@ -236,7 +236,7 @@ Sequential path from empty project to a seeded database with tables.
 
 ---
 
-### `[ ]` C3 — feat(api): set up Better Auth
+### `[x]` C3 — feat(api): set up Better Auth
 
 - **Labels**: `type:feature` `area:api` `prio:P1`
 - **Description**: Install and configure Better Auth with the Drizzle adapter. Let Better Auth own the auth tables (`user`, `session`, `account`, `verification`), generated via its CLI. Wire the auth handler into Hono at `/api/auth/**`. Enable email + password by default; leave magic-link config drafted but disabled until the email-delivery decision (C3b) is made.
@@ -287,7 +287,7 @@ Sequential path from empty project to a seeded database with tables.
 
 ---
 
-### `[ ]` C4 — feat(api): user profile CRUD endpoints
+### `[x]` C4 — feat(api): user profile CRUD endpoints
 
 - **Labels**: `type:feature` `area:api` `prio:P1`
 - **Description**: Endpoints for the authenticated user to read and update their own profile (bio, interests, location).
@@ -335,7 +335,7 @@ Sequential path from empty project to a seeded database with tables.
 
 ## Track D — Mobile
 
-### `[ ]` D0 — feat(app): add splash screen with initial logo
+### `[x]` D0 — feat(app): add splash screen with initial logo
 
 - **Labels**: `type:feature` `area:mobile` `prio:P1`
 - **Description**: Show the Haven brand on launch: a native splash (solid background) followed by a short animated intro with the boat logo and “Haven” wordmark, then fade into the app shell. This is the first branded moment users see and should run before any navigation or auth flows land.
@@ -379,7 +379,7 @@ Sequential path from empty project to a seeded database with tables.
 
 ---
 
-### `[ ]` D2 — feat(mobile): auth screens (signup, login)
+### `[x]` D2 — feat(mobile): auth screens (signup, login)
 
 - **Labels**: `type:feature` `area:mobile` `prio:P1`
 - **Description**: Branded login and signup screens that authenticate against the Better Auth API (`/auth/**`) via the Expo client plugin. On success, persist the session in SecureStore and route the user into the app shell (tabs once D1 lands; placeholder home until then). This is the first interactive screen after the splash and the gate for all authenticated flows.
@@ -418,7 +418,7 @@ Sequential path from empty project to a seeded database with tables.
 
 ---
 
-### `[ ]` D3 — feat(mobile): profile creation flow
+### `[~]` D3 — feat(mobile): profile creation flow
 
 - **Labels**: `type:feature` `area:mobile` `prio:P1`
 - **Description**: First-run flow where the user fills in bio, selects interests from the 17-category taxonomy, and grants location permission.

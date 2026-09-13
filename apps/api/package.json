@@ -2,7 +2,7 @@
 	"name": "api",
 	"type": "module",
 	"scripts": {
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --ip 0.0.0.0",
 		"deploy": "wrangler deploy --minify",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"db:generate": "drizzle-kit generate",
@@ -10,7 +10,8 @@
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"db:visualizer": "drizzle-lab visualizer -c drizzle.config.ts -e .env --ts-config tsconfig.json",
-		"db:seed": "tsx scripts/seed.ts"
+		"db:seed": "tsx scripts/seed.ts",
+		"db:seed-recommendations": "tsx scripts/seed-recommendations.ts"
 	},
 	"dependencies": {
 		"@better-auth/expo": "^1.6.23",

@@ -1,12 +1,22 @@
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 
-import type { GenderValue, GoalValue, InterestKey, PrefKey, SelfKey } from "@/constants/profile-taxonomy";
+import type {
+	EthnicityValue,
+	GenderValue,
+	GoalValue,
+	InterestKey,
+	LookingForValue,
+	PrefKey,
+	SelfKey,
+} from "@/constants/profile-taxonomy";
 
 /** Mirrors the `user_profiles` columns the onboarding flow collects. */
 export type ProfileDraft = {
 	/** `YYYY-MM-DD`, matching the `birth_date` column. Age is derived, never stored. */
 	birthDate: string | undefined;
 	gender: GenderValue | undefined;
+	ethnicity: EthnicityValue | undefined;
+	lookingFor: LookingForValue | undefined;
 	career: string;
 	goal: GoalValue | undefined;
 	bio: string;
@@ -20,6 +30,8 @@ export type ProfileDraft = {
 const emptyDraft: ProfileDraft = {
 	birthDate: undefined,
 	gender: undefined,
+	ethnicity: undefined,
+	lookingFor: undefined,
 	career: "",
 	goal: undefined,
 	bio: "",

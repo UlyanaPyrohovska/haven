@@ -2,11 +2,12 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import Papa from "papaparse";
 import pg from "pg";
 import { friendships, interactions, userProfiles } from "../src/db/schema";
+import { lookingForFromGoal } from "../src/lib/looking-for";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const apiRoot = resolve(scriptDir, "..");
@@ -90,6 +91,7 @@ function mapUserRow(row: CsvRow) {
 		birthDate: birthDateFromAge(parseIntField(row, "age")),
 		ethnicity: row.ethnicity,
 		career: row.career,
+		lookingFor: lookingForFromGoal(row.goal),
 		goal: row.goal,
 		latitude: parseFloatField(row, "latitude"),
 		longitude: parseFloatField(row, "longitude"),
@@ -193,16 +195,23 @@ async function main() {
 	const db = drizzle(pool);
 
 	try {
-		console.log("Truncating synthetic tables…");
+		const [beforeReal] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(userProfiles)
+			.where(eq(userProfiles.isSynthetic, false));
+
+		console.log("Clearing synthetic dataset…");
+		// Derived tables only reference synthetic profile ids (1–2000). Real onboarding
+		// profiles (`is_synthetic = false`) are left untouched.
 		await db.execute(sql`
 			TRUNCATE TABLE
 				recommendations,
 				user_embeddings,
 				interactions,
-				friendships,
-				user_profiles
-			RESTART IDENTITY CASCADE
+				friendships
+			RESTART IDENTITY
 		`);
+		await db.delete(userProfiles).where(eq(userProfiles.isSynthetic, true));
 
 		console.log("Inserting user profiles…");
 		await batchInsert("user_profiles", userRows, async (batch) => {
@@ -219,21 +228,42 @@ async function main() {
 			await db.insert(friendships).values(batch);
 		});
 
-		const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(userProfiles);
+		// Explicit ids (1–2000) do not advance the serial sequence; without this, the next
+		// real profile insert would reuse an existing id and fail with a PK violation.
+		await db.execute(sql`
+			SELECT setval(
+				pg_get_serial_sequence('user_profiles', 'id'),
+				COALESCE((SELECT MAX(id) FROM user_profiles), 1)
+			)
+		`);
+
+		const [syntheticCount] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(userProfiles)
+			.where(eq(userProfiles.isSynthetic, true));
+		const [realCount] = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(userProfiles)
+			.where(eq(userProfiles.isSynthetic, false));
 		const [interactionCount] = await db.select({ count: sql<number>`count(*)::int` }).from(interactions);
 		const [friendshipCount] = await db.select({ count: sql<number>`count(*)::int` }).from(friendships);
 
 		console.log("\nSeed complete:");
-		console.log(`  user_profiles: ${userCount.count}`);
-		console.log(`  interactions:  ${interactionCount.count}`);
-		console.log(`  friendships:   ${friendshipCount.count}`);
+		console.log(`  user_profiles (synthetic): ${syntheticCount.count}`);
+		console.log(`  user_profiles (real):      ${realCount.count}`);
+		console.log(`  interactions:              ${interactionCount.count}`);
+		console.log(`  friendships:               ${friendshipCount.count}`);
+
+		if (realCount.count !== beforeReal.count) {
+			throw new Error(`Real profile count changed during seed (${beforeReal.count} → ${realCount.count})`);
+		}
 
 		if (
-			userCount.count !== EXPECTED_COUNTS.users ||
+			syntheticCount.count !== EXPECTED_COUNTS.users ||
 			interactionCount.count !== EXPECTED_COUNTS.interactions ||
 			friendshipCount.count !== EXPECTED_COUNTS.friendships
 		) {
-			throw new Error("Post-seed row counts do not match the source CSVs");
+			throw new Error("Post-seed synthetic row counts do not match the source CSVs");
 		}
 	} finally {
 		await pool.end();

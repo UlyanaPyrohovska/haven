@@ -1,4 +1,4 @@
-import { Strings } from "@/constants/strings";
+import i18n from "@/lib/i18n";
 
 export type AuthErrorLike = {
 	code?: string | undefined;
@@ -9,24 +9,24 @@ export type AuthErrorLike = {
 /** Maps a Better Auth client error onto user-facing copy. */
 export function describeAuthError(error: AuthErrorLike | null | undefined): string {
 	if (!error) {
-		return Strings.auth.errors.generic;
+		return i18n.t("auth.errors.generic");
 	}
 
 	switch (error.code) {
 		case "INVALID_EMAIL_OR_PASSWORD":
 		case "INVALID_PASSWORD":
-			return Strings.auth.errors.invalidCredentials;
+			return i18n.t("auth.errors.invalidCredentials");
 		case "USER_ALREADY_EXISTS":
 		case "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL":
-			return Strings.auth.errors.emailTaken;
+			return i18n.t("auth.errors.emailTaken");
 		default:
 			break;
 	}
 
 	// A failed request never reaches the server, so it carries no HTTP status.
 	if (!error.status) {
-		return Strings.auth.errors.network;
+		return i18n.t("auth.errors.network");
 	}
 
-	return Strings.auth.errors.generic;
+	return i18n.t("auth.errors.generic");
 }

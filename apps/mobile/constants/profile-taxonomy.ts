@@ -38,16 +38,69 @@ export const GenderOptions = [
 
 export type GenderValue = (typeof GenderOptions)[number]["value"];
 
-/** `goal` is free-text varchar(100); these are the values the app offers. */
-export const GoalOptions = [
-	"Make new friends",
-	"Find a relationship",
-	"Meet people nearby",
-	"Share a hobby",
-	"Something casual",
+/** Primary matching mode — friends and dating never cross in recommendations. */
+export const LookingFor = {
+	friends: 0,
+	dating: 1,
+} as const;
+
+export type LookingForValue = (typeof LookingFor)[keyof typeof LookingFor];
+
+export const LookingForOptions = [
+	{
+		value: LookingFor.friends,
+		label: "Friends",
+		subtitle: "Meet people platonically — no romance",
+		badge: "Here for friends",
+	},
+	{
+		value: LookingFor.dating,
+		label: "Dating",
+		subtitle: "Romantic connections",
+		badge: "Here for dating",
+	},
 ] as const;
 
-export type GoalValue = (typeof GoalOptions)[number];
+/** Exact `goal` values from the synthetic dataset, grouped by mode. */
+export const FriendsGoalOptions = ["To meet new people", "Seemed like fun", "To say I did it", "Other"] as const;
+
+export const DatingGoalOptions = ["To get a date", "Looking for a serious relationship"] as const;
+
+export const ProfileGoalOptions = [...FriendsGoalOptions, ...DatingGoalOptions] as const;
+
+export type FriendsGoalValue = (typeof FriendsGoalOptions)[number];
+export type DatingGoalValue = (typeof DatingGoalOptions)[number];
+export type GoalValue = (typeof ProfileGoalOptions)[number];
+
+const datingGoalSet = new Set<string>(DatingGoalOptions);
+
+export function lookingForFromGoal(goal: string): LookingForValue {
+	return datingGoalSet.has(goal) ? LookingFor.dating : LookingFor.friends;
+}
+
+export function goalOptionsForLookingFor(lookingFor: LookingForValue): readonly { value: GoalValue; label: string }[] {
+	const options = lookingFor === LookingFor.dating ? DatingGoalOptions : FriendsGoalOptions;
+
+	return options.map((goal) => ({ value: goal, label: goal }));
+}
+
+export function isGoalValidForLookingFor(goal: GoalValue, lookingFor: LookingForValue): boolean {
+	return (goalOptionsForLookingFor(lookingFor) as readonly { value: GoalValue }[]).some(
+		(option) => option.value === goal,
+	);
+}
+
+/** Distinct `ethnicity` values from the synthetic dataset; stored verbatim for matching. */
+export const EthnicityOptions = [
+	{ value: "Asian/Pacific Islander", label: "Asian / Pacific Islander" },
+	{ value: "Black/African American", label: "Black / African American" },
+	{ value: "European/Caucasian-American", label: "European / Caucasian" },
+	{ value: "Latino/Hispanic American", label: "Latino / Hispanic" },
+	{ value: "Native American", label: "Native American" },
+	{ value: "Other", label: "Other" },
+] as const;
+
+export type EthnicityValue = (typeof EthnicityOptions)[number]["value"];
 
 /** The 17 `interest_*` columns, grouped only to break up the pick-list visually. */
 export const InterestCategories = [

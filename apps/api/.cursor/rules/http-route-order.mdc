@@ -1,0 +1,33 @@
+---
+description: Order HTTP route handlers GET → POST → PUT → PATCH → DELETE
+globs: apps/api/src/modules/**/{index,routes,service}.ts
+alwaysApply: false
+---
+
+# HTTP route method order
+
+When adding or reordering routes in API modules, use this method order:
+
+1. **GET**
+2. **POST**
+3. **PUT**
+4. **PATCH**
+5. **DELETE**
+
+Apply in:
+
+- `routes.ts` — exported `createRoute` definitions
+- `index.ts` — `app.openapi(...)` registrations
+- `service.ts` — exported handlers (same order when practical)
+
+Within each method, sort by path specificity: static paths (`/recommendations`, `/matches`) before param paths (`/{candidateId}`).
+
+Do not interleave methods (e.g. PATCH between GET and POST).
+
+```typescript
+// GET → POST
+app.openapi(getItemsRoute, ...);
+app.openapi(getMatchesRoute, ...);
+app.openapi(getItemRoute, ...);
+app.openapi(postItemRoute, ...);
+```

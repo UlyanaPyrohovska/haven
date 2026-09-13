@@ -1,5 +1,13 @@
 import { z } from "@hono/zod-openapi";
 import { ageFromBirthDate, MAX_AGE, MIN_AGE, parseIsoDate } from "@/lib/age";
+import {
+	DatingGoals,
+	FriendsGoals,
+	isGoalValidForLookingFor,
+	LookingFor,
+	type LookingForValue,
+	ProfileGoals,
+} from "@/lib/looking-for";
 
 /** `interest_*` and `self_*` columns are 1–10 Likert values; null means "not answered". */
 const likert = z.number().int().min(1).max(10).nullable().optional();
@@ -36,12 +44,28 @@ const points = z.number().min(0).max(100).optional();
 
 const nullableText = (max: number) => z.string().trim().max(max).nullable().optional();
 
+/** Distinct values from the synthetic dataset; kept in sync with mobile `EthnicityOptions`. */
+const ethnicityValues = [
+	"Asian/Pacific Islander",
+	"Black/African American",
+	"European/Caucasian-American",
+	"Latino/Hispanic American",
+	"Native American",
+	"Other",
+] as const;
+
+const lookingFor = z.union([z.literal(LookingFor.friends), z.literal(LookingFor.dating)]).optional();
+
+const goal = z.enum(ProfileGoals).nullable().optional();
+
 export const ProfileUpdateSchema = z
 	.object({
 		birthDate,
 		gender: z.number().int().min(0).max(1).nullable().optional(),
+		ethnicity: z.enum(ethnicityValues).nullable().optional(),
 		career: nullableText(100),
-		goal: nullableText(100),
+		lookingFor,
+		goal,
 		bio: nullableText(2000),
 
 		interestSports: likert,
@@ -76,6 +100,21 @@ export const ProfileUpdateSchema = z
 		selfAmb: likert,
 		selfShar: likert,
 	})
+	.superRefine((value, ctx) => {
+		if (value.lookingFor === undefined || value.goal == null) {
+			return;
+		}
+
+		if (!isGoalValidForLookingFor(value.goal, value.lookingFor as LookingForValue)) {
+			const allowed = value.lookingFor === LookingFor.dating ? DatingGoals : FriendsGoals;
+
+			ctx.addIssue({
+				code: "custom",
+				path: ["goal"],
+				message: `Goal must match lookingFor. Expected one of: ${allowed.join(", ")}`,
+			});
+		}
+	})
 	.openapi("ProfileUpdate");
 
 export type ProfileUpdate = z.infer<typeof ProfileUpdateSchema>;
@@ -86,3 +125,9 @@ export const ErrorSchema = z
 		message: z.string(),
 	})
 	.openapi("Error");
+
+export const ProfileResponseSchema = z
+	.object({
+		profile: z.record(z.string(), z.unknown()).nullable(),
+	})
+	.openapi("ProfileResponse");

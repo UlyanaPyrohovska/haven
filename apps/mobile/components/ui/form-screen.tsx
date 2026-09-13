@@ -1,14 +1,34 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useNavigation } from "expo-router";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { ThemedText } from "@/components/themed-text";
 import { StepProgress } from "@/components/ui/step-progress";
 import { Radius, Spacing } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
+export type FormScreenHeaderButtonProps = {
+	accessibilityLabel: string;
+	onPress: () => void;
+	children: ReactNode;
+};
+
+export function FormScreenHeaderButton({ accessibilityLabel, onPress, children }: FormScreenHeaderButtonProps) {
+	const theme = useTheme();
+
+	return (
+		<Pressable
+			accessibilityRole="button"
+			accessibilityLabel={accessibilityLabel}
+			hitSlop={Spacing.md}
+			onPress={onPress}
+			style={({ pressed }) => [styles.headerButton, { backgroundColor: theme.field, opacity: pressed ? 0.6 : 1 }]}
+		>
+			{children}
+		</Pressable>
+	);
+}
 
 export type FormScreenProps = {
 	title: string;
@@ -17,9 +37,11 @@ export type FormScreenProps = {
 	hero?: ReactNode;
 	/** Vertically centres the content and centre-aligns its text. Used by login and register. */
 	centered?: boolean;
-	/** Renders a back chevron; defaults to `router.back()` when no handler is given. */
+	/** Renders a back chevron; defaults to a native stack pop when no handler is given. */
 	showBack?: boolean;
 	onBack?: () => void;
+	/** Optional action rendered opposite the back button, e.g. a preview icon. */
+	headerRight?: ReactNode;
 	/** Shows a progress bar and "Step x of y" caption above the title. */
 	progress?: { current: number; total: number };
 	/** Pinned below the scroll area so the primary action stays reachable. */
@@ -35,13 +57,15 @@ export function FormScreen({
 	centered = false,
 	showBack,
 	onBack,
+	headerRight,
 	progress,
 	footer,
 	children,
 }: FormScreenProps) {
 	const theme = useTheme();
 	const insets = useSafeAreaInsets();
-	const router = useRouter();
+	const navigation = useNavigation();
+	const { t } = useTranslation();
 
 	return (
 		<KeyboardAvoidingView
@@ -58,16 +82,17 @@ export function FormScreen({
 				keyboardShouldPersistTaps="handled"
 				keyboardDismissMode="on-drag"
 			>
-				{showBack ? (
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={Strings.common.back}
-						hitSlop={Spacing.md}
-						onPress={onBack ?? (() => router.back())}
-						style={({ pressed }) => [styles.back, { backgroundColor: theme.field, opacity: pressed ? 0.6 : 1 }]}
-					>
-						<Ionicons name="chevron-back" size={20} color={theme.text} />
-					</Pressable>
+				{showBack || headerRight ? (
+					<View style={styles.headerRow}>
+						<View style={styles.headerSideStart}>
+							{showBack ? (
+								<FormScreenHeaderButton accessibilityLabel={t("common.back")} onPress={onBack ?? (() => navigation.goBack())}>
+									<Ionicons name="chevron-back" size={20} color={theme.text} />
+								</FormScreenHeaderButton>
+							) : null}
+						</View>
+						<View style={styles.headerSideEnd}>{headerRight}</View>
+					</View>
 				) : null}
 
 				{progress ? <StepProgress current={progress.current} total={progress.total} /> : null}
@@ -121,13 +146,28 @@ const styles = StyleSheet.create({
 		flexGrow: 1,
 		justifyContent: "center",
 	},
-	back: {
+	headerButton: {
 		width: 40,
 		height: 40,
 		borderRadius: Radius.pill,
 		alignItems: "center",
 		justifyContent: "center",
+	},
+	headerRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
 		marginBottom: Spacing.md,
+	},
+	headerSideStart: {
+		width: 40,
+		height: 40,
+		justifyContent: "center",
+	},
+	headerSideEnd: {
+		minHeight: 40,
+		justifyContent: "center",
+		alignItems: "flex-end",
 	},
 	title: {
 		lineHeight: 38,

@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 
-/** Must match the port in `lib/env.ts` default / `EXPO_PUBLIC_API_URL`. */
+/** Must match the port in `lib/config/env.ts` default / `EXPO_PUBLIC_API_URL`. */
 const API_PORT = process.env.EXPO_PUBLIC_API_URL?.match(/:(\d+)/)?.[1] ?? "8787";
 
 /** @param {string} devicesOutput @returns {boolean} */
