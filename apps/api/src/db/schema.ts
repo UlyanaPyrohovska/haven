@@ -17,6 +17,8 @@ import {
 	vector,
 } from "drizzle-orm/pg-core";
 
+import { LookingFor } from "@/lib/looking-for";
+
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
@@ -133,6 +135,8 @@ export const userProfiles = pgTable(
 		birthDate: date("birth_date"),
 		ethnicity: varchar("ethnicity", { length: 100 }),
 		career: varchar("career", { length: 100 }),
+		/** 0 = friends, 1 = dating. Matching only surfaces same-mode profiles. */
+		lookingFor: smallint("looking_for").notNull().default(LookingFor.friends),
 		goal: varchar("goal", { length: 100 }),
 
 		// Location
@@ -141,6 +145,8 @@ export const userProfiles = pgTable(
 
 		// Free text
 		bio: text("bio"),
+		/** Optional portrait URL (e.g. Unsplash CDN). Null when derived at read time. */
+		photoUrl: text("photo_url"),
 
 		// Interests (1–10 Likert)
 		interestSports: smallint("interest_sports"),
@@ -183,6 +189,7 @@ export const userProfiles = pgTable(
 	(t) => [
 		index("user_profiles_user_id_idx").on(t.userId),
 		index("user_profiles_synthetic_idx").on(t.isSynthetic),
+		index("user_profiles_looking_for_idx").on(t.lookingFor),
 		index("user_profiles_lat_lon_idx").on(t.latitude, t.longitude),
 	],
 );
@@ -264,6 +271,24 @@ export const friendships = pgTable(
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(t) => [primaryKey({ columns: [t.userA, t.userB] }), index("friendships_user_b_idx").on(t.userB)],
+);
+
+// ────────────────────────────────────────────────────────────────
+// mood_checkins — one mood per user per calendar day (UTC)
+// ────────────────────────────────────────────────────────────────
+export const moodCheckins = pgTable(
+	"mood_checkins",
+	{
+		id: serial("id").primaryKey(),
+		userProfileId: integer("user_profile_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		mood: smallint("mood").notNull(),
+		checkinDate: date("checkin_date").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => [uniqueIndex("mood_checkins_profile_date_uniq").on(t.userProfileId, t.checkinDate)],
 );
 
 // ────────────────────────────────────────────────────────────────

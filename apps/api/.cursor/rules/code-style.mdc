@@ -1,0 +1,84 @@
+---
+description: Haven API TypeScript standards — precise types, simple code, module layout
+alwaysApply: true
+---
+
+# Code style
+
+Apply to all TypeScript in `apps/api/src/`.
+
+## Types
+
+- Do **not** use `any`.
+- Avoid `unknown` unless you narrow it immediately (Zod parse, type guard, discriminated check).
+- Prefer existing types: Zod `z.infer`, Drizzle schema types, shared OpenAPI schemas, small explicit local types.
+- Fix schema/model mismatches instead of casting.
+- Prefer `z.infer<typeof schema>` over `as Record<string, unknown>` chains.
+
+```typescript
+// ❌ BAD
+const payload = body as Record<string, unknown>;
+
+// ✅ GOOD
+type ProfileUpdate = z.infer<typeof ProfileUpdateSchema>;
+const payload: ProfileUpdate = body;
+```
+
+## Simplicity
+
+- Match surrounding code: naming, file layout, import style, abstraction level.
+- Minimize scope — smallest correct diff; no unrelated refactors.
+- Do not add one-off helpers, deep abstraction, or generic utilities used once.
+- Reuse and extend existing functions before reimplementing similar logic.
+
+## API responses
+
+- Return service data directly from route handlers (`index.ts`) via `c.json(...)`.
+- Zod schemas in `schemas.ts` are for **OpenAPI docs** and **request** validation — not runtime response parsing.
+- **Repository reads:** return Drizzle query results as-is; use explicit select columns (never return `email` / `passwordHash` on synthetic rows).
+- **Repository writes:** use `.returning(...)` on insert/update.
+- Services throw `errors.*` from `@/lib/errors`; the global error middleware in `createOpenAPIApp` / `createApp` maps them to `{ code, message }`.
+- Haven uses domain-shaped JSON (`{ profile }`, `{ recommendations, count }`) — not Goodboost's `{ code, message, results }` envelope.
+
+Services return raw domain data; handlers shape the HTTP response only.
+
+## Route module layout
+
+Each feature module under `src/modules/<name>/` uses five files:
+
+| File | Role |
+|------|------|
+| `schemas.ts` | Zod request/response schemas + `z.infer` types |
+| `repository.ts` | Drizzle queries only — no business logic |
+| `service.ts` | Business logic; throws `errors.*` |
+| `routes.ts` | `createRoute` OpenAPI definitions |
+| `index.ts` | Thin `app.openapi(...)` handlers |
+
+## Route module order
+
+In each module, order exports and handlers by HTTP method:
+
+**GET → POST → PUT → PATCH → DELETE**
+
+- Within a method group, static paths before param paths (`/matches` before `/recommendations/{candidateId}`).
+- Repository helpers belong in the section of the handler that uses them.
+- Shared entity schemas stay at the top of `schemas.ts`; method-specific schemas follow in method order.
+- Imports in `service.ts` and `index.ts` mirror the same order.
+
+## Route module imports
+
+Within a route module folder:
+
+- **`routes`**, **`service`**, **`repository`**: namespace imports (`import * as routes from "./routes"`, etc.).
+- **`schemas`**: **named imports only** — list exactly what the file uses. Do not `import * as schemas` except in `routes.ts`.
+
+| File | Sibling imports |
+|------|-----------------|
+| `index.ts` | `import * as routes`, `import * as service` |
+| `service.ts` | `import * as repository`, named types from `./schemas` |
+| `routes.ts` | `import * as schemas` |
+| `repository.ts` | named types from `./schemas` when needed |
+
+Use named imports for everything **outside** the module folder (`@/db`, `@/lib/...`).
+
+Reference namespace exports as `routes.getXRoute`, `service.getX`, `repository.findX`.

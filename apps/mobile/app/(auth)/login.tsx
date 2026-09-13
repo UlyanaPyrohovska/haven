@@ -1,7 +1,7 @@
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-
 import { BrandHero } from "@/components/brand-hero";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
@@ -9,16 +9,14 @@ import { ErrorBanner } from "@/components/ui/error-banner";
 import { FormScreen } from "@/components/ui/form-screen";
 import { TextField } from "@/components/ui/text-field";
 import { Spacing, TextStyles } from "@/constants/app-config";
-import { Strings } from "@/constants/strings";
 import { useTheme } from "@/hooks/use-theme";
-import { signIn } from "@/lib/auth-client";
-import { describeAuthError } from "@/lib/auth-errors";
-import { navigateAfterAuth } from "@/lib/auth-navigation";
-import { type ValidationError, validateEmail, validatePassword } from "@/lib/validation";
-
-const copy = Strings.auth;
+import { signIn } from "@/lib/auth/client";
+import { describeAuthError } from "@/lib/auth/errors";
+import { navigateAfterAuth } from "@/lib/auth/navigation";
+import { type ValidationError, validateEmail, validatePassword } from "@/lib/utils/validation";
 
 export default function LoginScreen() {
+	const { t } = useTranslation();
 	const theme = useTheme();
 	const router = useRouter();
 
@@ -51,27 +49,27 @@ export default function LoginScreen() {
 
 	return (
 		<FormScreen
-			title={copy.login.title}
-			hero={<BrandHero tagline={Strings.app.tagline} />}
+			title={t("auth.login.title")}
+			hero={<BrandHero tagline={t("app.tagline")} />}
 			centered
 			footer={
 				<>
 					<ErrorBanner message={formError} />
-					<Button label={copy.login.submit} loading={submitting} onPress={onSubmit} />
+					<Button label={t("auth.login.submit")} loading={submitting} onPress={onSubmit} />
 					<View style={styles.footerRow}>
 						<ThemedText type="caption" style={{ color: theme.muted }}>
-							{copy.login.footerPrompt}
+							{t("auth.login.footerPrompt")}
 						</ThemedText>
 						<Link href="/register" replace style={[TextStyles.caption, styles.footerLink, { color: theme.link }]}>
-							{copy.login.footerAction}
+							{t("auth.login.footerAction")}
 						</Link>
 					</View>
 				</>
 			}
 		>
 			<TextField
-				label={copy.fields.email}
-				placeholder={copy.fields.emailPlaceholder}
+				label={t("auth.fields.email")}
+				placeholder={t("auth.fields.emailPlaceholder")}
 				value={email}
 				onChangeText={setEmail}
 				error={errors.email}
@@ -83,8 +81,8 @@ export default function LoginScreen() {
 			/>
 
 			<TextField
-				label={copy.fields.password}
-				placeholder={copy.fields.enterPassword}
+				label={t("auth.fields.password")}
+				placeholder={t("auth.fields.enterPassword")}
 				value={password}
 				onChangeText={setPassword}
 				error={errors.password}

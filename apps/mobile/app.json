@@ -7,7 +7,6 @@
 		"icon": "./assets/images/icon.png",
 		"scheme": "haven",
 		"userInterfaceStyle": "automatic",
-		"newArchEnabled": true,
 		"ios": {
 			"supportsTablet": true,
 			"bundleIdentifier": "com.haven.app"
@@ -17,7 +16,6 @@
 				"backgroundColor": "#ffffff",
 				"foregroundImage": "./assets/images/android-icon-foreground.png"
 			},
-			"edgeToEdgeEnabled": true,
 			"predictiveBackGestureEnabled": false,
 			"package": "com.haven.app"
 		},
@@ -36,11 +34,27 @@
 					}
 				}
 			],
-			"expo-secure-store"
+			[
+				"expo-image-picker",
+				{
+					"photosPermission": "Haven uses your photo library so you can choose a profile photo."
+				}
+			],
+			"expo-secure-store",
+			"expo-font",
+			"expo-web-browser",
+			"expo-localization"
 		],
 		"experiments": {
 			"typedRoutes": true,
 			"reactCompiler": true
-		}
+		},
+		"extra": {
+			"router": {},
+			"eas": {
+				"projectId": "bfaa7443-054a-4d72-bf56-45f2f89f1596"
+			}
+		},
+		"owner": "pirogotters-team"
 	}
 }

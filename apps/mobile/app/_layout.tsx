@@ -13,6 +13,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AnimatedSplash, getReduceMotionEnabled } from "@/components/animated-splash";
 import { Colors, FontFamily } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import "@/lib/i18n";
+import { ThemePreferenceProvider } from "@/lib/theme/preference";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,7 +41,6 @@ const NavigationDarkTheme = {
 };
 
 export default function RootLayout() {
-	const colorScheme = useColorScheme();
 	const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
 	const [reduceMotion, setReduceMotion] = useState(false);
 	const [preferencesReady, setPreferencesReady] = useState(false);
@@ -74,15 +75,44 @@ export default function RootLayout() {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<SafeAreaProvider>
-				<View style={styles.root}>
-					<ThemeProvider value={colorScheme === "dark" ? NavigationDarkTheme : NavigationLightTheme}>
-						<Stack screenOptions={{ headerShown: false }} />
-						<StatusBar style="auto" />
-					</ThemeProvider>
-					{showAnimatedSplash ? <AnimatedSplash onFinish={onSplashFinish} reduceMotion={reduceMotion} /> : null}
-				</View>
+				<ThemePreferenceProvider>
+					<RootLayoutContent
+						showAnimatedSplash={showAnimatedSplash}
+						onSplashFinish={onSplashFinish}
+						reduceMotion={reduceMotion}
+					/>
+				</ThemePreferenceProvider>
 			</SafeAreaProvider>
 		</QueryClientProvider>
+	);
+}
+
+function RootLayoutContent({
+	showAnimatedSplash,
+	onSplashFinish,
+	reduceMotion,
+}: {
+	showAnimatedSplash: boolean;
+	onSplashFinish: () => void;
+	reduceMotion: boolean;
+}) {
+	const colorScheme = useColorScheme();
+
+	return (
+		<View style={styles.root}>
+			<ThemeProvider value={colorScheme === "dark" ? NavigationDarkTheme : NavigationLightTheme}>
+				<Stack
+					screenOptions={{
+						headerShown: false,
+						contentStyle: {
+							backgroundColor: colorScheme === "dark" ? Colors.dark.background : Colors.light.background,
+						},
+					}}
+				/>
+				<StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+			</ThemeProvider>
+			{showAnimatedSplash ? <AnimatedSplash onFinish={onSplashFinish} reduceMotion={reduceMotion} /> : null}
+		</View>
 	);
 }
 
