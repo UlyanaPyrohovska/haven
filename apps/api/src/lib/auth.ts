@@ -16,8 +16,8 @@ export const createAuth = (bindings: CloudflareBindings) => {
 		emailAndPassword: {
 			enabled: true,
 		},
-		// The Expo client completes sign-in over a deep link back into the app.
-		trustedOrigins: ["haven://", "haven://*"],
+		// Prefix match: haven:// (app scheme), exp:// (Expo Go).
+		trustedOrigins: ["haven://", "exp://"],
 		plugins: [openAPI(), expo()],
 	});
 };

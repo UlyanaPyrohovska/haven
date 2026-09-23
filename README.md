@@ -43,4 +43,4 @@ pnpm db:migrate    # apply migrations to Neon
 pnpm db:studio     # open Drizzle Studio
 ```
 
-For local Worker development, also set `DATABASE_URL` in `apps/api/.dev.vars` (git-ignored).
+For local Worker development, copy `apps/api/.env.dev.example` to `apps/api/.env.dev` (git-ignored).

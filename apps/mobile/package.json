@@ -3,7 +3,8 @@
 	"main": "expo-router/entry",
 	"version": "1.0.0",
 	"scripts": {
-		"dev": "node scripts/ensure-android-tunnel.mjs && expo start",
+		"dev": "node scripts/ensure-android-tunnel.mjs && dotenv -c dev -- expo start",
+		"dev:prod": "node scripts/ensure-android-tunnel.mjs && dotenv -c production -- expo start",
 		"android": "node scripts/ensure-android-tunnel.mjs && expo run:android",
 		"ios": "expo run:ios",
 		"web": "expo start --web",
@@ -53,6 +54,7 @@
 	},
 	"devDependencies": {
 		"@types/react": "~19.2.18",
+		"dotenv-cli": "^8.0.0",
 		"eslint": "^9.25.0",
 		"eslint-config-expo": "~57.0.2",
 		"typescript": "~6.0.3"

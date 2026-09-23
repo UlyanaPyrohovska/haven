@@ -1,6 +1,10 @@
 /**
- * `localhost` only resolves for simulators. On a physical device set
- * `EXPO_PUBLIC_API_URL` to your machine's LAN address (see `.env.example`).
+ * API base URL — set via env files or scripts:
+ * - `pnpm dev` → `.env.dev` (localhost)
+ * - `pnpm dev:prod` → `.env.production` (deployed Worker)
+ * - `eas build` → `.env.production`
+ *
+ * On a physical device in local mode, override in `.env.dev.local`.
  */
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 
