@@ -4,10 +4,11 @@ import { createAuth } from "@/lib/auth";
 import { errorHandler } from "@/lib/http/errors";
 import { validationErrorHook } from "./validation";
 
-const OPEN_API_CONFIG = {
-	openapi: "3.0.4",
+const PRODUCTION_URL = "https://haven-api.haven-app.workers.dev";
+
+const OPEN_API_INFO = {
+	openapi: "3.0.4" as const,
 	info: { title: "Haven API", version: "1.0.0" },
-	servers: [{ url: "http://localhost:8787", description: "Local development" }],
 };
 
 export function createOpenAPIApp() {
@@ -31,7 +32,15 @@ export type App = ReturnType<typeof createOpenAPIApp>;
 export function withOpenApiDoc(app: App) {
 	app.get("/openapi.json", async (c) => {
 		const authDoc = await createAuth(c.env).api.generateOpenAPISchema();
-		const apiDoc = app.getOpenAPIDocument(OPEN_API_CONFIG);
+		const requestOrigin = new URL(c.req.url).origin;
+		const apiDoc = app.getOpenAPIDocument({
+			...OPEN_API_INFO,
+			servers: [
+				{ url: requestOrigin, description: "Current host" },
+				{ url: PRODUCTION_URL, description: "Production" },
+				{ url: "http://localhost:8787", description: "Local development" },
+			],
+		});
 
 		const authPaths = Object.fromEntries(
 			Object.entries(authDoc.paths).map(([path, operation]) => [`/auth${path}`, operation]),

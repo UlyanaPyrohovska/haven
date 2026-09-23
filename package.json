@@ -2,6 +2,7 @@
 	"name": "haven",
 	"scripts": {
 		"dev": "turbo dev",
+		"dev:prod": "pnpm --filter haven-app dev:prod",
 		"build": "turbo build",
 		"deploy": "turbo run deploy --affected",
 		"db:generate": "pnpm --filter api db:generate",
