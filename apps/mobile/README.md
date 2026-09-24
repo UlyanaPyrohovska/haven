@@ -1,50 +1,83 @@
-# Welcome to your Expo app 👋
+# Haven Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo app for Haven, using a **custom development build** (`expo-dev-client`) — not Expo Go.
 
-## Get started
+## First-time setup
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Install dependencies from the monorepo root:
 
 ```bash
-npm run reset-project
+pnpm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Option A — Local simulator / emulator (recommended for daily dev)
 
-## Learn more
+Build and install the dev client on your machine:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+cd apps/mobile
+pnpm ios       # iOS Simulator (macOS + Xcode)
+pnpm android   # Android emulator (Android Studio)
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+These run `expo run:*`, which generates native projects and installs a dev client with the env from `.env.dev`.
 
-## Join the community
+### Option B — Physical device via EAS
 
-Join our community of developers creating universal apps.
+```bash
+cd apps/mobile
+pnpm build:dev:ios       # or build:dev:android
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Install the build from the EAS dashboard or QR link. You need an Expo account on the `pirogotters-team` org.
+
+## Daily development
+
+From the monorepo root, start API + Metro together:
+
+```bash
+pnpm dev
+```
+
+Or mobile only:
+
+```bash
+cd apps/mobile
+pnpm dev
+```
+
+Open the **Haven dev client** app (not Expo Go). It connects to Metro automatically on the same network.
+
+For the deployed API instead of localhost:
+
+```bash
+pnpm dev:prod
+```
+
+## Environment
+
+| Command | Env file | API URL |
+|---|---|---|
+| `pnpm dev` | `.env.dev` | `http://localhost:8787` |
+| `pnpm dev:prod` | `.env.production` | deployed Worker |
+| `eas build` | `eas.json` | production Worker |
+
+**Physical device + local API:** copy `.env.dev.local.example` to `.env.dev.local` and set your machine's LAN IP, then rebuild the dev client (`pnpm ios` / `pnpm android` / EAS).
+
+**Android emulator:** `pnpm dev` auto-runs `adb reverse` so `localhost:8787` works.
+
+## Build profiles
+
+| Script | Profile | Use case |
+|---|---|---|
+| `build:dev:*` | `development` | Dev client with debug tooling |
+| `build:preview:*` | `preview` | Internal testing |
+| `build:prod:*` | `production` | Store release |
+
+## Useful commands
+
+```bash
+pnpm prebuild          # regenerate ios/ and android/ (clean)
+pnpm android:tunnel    # manually run adb reverse for port 8787
+pnpm lint
+```

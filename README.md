@@ -44,3 +44,23 @@ pnpm db:studio     # open Drizzle Studio
 ```
 
 For local Worker development, copy `apps/api/.env.dev.example` to `apps/api/.env.dev` (git-ignored).
+
+## Mobile (development build)
+
+The Expo app uses a **custom dev client**, not Expo Go. See [`apps/mobile/README.md`](apps/mobile/README.md) for full setup.
+
+**First time** — build and install the dev client:
+
+```bash
+cd apps/mobile
+pnpm ios       # iOS Simulator
+pnpm android   # Android emulator
+```
+
+**Daily dev** — API + Metro from the repo root:
+
+```bash
+pnpm dev
+```
+
+Open the Haven dev client app on your simulator/emulator (not Expo Go).

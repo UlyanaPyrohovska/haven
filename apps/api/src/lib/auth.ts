@@ -16,8 +16,7 @@ export const createAuth = (bindings: CloudflareBindings) => {
 		emailAndPassword: {
 			enabled: true,
 		},
-		// Prefix match: haven:// (app scheme), exp:// (Expo Go).
-		trustedOrigins: ["haven://", "exp://"],
+		trustedOrigins: ["haven://"],
 		plugins: [openAPI(), expo()],
 	});
 };
