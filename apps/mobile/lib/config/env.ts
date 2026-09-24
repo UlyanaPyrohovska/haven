@@ -2,9 +2,10 @@
  * API base URL — set via env files or scripts:
  * - `pnpm dev` → `.env.dev` (localhost)
  * - `pnpm dev:prod` → `.env.production` (deployed Worker)
- * - `eas build` → `.env.production`
+ * - `eas build` → env in `eas.json` (production API)
  *
  * On a physical device in local mode, override in `.env.dev.local`.
+ * Rebuild the dev client after changing env vars baked into a native build.
  */
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 

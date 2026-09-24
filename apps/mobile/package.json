@@ -3,13 +3,20 @@
 	"main": "expo-router/entry",
 	"version": "1.0.0",
 	"scripts": {
-		"dev": "node scripts/ensure-android-tunnel.mjs && dotenv -c dev -- expo start",
-		"dev:prod": "node scripts/ensure-android-tunnel.mjs && dotenv -c production -- expo start",
-		"android": "node scripts/ensure-android-tunnel.mjs && expo run:android",
-		"ios": "expo run:ios",
+		"dev": "node scripts/ensure-android-tunnel.mjs && dotenv -c dev -- expo start --dev-client",
+		"dev:prod": "node scripts/ensure-android-tunnel.mjs && dotenv -c production -- expo start --dev-client",
+		"android": "node scripts/ensure-android-tunnel.mjs && dotenv -c dev -- expo run:android",
+		"ios": "dotenv -c dev -- expo run:ios",
+		"prebuild": "expo prebuild --clean",
 		"web": "expo start --web",
 		"lint": "expo lint",
-		"android:tunnel": "adb reverse tcp:8787 tcp:8787"
+		"android:tunnel": "adb reverse tcp:8787 tcp:8787",
+		"build:dev:ios": "eas build --profile development --platform ios",
+		"build:dev:android": "eas build --profile development --platform android",
+		"build:preview:ios": "eas build --profile preview --platform ios",
+		"build:preview:android": "eas build --profile preview --platform android",
+		"build:prod:ios": "eas build --profile production --platform ios",
+		"build:prod:android": "eas build --profile production --platform android"
 	},
 	"dependencies": {
 		"@better-auth/expo": "^1.6.23",
@@ -23,6 +30,7 @@
 		"better-auth": "^1.6.23",
 		"expo": "~57.0.20",
 		"expo-constants": "~57.0.17",
+		"expo-dev-client": "~57.0.19",
 		"expo-font": "~57.0.3",
 		"expo-haptics": "~57.0.2",
 		"expo-image": "~57.0.4",

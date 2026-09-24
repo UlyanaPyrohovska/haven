@@ -1,0 +1,26 @@
+{
+	"cli": {
+		"version": ">= 16.0.0",
+		"appVersionSource": "remote"
+	},
+	"build": {
+		"development": {
+			"developmentClient": true,
+			"distribution": "internal",
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://haven-api.haven-app.workers.dev"
+			}
+		},
+		"preview": {
+			"distribution": "internal",
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://haven-api.haven-app.workers.dev"
+			}
+		},
+		"production": {
+			"env": {
+				"EXPO_PUBLIC_API_URL": "https://haven-api.haven-app.workers.dev"
+			}
+		}
+	}
+}
