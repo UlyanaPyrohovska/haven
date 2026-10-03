@@ -17,13 +17,13 @@ import { useTheme } from "@/hooks/use-theme";
 import { useSession } from "@/lib/auth/client";
 import {
 	profileAge,
-	profileAgeLabel,
 	profileEthnicityLabel,
 	profileGenderLabel,
 	profileLookingForLabel,
 	profileSelectedInterests,
 	profileSelfRatings,
 } from "@/lib/profile/display";
+import { publicProfilePreview } from "@/lib/profile/privacy";
 import { ProfilePhotoError, pickProfilePhotoDataUrl, removeProfilePhoto, saveProfilePhoto } from "@/lib/profile/photo";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -136,7 +136,7 @@ export default function ProfileScreen() {
 
 	const data = profile.data;
 	const age = data ? profileAge(data) : undefined;
-	const publicAgeLabel = data ? profileAgeLabel(data) : undefined;
+	const publicPreview = data ? publicProfilePreview(data) : undefined;
 	const gender = data ? profileGenderLabel(data) : undefined;
 	const ethnicity = data ? profileEthnicityLabel(data) : undefined;
 	const career = typeof data?.career === "string" ? data.career.trim() : "";
@@ -286,10 +286,10 @@ export default function ProfileScreen() {
 				onClose={() => setPreviewOpen(false)}
 				displayName={displayName}
 				photoUrl={photoUrl}
-				ageLabel={publicAgeLabel}
-				career={career || undefined}
-				bio={bio || undefined}
-				interests={interests}
+				ageLabel={publicPreview?.ageLabel}
+				career={publicPreview?.career}
+				bio={publicPreview?.bio}
+				interests={publicPreview?.interests ?? []}
 			/>
 		</>
 	);

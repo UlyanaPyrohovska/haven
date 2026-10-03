@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useCallback, useState } from "react";
@@ -9,12 +8,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionDock, connectionDockClearance } from "@/components/connections/connection-dock";
 import { type DecisionKind, DecisionOverlay, useDecisionCardStyle } from "@/components/connections/decision-animation";
 import { ProfileBadges } from "@/components/connections/profile-badges";
+import { LocationPill } from "@/components/location/location-pill";
 import { ProfileHeaderButton } from "@/components/profile/profile-header-button";
 import { ThemedText } from "@/components/themed-text";
 import { BackHomeButton } from "@/components/ui/back-home-button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { FontSize, Radius, Spacing } from "@/constants/app-config";
+import { useHeaderLocation } from "@/hooks/use-header-location";
 import { useTheme } from "@/hooks/use-theme";
 import {
 	fetchRecommendation,
@@ -73,7 +74,8 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 		mutationFn: (decision: DecisionKind) => postRecommendationDecision(candidateId, decision),
 	});
 
-	const locationLabel = connection.data?.locationLabel ?? t("home.locationFallback");
+	const headerLocation = useHeaderLocation(true);
+	const candidateLocationLabel = connection.data?.locationLabel;
 
 	const prefetchNextCandidate = useCallback(async () => {
 		await queryClient.invalidateQueries({ queryKey: recommendationsQueryKey });
@@ -163,16 +165,23 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 				showsVerticalScrollIndicator={false}
 			>
 				<View style={styles.header}>
-					<BackHomeButton accessibilityLabel={t("common.back")} />
-
-					<View style={[styles.locationPill, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-						<Ionicons name="location-outline" size={14} color={theme.icon} />
-						<ThemedText type="caption" style={styles.locationText}>
-							{locationLabel}
-						</ThemedText>
+					<View style={styles.headerSide}>
+						<BackHomeButton accessibilityLabel={t("common.back")} />
 					</View>
 
-					<ProfileHeaderButton size={40} />
+					<View style={styles.headerCenter}>
+						{headerLocation.visible ? (
+							<LocationPill
+								label={headerLocation.label}
+								hidden={headerLocation.hidden}
+								unset={headerLocation.unset}
+							/>
+						) : null}
+					</View>
+
+					<View style={styles.headerSide}>
+						<ProfileHeaderButton size={40} />
+					</View>
 				</View>
 
 				<ThemedText type="label" style={styles.sectionTitle}>
@@ -215,9 +224,16 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 						</View>
 					</View>
 
-					<ThemedText style={[styles.crossPaths, { color: theme.muted }]}>
-						{t("connections.crossPaths", { count: data.crossPathsCount })}
-					</ThemedText>
+					{data.crossPathsCount != null ? (
+						<ThemedText style={[styles.crossPaths, { color: theme.muted }]}>
+							{t("connections.crossPaths", { count: data.crossPathsCount })}
+						</ThemedText>
+					) : null}
+					{candidateLocationLabel ? (
+						<ThemedText style={[styles.crossPaths, { color: theme.muted }]}>
+							{t("connections.nearbyLabel", { location: candidateLocationLabel })}
+						</ThemedText>
+					) : null}
 				</Animated.View>
 			</ScrollView>
 
@@ -273,20 +289,17 @@ const styles = StyleSheet.create({
 	header: {
 		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "space-between",
 	},
-	locationPill: {
-		flexDirection: "row",
+	headerSide: {
+		width: 44,
 		alignItems: "center",
-		gap: Spacing.xs,
-		paddingHorizontal: Spacing.md,
-		paddingVertical: Spacing.sm,
-		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
-		maxWidth: "58%",
+		justifyContent: "center",
 	},
-	locationText: {
-		fontWeight: "500",
+	headerCenter: {
+		flex: 1,
+		minWidth: 0,
+		alignItems: "center",
+		paddingHorizontal: Spacing.xs,
 	},
 	sectionTitle: {
 		marginTop: Spacing.sm,

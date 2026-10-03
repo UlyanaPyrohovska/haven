@@ -82,3 +82,20 @@ export async function saveProfile(draft: ProfileDraft): Promise<void> {
 		throw new Error(`Failed to save profile (${response.status})`);
 	}
 }
+
+export async function saveProfileSettings(
+	updates: Partial<Record<string, boolean | string | number | null>>,
+): Promise<ProfileRecord | null> {
+	const response = await apiFetch("/me", {
+		method: "PATCH",
+		body: JSON.stringify(updates),
+	});
+
+	if (!response.ok) {
+		throw new Error(`Failed to save privacy settings (${response.status})`);
+	}
+
+	const body = (await response.json()) as { profile: ProfileRecord | null };
+
+	return body.profile;
+}

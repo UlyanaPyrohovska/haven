@@ -27,7 +27,13 @@ export function listPendingRecommendations(db: Db, viewerId: number) {
 		})
 		.from(recommendations)
 		.innerJoin(userProfiles, eq(userProfiles.id, recommendations.candidateId))
-		.where(and(eq(recommendations.userId, viewerId), eq(recommendations.actedOn, false)))
+		.where(
+			and(
+				eq(recommendations.userId, viewerId),
+				eq(recommendations.actedOn, false),
+				eq(userProfiles.discoverable, true),
+			),
+		)
 		.orderBy(asc(recommendations.rank));
 }
 

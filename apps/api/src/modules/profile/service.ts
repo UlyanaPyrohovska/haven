@@ -23,14 +23,29 @@ export async function getProfile(c: Context<{ Bindings: CloudflareBindings }>) {
 	return { profile };
 }
 
+function normalizeProfileUpdate(updates: ProfileUpdate): ProfileUpdate {
+	if (updates.locationHidden !== true) {
+		return updates;
+	}
+
+	return {
+		...updates,
+		locationHidden: true,
+		displayLocation: null,
+		latitude: null,
+		longitude: null,
+	};
+}
+
 export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>, updates: ProfileUpdate) {
 	const userId = await requireUserId(c);
 	const db = getDb(c.env.DATABASE_URL);
 	const profileId = await repository.findProfileIdByUserId(db, userId);
+	const payload = normalizeProfileUpdate(updates);
 
 	const profile = profileId
-		? await repository.updateProfileById(db, profileId, updates)
-		: await repository.insertProfile(db, userId, updates);
+		? await repository.updateProfileById(db, profileId, payload)
+		: await repository.insertProfile(db, userId, payload);
 
 	return { profile };
 }

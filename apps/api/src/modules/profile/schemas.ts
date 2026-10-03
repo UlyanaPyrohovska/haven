@@ -58,6 +58,8 @@ const lookingFor = z.union([z.literal(LookingFor.friends), z.literal(LookingFor.
 
 const goal = z.enum(ProfileGoals).nullable().optional();
 
+const privacyToggle = z.boolean().optional();
+
 export const ProfileUpdateSchema = z
 	.object({
 		birthDate,
@@ -99,6 +101,18 @@ export const ProfileUpdateSchema = z
 		selfFun: likert,
 		selfAmb: likert,
 		selfShar: likert,
+
+		discoverable: privacyToggle,
+		showAge: privacyToggle,
+		showCareer: privacyToggle,
+		showBio: privacyToggle,
+		showInterests: privacyToggle,
+		shareLocation: privacyToggle,
+		shareCrossPaths: privacyToggle,
+		locationHidden: privacyToggle,
+		displayLocation: nullableText(200),
+		latitude: z.number().min(-90).max(90).nullable().optional(),
+		longitude: z.number().min(-180).max(180).nullable().optional(),
 	})
 	.superRefine((value, ctx) => {
 		if (value.lookingFor === undefined || value.goal == null) {

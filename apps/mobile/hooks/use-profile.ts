@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQuery } from "@tanstack/react-query";
 
-import { fetchProfile } from "@/lib/api/profile";
+import { type ProfileRecord, fetchProfile } from "@/lib/api/profile";
 
 export const profileQueryKey = ["profile"] as const;
 
@@ -12,4 +12,26 @@ export function useProfileQuery(enabled: boolean) {
 		enabled,
 		retry: 1,
 	});
+}
+
+export function mergeProfileCache(
+	queryClient: QueryClient,
+	updates: Partial<ProfileRecord>,
+	serverProfile?: ProfileRecord | null,
+) {
+	queryClient.setQueryData<ProfileRecord | null>(profileQueryKey, (current) => {
+		if (serverProfile) {
+			return serverProfile;
+		}
+
+		if (current && typeof current === "object") {
+			return { ...current, ...updates };
+		}
+
+		return current ?? null;
+	});
+}
+
+export function refreshProfileCache(queryClient: QueryClient) {
+	void queryClient.invalidateQueries({ queryKey: profileQueryKey });
 }
