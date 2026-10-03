@@ -49,7 +49,7 @@ export const RecommendationDetailSchema = z
 		sharedInterests: z.array(z.string()),
 		dailyQuestion: z.string(),
 		questionAnswer: z.string(),
-		crossPathsCount: z.number().int(),
+		crossPathsCount: z.number().int().nullable(),
 		distanceKm: z.number().optional(),
 		locationLabel: z.string().optional(),
 		actedOn: z.boolean(),

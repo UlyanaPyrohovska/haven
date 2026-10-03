@@ -19,7 +19,7 @@ export type RecommendationDetail = RecommendationSummary & {
 	interests: string[];
 	dailyQuestion: string;
 	questionAnswer: string;
-	crossPathsCount: number;
+	crossPathsCount: number | null;
 	distanceKm?: number;
 	locationLabel?: string;
 	actedOn: boolean;

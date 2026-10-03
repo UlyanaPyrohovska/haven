@@ -4,12 +4,12 @@ import { resolveProfilePhotoUrl } from "@/lib/avatar-url";
 import { resolveCandidateMood } from "@/lib/candidate-mood";
 import { errors } from "@/lib/errors";
 import {
-	ageLabel,
+	candidateLocationLabel,
 	haversineKm,
-	interestLabels,
 	type ProfileRow,
-	profileAge,
-	sharedInterestLabels,
+	publicProfileFields,
+	readPrivacySettings,
+	shouldShowCrossPaths,
 } from "@/lib/profile-view";
 import { DEMO_DAILY_QUESTION, demoPresentation, displayNameForCandidate } from "@/lib/recommendation-demo-data";
 import { getSessionUserId } from "@/lib/session";
@@ -43,9 +43,7 @@ function summariseCandidate(
 	candidate: repository.ViewerProfile,
 	recommendation: { id: number; rank: number | null; score: number | null },
 ) {
-	const age = profileAge(candidate.birthDate);
-	const interests = interestLabels(candidate);
-	const shared = sharedInterestLabels(viewer, candidate);
+	const publicFields = publicProfileFields(viewer, candidate);
 	const presentation = demoPresentation(candidate.id);
 
 	return {
@@ -55,32 +53,13 @@ function summariseCandidate(
 		score: recommendation.score ?? 0,
 		displayName: displayNameForCandidate(candidate.id),
 		photoUrl: resolveProfilePhotoUrl(candidate),
-		ageLabel: age === undefined ? undefined : ageLabel(age),
-		career: typeof candidate.career === "string" ? candidate.career : null,
-		topInterests: interests.slice(0, 3),
-		sharedInterests: shared.length > 0 ? shared.slice(0, 6) : interests.slice(0, 3),
+		ageLabel: publicFields.ageLabel,
+		career: publicFields.career,
+		topInterests: publicFields.topInterests,
+		sharedInterests: publicFields.sharedInterests,
 		questionAnswer: presentation?.questionAnswer ?? "",
-		crossPathsCount: presentation?.crossPathsCount ?? 1,
+		crossPathsCount: shouldShowCrossPaths(viewer, candidate) ? (presentation?.crossPathsCount ?? 1) : null,
 	};
-}
-
-function locationLabel(viewer: ProfileRow, candidate: ProfileRow): string | undefined {
-	const distance = haversineKm(
-		viewer.latitude as number | null,
-		viewer.longitude as number | null,
-		candidate.latitude as number | null,
-		candidate.longitude as number | null,
-	);
-
-	if (distance === undefined) {
-		return undefined;
-	}
-
-	if (distance < 5) {
-		return "Setúbal, Portugal";
-	}
-
-	return `${distance.toFixed(0)} km away`;
 }
 
 export async function getRecommendations({ db, viewer }: ViewerContext) {
@@ -108,12 +87,16 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 	const isSynthetic = Boolean(candidate.isSynthetic);
 	const mood = await resolveCandidateMood(db, candidate.id, isSynthetic);
 	const summary = summariseCandidate(viewer, candidate, row.recommendation);
-	const distance = haversineKm(
-		viewer.latitude as number | null,
-		viewer.longitude as number | null,
-		candidate.latitude as number | null,
-		candidate.longitude as number | null,
-	);
+	const publicFields = publicProfileFields(viewer, candidate);
+	const shareLocation = readPrivacySettings(candidate).shareLocation;
+	const distance = shareLocation
+		? haversineKm(
+				viewer.latitude as number | null,
+				viewer.longitude as number | null,
+				candidate.latitude as number | null,
+				candidate.longitude as number | null,
+			)
+		: undefined;
 
 	return {
 		recommendationId: summary.recommendationId,
@@ -124,14 +107,14 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 		photoUrl: summary.photoUrl,
 		ageLabel: summary.ageLabel,
 		career: summary.career,
-		bio: typeof candidate.bio === "string" ? candidate.bio : null,
-		interests: interestLabels(candidate),
+		bio: publicFields.bio,
+		interests: publicFields.interests,
 		sharedInterests: summary.sharedInterests,
 		dailyQuestion: DEMO_DAILY_QUESTION,
 		questionAnswer: summary.questionAnswer,
 		crossPathsCount: summary.crossPathsCount,
 		distanceKm: distance,
-		locationLabel: locationLabel(viewer, candidate),
+		locationLabel: candidateLocationLabel(viewer, candidate),
 		actedOn: row.recommendation.actedOn,
 		mood,
 		isSynthetic,
@@ -196,14 +179,14 @@ export async function getMatches({ db, viewer }: ViewerContext) {
 				return null;
 			}
 
-			const age = profileAge(candidate.birthDate);
+			const publicFields = publicProfileFields(viewer, candidate);
 
 			return {
 				candidateId,
 				displayName: displayNameForCandidate(candidateId),
 				photoUrl: resolveProfilePhotoUrl({ ...candidate, id: candidateId }),
-				ageLabel: age === undefined ? undefined : ageLabel(age),
-				topInterests: interestLabels(candidate).slice(0, 3),
+				ageLabel: publicFields.ageLabel,
+				topInterests: publicFields.topInterests,
 				matchedAt: interaction.createdAt.toISOString(),
 			};
 		}),

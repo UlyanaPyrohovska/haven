@@ -2,29 +2,44 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
-import { ThemedText } from "@/components/themed-text";
-import { ChipGroup } from "@/components/ui/chip-group";
+
 import { FormScreen } from "@/components/ui/form-screen";
 import { MenuCard, MenuDivider, MenuRow } from "@/components/ui/menu-row";
-import { Spacing } from "@/constants/app-config";
+import { useProfileQuery } from "@/hooks/use-profile";
 import { signOut } from "@/lib/auth/client";
-import { ThemePreference, type ThemePreferenceValue, useThemePreference } from "@/lib/theme/preference";
+import { locationSettingsSummary } from "@/lib/profile/location";
+import { readPrivacySettings } from "@/lib/profile/privacy";
+import { ThemePreference, useThemePreference } from "@/lib/theme/preference";
 
 export default function ProfileSettingsScreen() {
 	const { t } = useTranslation();
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const { preference, setPreference } = useThemePreference();
+	const { preference } = useThemePreference();
+	const profile = useProfileQuery(true);
 
-	const appearanceOptions = useMemo(
-		() => [
-			{ value: ThemePreference.system, label: t("profile.settingsScreen.appearance.system") },
-			{ value: ThemePreference.light, label: t("profile.settingsScreen.appearance.light") },
-			{ value: ThemePreference.dark, label: t("profile.settingsScreen.appearance.dark") },
-		],
-		[t],
+	const privacy = readPrivacySettings(profile.data);
+
+	const locationSummary = locationSettingsSummary(
+		profile.data,
+		t("home.locationUnset"),
+		t("home.noLocation"),
 	);
+
+	const visibilitySummary = privacy.discoverable
+		? t("profile.settingsScreen.visibility.summaryActive")
+		: t("profile.settingsScreen.visibility.summaryPaused");
+
+	const appearanceSummary = useMemo(() => {
+		switch (preference) {
+			case ThemePreference.light:
+				return t("profile.settingsScreen.appearance.light");
+			case ThemePreference.dark:
+				return t("profile.settingsScreen.appearance.dark");
+			default:
+				return t("profile.settingsScreen.appearance.system");
+		}
+	}, [preference, t]);
 
 	const onSignOut = async () => {
 		await signOut();
@@ -35,35 +50,22 @@ export default function ProfileSettingsScreen() {
 	return (
 		<FormScreen title={t("profile.settingsScreen.title")} subtitle={t("profile.settingsScreen.subtitle")} showBack>
 			<MenuCard>
-				<View style={styles.appearance}>
-					<View style={styles.appearanceCopy}>
-						<ThemedText type="label">{t("profile.settingsScreen.appearance.title")}</ThemedText>
-						<ThemedText type="caption">{t("profile.settingsScreen.appearance.subtitle")}</ThemedText>
-					</View>
-					<ChipGroup<ThemePreferenceValue>
-						hideLabel
-						label={t("profile.settingsScreen.appearance.title")}
-						options={appearanceOptions}
-						value={preference}
-						onChange={setPreference}
-					/>
-				</View>
-			</MenuCard>
-
-			<MenuCard>
-				<MenuRow
-					label={t("profile.settingsScreen.privacy.title")}
-					subtitle={`${t("profile.settingsScreen.privacy.subtitle")} · ${t("profile.settingsScreen.comingSoon")}`}
-				/>
-				<MenuDivider />
-				<MenuRow
-					label={t("profile.settingsScreen.visibility.title")}
-					subtitle={`${t("profile.settingsScreen.visibility.subtitle")} · ${t("profile.settingsScreen.comingSoon")}`}
-				/>
-				<MenuDivider />
 				<MenuRow
 					label={t("profile.settingsScreen.location.title")}
-					subtitle={`${t("profile.settingsScreen.location.subtitle")} · ${t("profile.settingsScreen.comingSoon")}`}
+					subtitle={locationSummary}
+					onPress={() => router.push("/profile/location-settings")}
+				/>
+				<MenuDivider />
+				<MenuRow
+					label={t("profile.settingsScreen.visibility.menuTitle")}
+					subtitle={visibilitySummary}
+					onPress={() => router.push("/profile/visibility-settings")}
+				/>
+				<MenuDivider />
+				<MenuRow
+					label={t("profile.settingsScreen.appearance.menuTitle")}
+					subtitle={appearanceSummary}
+					onPress={() => router.push("/profile/appearance-settings")}
 				/>
 			</MenuCard>
 
@@ -73,14 +75,3 @@ export default function ProfileSettingsScreen() {
 		</FormScreen>
 	);
 }
-
-const styles = StyleSheet.create({
-	appearance: {
-		paddingHorizontal: Spacing.lg,
-		paddingVertical: Spacing.lg,
-		gap: Spacing.md,
-	},
-	appearanceCopy: {
-		gap: Spacing.xs,
-	},
-});

@@ -6,11 +6,14 @@ import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
+import { LocationPill } from "@/components/location/location-pill";
 import { MoodCard } from "@/components/home/mood-card";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemedText } from "@/components/themed-text";
 import { Colors, FontFamily, FontSize, Radius, Spacing } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useHeaderLocation } from "@/hooks/use-header-location";
+import { useProfileQuery } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
 import { todayMoodQueryKey } from "@/lib/api/mood";
 import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
@@ -18,7 +21,6 @@ import { useSession } from "@/lib/auth/client";
 
 /** Placeholder content until profile and feed APIs are wired up. */
 const DUMMY = {
-	location: "Setúbal, Portugal",
 	unreadMessages: 5,
 	dailyQuestion: "What made you smile this week?",
 } as const;
@@ -119,6 +121,9 @@ export default function HomeScreen() {
 	const { width } = useWindowDimensions();
 	const queryClient = useQueryClient();
 	const { data: session } = useSession();
+	const hasSession = Boolean(session);
+	useProfileQuery(hasSession);
+
 	const recommendations = useQuery({
 		queryKey: recommendationsQueryKey,
 		queryFn: fetchRecommendations,
@@ -126,6 +131,7 @@ export default function HomeScreen() {
 	const [response, setResponse] = useState("");
 
 	const dock = dockColors(colorScheme);
+	const headerLocation = useHeaderLocation(hasSession);
 	const displayName = session?.user.name?.split(" ")[0] ?? "Uliana";
 	const photoUrl = session?.user.image?.trim() || null;
 	const newConnections = recommendations.data?.count ?? 0;
@@ -159,32 +165,43 @@ export default function HomeScreen() {
 				}
 			>
 				<View style={styles.header}>
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("home.settingsAccessibilityLabel")}
-						hitSlop={Spacing.sm}
-						onPress={() => router.push("/profile/settings")}
-						style={({ pressed }) => [styles.iconButton, { opacity: pressed ? 0.6 : 1 }]}
-					>
-						<Ionicons name="settings-outline" size={24} color={theme.text} />
-					</Pressable>
-
-					<View style={[styles.locationPill, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-						<Ionicons name="eye-off-outline" size={14} color={theme.icon} />
-						<ThemedText type="caption" style={styles.locationText}>
-							{DUMMY.location}
-						</ThemedText>
+					<View style={styles.headerSide}>
+						<Pressable
+							accessibilityRole="button"
+							accessibilityLabel={t("home.settingsAccessibilityLabel")}
+							hitSlop={Spacing.sm}
+							onPress={() => router.push("/profile/settings")}
+							style={({ pressed }) => [styles.iconButton, { opacity: pressed ? 0.6 : 1 }]}
+						>
+							<Ionicons name="settings-outline" size={24} color={theme.text} />
+						</Pressable>
 					</View>
 
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("home.profileAccessibilityLabel")}
-						hitSlop={Spacing.sm}
-						onPress={() => router.push("/profile")}
-						style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}
-					>
-						<UserAvatar imageUrl={photoUrl} name={session?.user.name ?? displayName} size={44} />
-					</Pressable>
+					<View style={styles.headerCenter}>
+						{headerLocation.visible ? (
+							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel={t("profile.settingsScreen.location.title")}
+								hitSlop={Spacing.sm}
+								onPress={() => router.push("/profile/location-settings")}
+								style={({ pressed }) => [styles.headerPillPressable, { opacity: pressed ? 0.75 : 1 }]}
+							>
+								<LocationPill label={headerLocation.label} hidden={headerLocation.hidden} unset={headerLocation.unset} />
+							</Pressable>
+						) : null}
+					</View>
+
+					<View style={styles.headerSide}>
+						<Pressable
+							accessibilityRole="button"
+							accessibilityLabel={t("home.profileAccessibilityLabel")}
+							hitSlop={Spacing.sm}
+							onPress={() => router.push("/profile")}
+							style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}
+						>
+							<UserAvatar imageUrl={photoUrl} name={session?.user.name ?? displayName} size={44} />
+						</Pressable>
+					</View>
 				</View>
 
 				<ThemedText type="title" style={styles.greeting}>
@@ -264,25 +281,26 @@ const styles = StyleSheet.create({
 	header: {
 		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "space-between",
+	},
+	headerSide: {
+		width: 44,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	headerCenter: {
+		flex: 1,
+		minWidth: 0,
+		alignItems: "center",
+		paddingHorizontal: Spacing.xs,
+	},
+	headerPillPressable: {
+		maxWidth: "100%",
 	},
 	iconButton: {
 		width: 40,
 		height: 40,
 		alignItems: "center",
 		justifyContent: "center",
-	},
-	locationPill: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: Spacing.xs,
-		paddingHorizontal: Spacing.md,
-		paddingVertical: Spacing.sm,
-		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
-	},
-	locationText: {
-		fontWeight: "500",
 	},
 	greeting: {
 		marginTop: Spacing.sm,

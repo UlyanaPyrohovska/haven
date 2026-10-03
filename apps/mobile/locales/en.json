@@ -27,7 +27,8 @@
 		"responsePlaceholder": "Write your response...",
 		"profileAccessibilityLabel": "View profile",
 		"settingsAccessibilityLabel": "Open settings",
-		"locationFallback": "Setúbal, Portugal"
+		"locationUnset": "Set location",
+		"noLocation": "No location"
 	},
 	"connections": {
 		"title": "Profile Details",
@@ -36,6 +37,7 @@
 		"whyMatched": "Why you've matched?",
 		"crossPaths_one": "You have crossed paths {{count}} time this week!",
 		"crossPaths_other": "You have crossed paths {{count}} times this week!",
+		"nearbyLabel": "Nearby: {{location}}",
 		"accept": "Accept connection",
 		"decline": "Decline connection",
 		"message": "Send message",
@@ -92,28 +94,70 @@
 			"save": "Save changes",
 			"saveError": "We couldn't save your profile. Please try again."
 		},
+		"locationScreen": {
+			"title": "Location",
+			"subtitle": "Choose what city or area you show in Haven and what we can use for matching.",
+			"hiddenLabel": "Location hidden",
+			"deviceLabel": "Near me",
+			"saveError": "We couldn't save your location settings. Please try again.",
+			"permissionDenied": "Location access is off. Enable it in Settings to use your current location.",
+			"servicesDisabled": "Location services are turned off on this device.",
+			"deviceUnavailable": "We couldn't get a location fix. On an emulator, set a mock location first.",
+			"deviceTimeout": "Finding your location took too long. Try again near a window or set a mock location on the emulator.",
+			"deviceError": "We couldn't read your current location. Please try again.",
+			"openSettings": "Open Settings",
+			"displayTitle": "Your location",
+			"displayHint": "Use your current location or hide it from Haven.",
+			"useDevice": "Update current location",
+			"sharingTitle": "Sharing & tracking",
+			"shareProximity": "Share proximity",
+			"shareProximityHint": "When off, others won't see distance or area labels for you",
+			"shareCrossPaths": "Cross paths",
+			"shareCrossPathsHint": "When off, Haven won't track or show crossed-path counts",
+			"footerHint": "Haven uses your GPS coordinates for matching when you share your current location.",
+			"presets": {
+				"device": "Current location",
+				"hidden": "Hidden"
+			}
+		},
 		"settingsScreen": {
 			"title": "Settings",
-			"subtitle": "Control what you share and how Haven uses your data.",
-			"comingSoon": "Coming soon",
+			"subtitle": "Manage location, visibility, and how Haven looks.",
+			"saveError": "We couldn't save your privacy settings. Please try again.",
 			"privacy": {
-				"title": "Privacy",
-				"subtitle": "Who can see your profile and activity"
+				"title": "What others see",
+				"showAge": "Show age range",
+				"showCareer": "Show career",
+				"showBio": "Show bio",
+				"showInterests": "Show interests"
 			},
 			"visibility": {
+				"title": "Discoverability",
+				"menuTitle": "Profile visibility",
+				"discoverable": "Show me in recommendations",
+				"discoverableHint": "Turn off to pause your profile while keeping your account",
+				"summaryActive": "Visible in recommendations",
+				"summaryPaused": "Hidden from recommendations"
+			},
+			"visibilityScreen": {
 				"title": "Profile visibility",
-				"subtitle": "Choose when your profile is shown to others"
+				"subtitle": "Choose who can find you and what they see on your profile."
 			},
 			"location": {
 				"title": "Location",
-				"subtitle": "Manage how location is used for matching"
+				"subtitle": "Display location, proximity, and cross paths"
 			},
 			"appearance": {
-				"title": "Appearance",
+				"title": "Theme",
+				"menuTitle": "App appearance",
 				"subtitle": "Choose light, dark, or match your device",
 				"system": "System",
 				"light": "Light",
 				"dark": "Dark"
+			},
+			"appearanceScreen": {
+				"title": "App appearance",
+				"subtitle": "Choose how Haven looks on this device."
 			}
 		}
 	},

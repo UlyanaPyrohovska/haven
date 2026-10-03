@@ -142,6 +142,10 @@ export const userProfiles = pgTable(
 		// Location
 		latitude: doublePrecision("latitude"),
 		longitude: doublePrecision("longitude"),
+		/** Label shown in the app header; can differ from GPS coordinates. */
+		displayLocation: varchar("display_location", { length: 200 }),
+		/** When true, the header shows a hidden-location state instead of `displayLocation`. */
+		locationHidden: boolean("location_hidden").notNull().default(false),
 
 		// Free text
 		bio: text("bio"),
@@ -182,6 +186,17 @@ export const userProfiles = pgTable(
 		selfFun: smallint("self_fun"),
 		selfAmb: smallint("self_amb"),
 		selfShar: smallint("self_shar"),
+
+		/** When false, the profile is hidden from new recommendations. */
+		discoverable: boolean("discoverable").notNull().default(true),
+		showAge: boolean("show_age").notNull().default(true),
+		showCareer: boolean("show_career").notNull().default(true),
+		showBio: boolean("show_bio").notNull().default(true),
+		showInterests: boolean("show_interests").notNull().default(true),
+		/** When false, distance and location labels are hidden from others. */
+		shareLocation: boolean("share_location").notNull().default(true),
+		/** When false, cross-paths tracking and counts are disabled for this user. */
+		shareCrossPaths: boolean("share_cross_paths").notNull().default(true),
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").defaultNow().notNull(),

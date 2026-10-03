@@ -50,6 +50,20 @@
 			"when": 1789068000000,
 			"tag": "0006_mood_checkins",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1789068100000,
+			"tag": "0007_profile_privacy",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1789068200000,
+			"tag": "0008_location_settings",
+			"breakpoints": true
 		}
 	]
 }
