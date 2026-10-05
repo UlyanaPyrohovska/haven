@@ -27,6 +27,21 @@ export const listMatchesRoute = createRoute({
 	},
 });
 
+export const postRegenerateRoute = createRoute({
+	method: "post",
+	path: "/recommendations/regenerate",
+	tags: ["Recommendations"],
+	summary: "Replace pending recommendations with a fresh batch (ignores cooldown)",
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.RegenerateResponseSchema } },
+			description: "Batch generated",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		400: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "No profile" },
+	},
+});
+
 export const getRecommendationRoute = createRoute({
 	method: "get",
 	path: "/recommendations/{candidateId}",

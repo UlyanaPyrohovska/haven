@@ -62,6 +62,7 @@ const privacyToggle = z.boolean().optional();
 
 export const ProfileUpdateSchema = z
 	.object({
+		displayName: nullableText(80),
 		birthDate,
 		gender: z.number().int().min(0).max(1).nullable().optional(),
 		ethnicity: z.enum(ethnicityValues).nullable().optional(),

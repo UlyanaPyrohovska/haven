@@ -92,3 +92,9 @@ export const MatchesListSchema = z
 		count: z.number().int(),
 	})
 	.openapi("MatchesList");
+
+export const RegenerateResponseSchema = z
+	.object({
+		count: z.number().int(),
+	})
+	.openapi("RegenerateResponse");

@@ -1,6 +1,6 @@
 import { eq, getTableColumns } from "drizzle-orm";
 import type { Db } from "@/db";
-import { userProfiles } from "@/db/schema";
+import { user, userProfiles } from "@/db/schema";
 import type { ProfileUpdate } from "./schemas";
 
 const { email: _email, passwordHash: _passwordHash, ...publicProfileColumns } = getTableColumns(userProfiles);
@@ -15,6 +15,12 @@ export async function findProfileByUserId(db: Db, userId: string) {
 		.limit(1);
 
 	return row ?? null;
+}
+
+export async function findAuthUserName(db: Db, userId: string) {
+	const [row] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
+
+	return row?.name ?? null;
 }
 
 export async function findProfileIdByUserId(db: Db, userId: string) {
