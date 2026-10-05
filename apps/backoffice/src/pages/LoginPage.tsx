@@ -1,11 +1,11 @@
 import { type FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ModeToggle } from "@/components/mode-toggle";
 import { signIn, useSession } from "@/lib/auth";
 
 export function LoginPage() {

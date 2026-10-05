@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
-import { errors } from "@/lib/errors";
 import { displayNameFromAuthName } from "@/lib/candidate-display";
+import { errors } from "@/lib/errors";
 import { isProfileComplete, type ProfileRow } from "@/lib/profile-view";
 import { getSessionUserId } from "@/lib/session";
 import * as recommendationService from "@/modules/recommendations/service";
@@ -48,7 +48,7 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 	const existing = await repository.findProfileByUserId(db, userId);
 	const wasComplete = existing ? isProfileComplete(existing as ProfileRow) : false;
 
-	let profile;
+	let profile: Awaited<ReturnType<typeof repository.updateProfileById>>;
 
 	if (profileId) {
 		profile = await repository.updateProfileById(db, profileId, payload);

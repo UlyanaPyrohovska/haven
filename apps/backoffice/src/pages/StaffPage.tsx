@@ -195,7 +195,9 @@ export function StaffPage() {
 						</Alert>
 					) : null}
 
-					<p className="text-sm text-muted-foreground">{total.toLocaleString()} staff account{total === 1 ? "" : "s"}</p>
+					<p className="text-sm text-muted-foreground">
+						{total.toLocaleString()} staff account{total === 1 ? "" : "s"}
+					</p>
 
 					{loading ? <p className="text-sm text-muted-foreground">Loading…</p> : null}
 

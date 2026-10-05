@@ -249,7 +249,12 @@ export function UserDetailPage() {
 							</div>
 							<div className="mt-4 space-y-2">
 								<Label htmlFor="bio">Bio</Label>
-								<Textarea id="bio" rows={4} value={draft.bio ?? ""} onChange={(e) => setDraft({ ...draft, bio: e.target.value })} />
+								<Textarea
+									id="bio"
+									rows={4}
+									value={draft.bio ?? ""}
+									onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
+								/>
 							</div>
 						</div>
 

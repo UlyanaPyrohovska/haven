@@ -34,8 +34,7 @@ export function AppSidebar() {
 					<SidebarGroupContent>
 						<SidebarMenu>
 							{navItems.map((item) => {
-								const active =
-									location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
+								const active = location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
 
 								return (
 									<SidebarMenuItem key={item.href}>

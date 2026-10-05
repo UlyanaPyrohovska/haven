@@ -72,11 +72,7 @@ export async function updateProfileById(db: Db, profileId: number, updates: Prof
 	return row ?? null;
 }
 
-export async function updateAuthUserById(
-	db: Db,
-	authUserId: string,
-	updates: { name?: string; email?: string },
-) {
+export async function updateAuthUserById(db: Db, authUserId: string, updates: { name?: string; email?: string }) {
 	const [row] = await db
 		.update(user)
 		.set({ ...updates, updatedAt: new Date() })
