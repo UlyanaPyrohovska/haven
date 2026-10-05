@@ -2,6 +2,7 @@
 	"name": "haven",
 	"scripts": {
 		"dev": "turbo dev",
+		"dev:backoffice": "pnpm --filter backoffice dev",
 		"dev:prod": "pnpm --filter haven-app dev:prod",
 		"build": "turbo build",
 		"deploy": "pnpm --filter api run deploy",
@@ -10,6 +11,7 @@
 		"db:migrate": "pnpm --filter api db:migrate",
 		"db:studio": "pnpm --filter api db:studio",
 		"db:seed": "pnpm --filter api db:seed",
+		"db:seed-staff": "pnpm --filter api db:seed-staff",
 		"db:visualizer": "pnpm --filter api db:visualizer",
 		"types": "turbo types",
 		"lint": "pnpm dlx @biomejs/biome lint --write",

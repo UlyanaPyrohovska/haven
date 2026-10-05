@@ -17,6 +17,11 @@ export const errors = {
 		code: "NOT_FOUND",
 		message: "Resource not found",
 	},
+	forbidden: {
+		status: 403,
+		code: "FORBIDDEN",
+		message: "You do not have permission to perform this action",
+	},
 	no_profile: {
 		status: 400,
 		code: "NO_PROFILE",
