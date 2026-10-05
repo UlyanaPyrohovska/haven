@@ -6,19 +6,23 @@ import { errors } from "@/lib/errors";
 import {
 	candidateLocationLabel,
 	haversineKm,
+	isProfileComplete,
 	type ProfileRow,
 	publicProfileFields,
 	readPrivacySettings,
 	shouldShowCrossPaths,
 } from "@/lib/profile-view";
+import { CADENCE, isCooldownElapsed, nextRefreshAtIso, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
 import { DEMO_DAILY_QUESTION, demoPresentation, displayNameForCandidate } from "@/lib/recommendation-demo-data";
 import { getSessionUserId } from "@/lib/session";
+import { generateRecommendations } from "./generator";
 import * as repository from "./repository";
 import type { DecisionBody } from "./schemas";
 
 export type ViewerContext = {
 	db: Db;
 	viewer: repository.ViewerProfile;
+	recCooldownHours: number;
 };
 
 export async function requireViewer(c: Context<{ Bindings: CloudflareBindings }>): Promise<ViewerContext> {
@@ -35,7 +39,11 @@ export async function requireViewer(c: Context<{ Bindings: CloudflareBindings }>
 		throw errors.no_profile;
 	}
 
-	return { db, viewer };
+	return {
+		db,
+		viewer,
+		recCooldownHours: resolveRecCooldownHours(c.env.REC_COOLDOWN_HOURS),
+	};
 }
 
 function summariseCandidate(
@@ -51,7 +59,11 @@ function summariseCandidate(
 		candidateId: candidate.id,
 		rank: recommendation.rank ?? 0,
 		score: recommendation.score ?? 0,
-		displayName: displayNameForCandidate(candidate.id),
+		displayName: displayNameForCandidate({
+			id: candidate.id,
+			gender: candidate.gender as number | null | undefined,
+			isSynthetic: Boolean(candidate.isSynthetic),
+		}),
 		photoUrl: resolveProfilePhotoUrl(candidate),
 		ageLabel: publicFields.ageLabel,
 		career: publicFields.career,
@@ -62,7 +74,21 @@ function summariseCandidate(
 	};
 }
 
-export async function getRecommendations({ db, viewer }: ViewerContext) {
+export async function getRecommendations({ db, viewer, recCooldownHours }: ViewerContext) {
+	let nextRefreshAt: string | undefined;
+
+	const pending = await repository.countPendingRecommendations(db, viewer.id);
+
+	if (pending === 0 && isProfileComplete(viewer)) {
+		const lastShown = await repository.getLastBatchShownAt(db, viewer.id);
+
+		if (isCooldownElapsed(lastShown, recCooldownHours)) {
+			await generateRecommendations(db, viewer.id, { k: CADENCE.batchSize });
+		} else if (lastShown) {
+			nextRefreshAt = nextRefreshAtIso(lastShown, recCooldownHours);
+		}
+	}
+
 	const rows = await repository.listPendingRecommendations(db, viewer.id);
 
 	const summaries = rows.map(({ recommendation, candidate }) =>
@@ -73,6 +99,7 @@ export async function getRecommendations({ db, viewer }: ViewerContext) {
 		recommendations: summaries.map(({ questionAnswer: _qa, crossPathsCount: _cp, ...summary }) => summary),
 		count: summaries.length,
 		dailyQuestion: DEMO_DAILY_QUESTION,
+		...(nextRefreshAt ? { nextRefreshAt } : {}),
 	};
 }
 
@@ -183,7 +210,11 @@ export async function getMatches({ db, viewer }: ViewerContext) {
 
 			return {
 				candidateId,
-				displayName: displayNameForCandidate(candidateId),
+				displayName: displayNameForCandidate({
+					id: candidateId,
+					gender: candidate.gender as number | null | undefined,
+					isSynthetic: Boolean(candidate.isSynthetic),
+				}),
 				photoUrl: resolveProfilePhotoUrl({ ...candidate, id: candidateId }),
 				ageLabel: publicFields.ageLabel,
 				topInterests: publicFields.topInterests,

@@ -36,11 +36,14 @@ export type MatchSummary = {
 	matchedAt: string;
 };
 
-export async function fetchRecommendations(): Promise<{
+export type RecommendationsListResponse = {
 	recommendations: RecommendationSummary[];
 	count: number;
 	dailyQuestion: string;
-}> {
+	nextRefreshAt?: string;
+};
+
+export async function fetchRecommendations(): Promise<RecommendationsListResponse> {
 	const response = await apiFetch("/recommendations");
 
 	if (!response.ok) {

@@ -48,6 +48,19 @@ const INTEREST_ACTIVE_THRESHOLD = 8;
 
 export type ProfileRow = Record<string, unknown>;
 
+const PREF_KEYS = ["prefAttr", "prefSinc", "prefIntel", "prefFun", "prefAmb", "prefShar"] as const;
+/** Self-ratings collected in onboarding; `selfShar` is pref-only and stays null for real users. */
+const SELF_RATED_KEYS = ["selfAttr", "selfSinc", "selfIntel", "selfFun", "selfAmb"] as const;
+
+/** True when onboarding fields needed for compatibility scoring are present. */
+export function isProfileComplete(profile: ProfileRow): boolean {
+	const hasInterest = INTEREST_KEYS.some((key) => profile[key] != null);
+	const hasPref = PREF_KEYS.every((key) => typeof profile[key] === "number");
+	const hasSelf = SELF_RATED_KEYS.every((key) => typeof profile[key] === "number");
+
+	return hasInterest && hasPref && hasSelf;
+}
+
 export type PrivacySettings = {
 	discoverable: boolean;
 	showAge: boolean;
