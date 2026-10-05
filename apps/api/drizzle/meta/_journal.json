@@ -71,6 +71,13 @@
 			"when": 1789068300000,
 			"tag": "0009_daily_question_answers",
 			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1789068400000,
+			"tag": "0010_display_name",
+			"breakpoints": true
 		}
 	]
 }

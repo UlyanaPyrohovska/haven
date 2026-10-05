@@ -124,6 +124,9 @@ export const userProfiles = pgTable(
 
 		isSynthetic: boolean("is_synthetic").notNull().default(false),
 
+		/** Shown on connection cards; real users get the first token of Better Auth `user.name`. */
+		displayName: varchar("display_name", { length: 80 }),
+
 		// Auth — nullable, only populated for real users
 		email: varchar("email", { length: 255 }).unique(),
 		passwordHash: varchar("password_hash", { length: 255 }),

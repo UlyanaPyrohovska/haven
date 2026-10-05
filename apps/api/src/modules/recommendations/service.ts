@@ -16,7 +16,7 @@ import {
 	shouldShowCrossPaths,
 } from "@/lib/profile-view";
 import { CADENCE, isCooldownElapsed, nextRefreshAtIso, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
-import { demoPresentation, displayNameForCandidate } from "@/lib/recommendation-demo-data";
+import { displayNameForCandidate } from "@/lib/candidate-display";
 import { getSessionUserId } from "@/lib/session";
 import * as dailyQuestionRepository from "@/modules/daily-question/repository";
 import { generateRecommendations } from "./generator";
@@ -28,6 +28,15 @@ export type ViewerContext = {
 	viewer: repository.ViewerProfile;
 	recCooldownHours: number;
 };
+
+function crossPathsCountFor(viewer: ProfileRow, candidate: ProfileRow): number | null {
+	if (!shouldShowCrossPaths(viewer, candidate)) {
+		return null;
+	}
+
+	// W1.6: return crossing count from DB.
+	return null;
+}
 
 export async function requireViewer(c: Context<{ Bindings: CloudflareBindings }>): Promise<ViewerContext> {
 	const authUserId = await getSessionUserId(c);
@@ -56,7 +65,6 @@ function summariseCandidate(
 	recommendation: { id: number; rank: number | null; score: number | null },
 ) {
 	const publicFields = publicProfileFields(viewer, candidate);
-	const presentation = demoPresentation(candidate.id);
 
 	return {
 		recommendationId: recommendation.id,
@@ -65,6 +73,7 @@ function summariseCandidate(
 		score: recommendation.score ?? 0,
 		displayName: displayNameForCandidate({
 			id: candidate.id,
+			displayName: candidate.displayName as string | null | undefined,
 			gender: candidate.gender as number | null | undefined,
 			isSynthetic: Boolean(candidate.isSynthetic),
 		}),
@@ -73,7 +82,7 @@ function summariseCandidate(
 		career: publicFields.career,
 		topInterests: publicFields.topInterests,
 		sharedInterests: publicFields.sharedInterests,
-		crossPathsCount: shouldShowCrossPaths(viewer, candidate) ? (presentation?.crossPathsCount ?? 1) : null,
+		crossPathsCount: crossPathsCountFor(viewer, candidate),
 	};
 }
 
@@ -205,6 +214,43 @@ export async function postDecision({ db, viewer }: ViewerContext, candidateId: n
 	return { matched, remainingCount };
 }
 
+/**
+ * When onboarding completes, seed the first batch without waiting for GET /recommendations.
+ * Skips cooldown — only runs on the transition to a complete profile with no pending recs.
+ */
+export async function maybeGenerateOnProfileComplete(
+	db: Db,
+	profile: ProfileRow & { id: number },
+	wasComplete: boolean,
+) {
+	if (wasComplete || !isProfileComplete(profile)) {
+		return;
+	}
+
+	const pending = await repository.countPendingRecommendations(db, profile.id);
+
+	if (pending > 0) {
+		return;
+	}
+
+	try {
+		await generateRecommendations(db, profile.id, { k: CADENCE.batchSize });
+	} catch (err) {
+		console.error("maybeGenerateOnProfileComplete failed", err);
+	}
+}
+
+/** Study knob: drop un-acted recs and generate a fresh batch (ignores cooldown). */
+export async function regenerate({ db, viewer }: ViewerContext) {
+	if (!isProfileComplete(viewer)) {
+		return { count: 0 };
+	}
+
+	const count = await generateRecommendations(db, viewer.id, { k: CADENCE.batchSize });
+
+	return { count };
+}
+
 export async function getMatches({ db, viewer }: ViewerContext) {
 	const interactionRows = await repository.listMatchInteractions(db, viewer.id);
 
@@ -223,6 +269,7 @@ export async function getMatches({ db, viewer }: ViewerContext) {
 				candidateId,
 				displayName: displayNameForCandidate({
 					id: candidateId,
+					displayName: candidate.displayName as string | null | undefined,
 					gender: candidate.gender as number | null | undefined,
 					isSynthetic: Boolean(candidate.isSynthetic),
 				}),

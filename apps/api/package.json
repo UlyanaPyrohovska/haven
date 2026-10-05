@@ -11,7 +11,6 @@
 		"db:studio": "drizzle-kit studio",
 		"db:visualizer": "drizzle-lab visualizer -c drizzle.config.ts -e .env --ts-config tsconfig.json",
 		"db:seed": "tsx scripts/seed.ts",
-		"db:seed-recommendations": "tsx scripts/seed-recommendations.ts",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},

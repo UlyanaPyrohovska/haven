@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import Papa from "papaparse";
 import pg from "pg";
 import { friendships, interactions, userProfiles } from "../src/db/schema";
+import { syntheticDisplayName } from "../src/lib/candidate-display";
 import { lookingForFromGoal } from "../src/lib/looking-for";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
@@ -84,10 +85,14 @@ function birthDateFromAge(age: number): string {
 }
 
 function mapUserRow(row: CsvRow) {
+	const id = parseIntField(row, "uid");
+	const gender = parseIntField(row, "gender");
+
 	return {
-		id: parseIntField(row, "uid"),
+		id,
 		isSynthetic: true,
-		gender: parseIntField(row, "gender"),
+		displayName: syntheticDisplayName({ id, gender }),
+		gender,
 		birthDate: birthDateFromAge(parseIntField(row, "age")),
 		ethnicity: row.ethnicity,
 		career: row.career,

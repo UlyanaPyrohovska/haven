@@ -10,6 +10,12 @@ recommendationsModule.openapi(routes.listRecommendationsRoute, async (c) => {
 	return c.json(await service.getRecommendations(ctx), 200);
 });
 
+// POST /recommendations/regenerate
+recommendationsModule.openapi(routes.postRegenerateRoute, async (c) => {
+	const ctx = await service.requireViewer(c);
+	return c.json(await service.regenerate(ctx), 200);
+});
+
 // GET /matches
 recommendationsModule.openapi(routes.listMatchesRoute, async (c) => {
 	const ctx = await service.requireViewer(c);
