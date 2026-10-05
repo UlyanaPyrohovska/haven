@@ -31,6 +31,7 @@ export const RecommendationsListSchema = z
 		recommendations: z.array(RecommendationSummarySchema),
 		count: z.number().int(),
 		dailyQuestion: z.string(),
+		nextRefreshAt: z.string().datetime().optional(),
 	})
 	.openapi("RecommendationsList");
 

@@ -24,6 +24,12 @@ export const DEFAULT_WEIGHTS: ScoringWeights = {
 	pref: 0.15,
 };
 
+/** Daily-drop feed: small batch size and cooldown between batches (hours). */
+export const CADENCE = {
+	batchSize: 4,
+	cooldownHours: 24,
+} as const;
+
 /** Distance decay scale for `geoProximity` (km). */
 export const GEO_DECAY_TAU_KM = 25;
 

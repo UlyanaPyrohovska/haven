@@ -44,6 +44,8 @@
 		"messageSoon": "Messaging is coming soon.",
 		"emptyTitle": "No new connections",
 		"emptySubtitle": "Check back later — we'll surface people nearby when there's a good fit.",
+		"caughtUpTitle": "You're all caught up",
+		"caughtUpSubtitle": "New people on {{date}}.",
 		"backHome": "Back to home",
 		"matchedTitle": "It's a match!",
 		"matchedMessage": "{{name}} accepted too. You can message each other soon.",

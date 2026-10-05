@@ -53,7 +53,7 @@ export default function ConnectionsIndexScreen() {
 
 			setCandidateId(null);
 
-			if (remainingCount === 0) {
+			if (remainingCount === 0 && !refreshed.nextRefreshAt) {
 				navigation.goBack();
 			}
 		},
@@ -79,10 +79,21 @@ export default function ConnectionsIndexScreen() {
 	}
 
 	if (candidateId === null) {
+		const nextRefreshAt = recommendations.data?.nextRefreshAt;
+		const refreshLabel = nextRefreshAt
+			? new Intl.DateTimeFormat(undefined, {
+					weekday: "long",
+					month: "long",
+					day: "numeric",
+				}).format(new Date(nextRefreshAt))
+			: null;
+
 		return (
 			<FormScreen
-				title={t("connections.emptyTitle")}
-				subtitle={t("connections.emptySubtitle")}
+				title={refreshLabel ? t("connections.caughtUpTitle") : t("connections.emptyTitle")}
+				subtitle={
+					refreshLabel ? t("connections.caughtUpSubtitle", { date: refreshLabel }) : t("connections.emptySubtitle")
+				}
 				showBack
 			>
 				<Button label={t("connections.backHome")} onPress={() => navigation.goBack()} />

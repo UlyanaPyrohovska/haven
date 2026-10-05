@@ -40,7 +40,8 @@ export type AvatarProfile = {
 	gender?: number | null;
 };
 
-function hashIndex(seed: number, length: number): number {
+/** Stable index for picking portrait/name variants from a profile id. */
+export function hashIndex(seed: number, length: number): number {
 	let hash = seed | 0;
 
 	hash = Math.imul(hash ^ (hash >>> 16), 0x7feb352d);

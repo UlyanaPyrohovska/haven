@@ -1,9 +1,54 @@
+import { hashIndex } from "@/lib/avatar-url";
+
 /** Presentation extras for demo recommendation candidates (synthetic profile ids). */
 export type DemoCandidatePresentation = {
 	displayName: string;
 	questionAnswer: string;
 	crossPathsCount: number;
 };
+
+export type CandidateDisplayProfile = {
+	id: number;
+	gender?: number | null;
+	isSynthetic?: boolean;
+};
+
+/** First names for seeded synthetic profiles (no name column in the CSV). */
+const FEMALE_FIRST_NAMES = [
+	"Anna",
+	"Maya",
+	"Sofia",
+	"Inês",
+	"Beatriz",
+	"Mariana",
+	"Clara",
+	"Leonor",
+	"Matilde",
+	"Rita",
+	"Carolina",
+	"Joana",
+	"Laura",
+	"Teresa",
+	"Helena",
+] as const;
+
+const MALE_FIRST_NAMES = [
+	"Leo",
+	"Tiago",
+	"Miguel",
+	"Duarte",
+	"Francisco",
+	"Gonçalo",
+	"Pedro",
+	"Rafael",
+	"Tomás",
+	"Diogo",
+	"André",
+	"Luís",
+	"Daniel",
+	"Bruno",
+	"Ricardo",
+] as const;
 
 /** Curated to match the connection-detail mockup and nearby Setúbal profiles. */
 export const DEMO_CANDIDATE_PRESENTATION: Record<number, DemoCandidatePresentation> = {
@@ -42,6 +87,22 @@ export function demoPresentation(candidateId: number): DemoCandidatePresentation
 	return DEMO_CANDIDATE_PRESENTATION[candidateId];
 }
 
-export function displayNameForCandidate(candidateId: number, fallback?: string): string {
-	return DEMO_CANDIDATE_PRESENTATION[candidateId]?.displayName ?? fallback ?? `Profile ${candidateId}`;
+function syntheticFirstName(profile: CandidateDisplayProfile): string {
+	const pool = profile.gender === 1 ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES;
+
+	return pool[hashIndex(profile.id, pool.length)];
+}
+
+export function displayNameForCandidate(profile: CandidateDisplayProfile, fallback = "Someone"): string {
+	const curated = DEMO_CANDIDATE_PRESENTATION[profile.id]?.displayName;
+
+	if (curated) {
+		return curated;
+	}
+
+	if (profile.isSynthetic !== false) {
+		return syntheticFirstName(profile);
+	}
+
+	return fallback;
 }

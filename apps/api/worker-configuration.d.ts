@@ -5,6 +5,8 @@ interface __BaseEnv_CloudflareBindings {
 	DATABASE_URL: string;
 	BETTER_AUTH_SECRET: string;
 	BETTER_AUTH_URL: string;
+	/** Override default 24h recommendation cooldown for study sessions (e.g. `0.05` ≈ 3 minutes). */
+	REC_COOLDOWN_HOURS?: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
