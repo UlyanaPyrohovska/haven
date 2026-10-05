@@ -33,10 +33,7 @@ export async function listUsers(c: Context<{ Bindings: CloudflareBindings }>, qu
 	await requireStaffAdmin(c);
 	const db = getDb(c.env.DATABASE_URL);
 
-	const [users, total] = await Promise.all([
-		repository.listProfiles(db, query),
-		repository.countProfiles(db, query),
-	]);
+	const [users, total] = await Promise.all([repository.listProfiles(db, query), repository.countProfiles(db, query)]);
 
 	return {
 		users: users.map((row) => ({

@@ -21,22 +21,34 @@ export function UsersPage() {
 
 	const limit = 25;
 
-	async function loadUsers() {
-		setLoading(true);
-		setError(null);
-		try {
-			const data = await listUsers({ q: search || undefined, limit, offset });
-			setUsers(data.users);
-			setTotal(data.total);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to load users");
-		} finally {
-			setLoading(false);
-		}
-	}
-
 	useEffect(() => {
-		loadUsers();
+		let cancelled = false;
+
+		async function loadUsers() {
+			setLoading(true);
+			setError(null);
+			try {
+				const data = await listUsers({ q: search || undefined, limit, offset });
+				if (!cancelled) {
+					setUsers(data.users);
+					setTotal(data.total);
+				}
+			} catch (err) {
+				if (!cancelled) {
+					setError(err instanceof Error ? err.message : "Failed to load users");
+				}
+			} finally {
+				if (!cancelled) {
+					setLoading(false);
+				}
+			}
+		}
+
+		void loadUsers();
+
+		return () => {
+			cancelled = true;
+		};
 	}, [search, offset]);
 
 	function onSearch(event: FormEvent) {
@@ -54,7 +66,9 @@ export function UsersPage() {
 		setError(null);
 		try {
 			await deleteUser(profileId);
-			await loadUsers();
+			const data = await listUsers({ q: search || undefined, limit, offset });
+			setUsers(data.users);
+			setTotal(data.total);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to delete user");
 		} finally {
@@ -125,9 +139,7 @@ export function UsersPage() {
 												{user.isSynthetic ? "Synthetic" : "Real"}
 											</Badge>
 										</TableCell>
-										<TableCell className="text-muted-foreground">
-											{new Date(user.createdAt).toLocaleString()}
-										</TableCell>
+										<TableCell className="text-muted-foreground">{new Date(user.createdAt).toLocaleString()}</TableCell>
 										<TableCell className="text-right">
 											<div className="flex justify-end gap-2">
 												<Button type="button" variant="outline" size="sm" asChild>
@@ -152,7 +164,12 @@ export function UsersPage() {
 				) : null}
 
 				<div className="flex flex-wrap items-center gap-3">
-					<Button type="button" variant="outline" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))}>
+					<Button
+						type="button"
+						variant="outline"
+						disabled={offset === 0}
+						onClick={() => setOffset(Math.max(0, offset - limit))}
+					>
 						Previous
 					</Button>
 					<span className="text-sm text-muted-foreground">

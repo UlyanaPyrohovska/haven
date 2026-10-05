@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { type Db, getDb } from "@/db";
 import { resolveProfilePhotoUrl } from "@/lib/avatar-url";
 import { resolveCandidateDailyAnswer } from "@/lib/candidate-daily-answer";
+import { displayNameForCandidate } from "@/lib/candidate-display";
 import { resolveCandidateMood } from "@/lib/candidate-mood";
 import { dailyQuestion } from "@/lib/daily-questions";
 import { errors } from "@/lib/errors";
@@ -16,7 +17,6 @@ import {
 	shouldShowCrossPaths,
 } from "@/lib/profile-view";
 import { CADENCE, isCooldownElapsed, nextRefreshAtIso, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
-import { displayNameForCandidate } from "@/lib/candidate-display";
 import { getSessionUserId } from "@/lib/session";
 import * as dailyQuestionRepository from "@/modules/daily-question/repository";
 import { generateRecommendations } from "./generator";

@@ -1,4 +1,5 @@
 import { authClient } from "@/lib/auth/client";
+import { signOutOnUnauthorized } from "@/lib/auth/unauthorized";
 import { API_URL } from "@/lib/config/env";
 
 /**
@@ -8,7 +9,7 @@ import { API_URL } from "@/lib/config/env";
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
 	const cookie = authClient.getCookie();
 
-	return fetch(`${API_URL}${path}`, {
+	const response = await fetch(`${API_URL}${path}`, {
 		...init,
 		credentials: "omit",
 		headers: {
@@ -17,4 +18,10 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 			...init.headers,
 		},
 	});
+
+	if (response.status === 401) {
+		void signOutOnUnauthorized();
+	}
+
+	return response;
 }

@@ -10,8 +10,8 @@ import { StyleSheet, View } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-
 import { AnimatedSplash, getReduceMotionEnabled } from "@/components/animated-splash";
+import { UnauthorizedHandler } from "@/components/auth/unauthorized-handler";
 import { Colors, FontFamily } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import "@/lib/i18n";
@@ -103,6 +103,7 @@ function RootLayoutContent({
 		<KeyboardProvider>
 			<View style={styles.root}>
 				<ThemeProvider value={colorScheme === "dark" ? NavigationDarkTheme : NavigationLightTheme}>
+					<UnauthorizedHandler />
 					<Stack
 						screenOptions={{
 							headerShown: false,
