@@ -1,8 +1,10 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { type Href, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionDock, connectionDockClearance } from "@/components/connections/connection-dock";
@@ -50,6 +52,55 @@ type ConnectionCandidateScreenProps = {
 	/** Called after the decision animation (or match dialog) when browsing should advance. */
 	onAdvance: (remainingCount: number) => Promise<void>;
 };
+
+function DailyQuestionAnswerBlock({
+	dailyQuestion,
+	questionAnswer,
+	answerLocked,
+}: {
+	dailyQuestion: string;
+	questionAnswer: string | null;
+	answerLocked: boolean;
+}) {
+	const { t } = useTranslation();
+	const theme = useTheme();
+	const router = useRouter();
+
+	const openDailyQuestion = () => router.push("/daily-question" as Href);
+
+	return (
+		<View style={styles.block}>
+			<ThemedText type="label">{t("home.todaysQuestion")}</ThemedText>
+			<ThemedText style={[styles.quote, { color: theme.muted }]}>{`"${dailyQuestion}"`}</ThemedText>
+			{answerLocked ? (
+				<Pressable
+					accessibilityRole="button"
+					onPress={openDailyQuestion}
+					style={({ pressed }) => [
+						styles.answerBubble,
+						styles.lockedBubble,
+						{
+							backgroundColor: theme.field,
+							borderColor: theme.border,
+							opacity: pressed ? 0.85 : 1,
+						},
+					]}
+				>
+					<Ionicons name="lock-closed-outline" size={18} color={theme.muted} />
+					<ThemedText style={{ lineHeight: 22, color: theme.muted, flex: 1 }}>
+						{t("dailyQuestion.lockedPrompt")}
+					</ThemedText>
+				</Pressable>
+			) : (
+				<View style={[styles.answerBubble, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+					<ThemedText style={{ lineHeight: 22, color: questionAnswer ? theme.text : theme.muted }}>
+						{questionAnswer ?? t("dailyQuestion.noAnswerYet")}
+					</ThemedText>
+				</View>
+			)}
+		</View>
+	);
+}
 
 export function ConnectionCandidateScreen({ candidateId, onAdvance }: ConnectionCandidateScreenProps) {
 	const { t } = useTranslation();
@@ -171,11 +222,7 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 
 					<View style={styles.headerCenter}>
 						{headerLocation.visible ? (
-							<LocationPill
-								label={headerLocation.label}
-								hidden={headerLocation.hidden}
-								unset={headerLocation.unset}
-							/>
+							<LocationPill label={headerLocation.label} hidden={headerLocation.hidden} unset={headerLocation.unset} />
 						) : null}
 					</View>
 
@@ -207,13 +254,11 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 						</View>
 					</View>
 
-					<View style={styles.block}>
-						<ThemedText type="label">{t("home.todaysQuestion")}</ThemedText>
-						<ThemedText style={[styles.quote, { color: theme.muted }]}>{`"${data.dailyQuestion}"`}</ThemedText>
-						<View style={[styles.answerBubble, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-							<ThemedText style={{ lineHeight: 22 }}>{data.questionAnswer}</ThemedText>
-						</View>
-					</View>
+					<DailyQuestionAnswerBlock
+						dailyQuestion={data.dailyQuestion}
+						questionAnswer={data.questionAnswer}
+						answerLocked={data.answerLocked}
+					/>
 
 					<View style={styles.block}>
 						<ThemedText type="label">{t("connections.whyMatched")}</ThemedText>
@@ -361,6 +406,11 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		paddingHorizontal: Spacing.lg,
 		paddingVertical: Spacing.md,
+	},
+	lockedBubble: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: Spacing.sm,
 	},
 	crossPaths: {
 		marginTop: Spacing.lg,

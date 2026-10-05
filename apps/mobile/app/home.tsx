@@ -1,20 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, useRouter } from "expo-router";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-import { LocationPill } from "@/components/location/location-pill";
+import { DailyQuestionCard } from "@/components/home/daily-question-card";
 import { MoodCard } from "@/components/home/mood-card";
+import { LocationPill } from "@/components/location/location-pill";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemedText } from "@/components/themed-text";
-import { Colors, FontFamily, FontSize, Radius, Spacing } from "@/constants/app-config";
+import { Colors, FontFamily, Radius, Spacing } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useHeaderLocation } from "@/hooks/use-header-location";
 import { useProfileQuery } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
+import { todayDailyQuestionQueryKey } from "@/lib/api/daily-question";
 import { todayMoodQueryKey } from "@/lib/api/mood";
 import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
 import { useSession } from "@/lib/auth/client";
@@ -22,7 +23,6 @@ import { useSession } from "@/lib/auth/client";
 /** Placeholder content until profile and feed APIs are wired up. */
 const DUMMY = {
 	unreadMessages: 5,
-	dailyQuestion: "What made you smile this week?",
 } as const;
 
 /** Semi-ellipse dome: flat bottom, curved top, full screen width — matches the wireframe. */
@@ -128,14 +128,11 @@ export default function HomeScreen() {
 		queryKey: recommendationsQueryKey,
 		queryFn: fetchRecommendations,
 	});
-	const [response, setResponse] = useState("");
-
 	const dock = dockColors(colorScheme);
 	const headerLocation = useHeaderLocation(hasSession);
 	const displayName = session?.user.name?.split(" ")[0] ?? "Uliana";
 	const photoUrl = session?.user.image?.trim() || null;
 	const newConnections = recommendations.data?.count ?? 0;
-	const dailyQuestion = recommendations.data?.dailyQuestion ?? DUMMY.dailyQuestion;
 	const dockClearance = DOCK.arcHeight + DOCK.fabSize / 2 + DOCK.fabLift + Spacing.lg;
 
 	return (
@@ -151,11 +148,16 @@ export default function HomeScreen() {
 				showsVerticalScrollIndicator={false}
 				refreshControl={
 					<RefreshControl
-						refreshing={recommendations.isRefetching || queryClient.isFetching({ queryKey: todayMoodQueryKey }) > 0}
+						refreshing={
+							recommendations.isRefetching ||
+							queryClient.isFetching({ queryKey: todayMoodQueryKey }) > 0 ||
+							queryClient.isFetching({ queryKey: todayDailyQuestionQueryKey }) > 0
+						}
 						onRefresh={() => {
 							void Promise.all([
 								recommendations.refetch(),
 								queryClient.invalidateQueries({ queryKey: todayMoodQueryKey }),
+								queryClient.invalidateQueries({ queryKey: todayDailyQuestionQueryKey }),
 							]);
 						}}
 						tintColor={theme.tint}
@@ -186,7 +188,11 @@ export default function HomeScreen() {
 								onPress={() => router.push("/profile/location-settings")}
 								style={({ pressed }) => [styles.headerPillPressable, { opacity: pressed ? 0.75 : 1 }]}
 							>
-								<LocationPill label={headerLocation.label} hidden={headerLocation.hidden} unset={headerLocation.unset} />
+								<LocationPill
+									label={headerLocation.label}
+									hidden={headerLocation.hidden}
+									unset={headerLocation.unset}
+								/>
 							</Pressable>
 						) : null}
 					</View>
@@ -230,27 +236,7 @@ export default function HomeScreen() {
 
 				<MoodCard />
 
-				<View style={styles.questionSection}>
-					<ThemedText type="label">{t("home.todaysQuestion")}</ThemedText>
-					<ThemedText style={[styles.questionQuote, { color: theme.muted }]}>{`"${dailyQuestion}"`}</ThemedText>
-
-					<TextInput
-						value={response}
-						onChangeText={setResponse}
-						placeholder={t("home.responsePlaceholder")}
-						placeholderTextColor={theme.placeholder}
-						selectionColor={theme.tint}
-						multiline
-						style={[
-							styles.responseInput,
-							{
-								backgroundColor: theme.field,
-								color: theme.text,
-								borderColor: theme.border,
-							},
-						]}
-					/>
-				</View>
+				<DailyQuestionCard />
 			</ScrollView>
 
 			<BottomDock
@@ -322,24 +308,6 @@ const styles = StyleSheet.create({
 		fontSize: 56,
 		lineHeight: 64,
 		fontWeight: "600",
-		fontFamily: FontFamily.body,
-	},
-	questionSection: {
-		gap: Spacing.sm,
-	},
-	questionQuote: {
-		fontSize: FontSize.md,
-		lineHeight: 24,
-		fontStyle: "italic",
-	},
-	responseInput: {
-		marginTop: Spacing.sm,
-		minHeight: 52,
-		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
-		paddingHorizontal: Spacing.lg,
-		paddingVertical: Spacing.md,
-		fontSize: FontSize.md,
 		fontFamily: FontFamily.body,
 	},
 	bottomDock: {

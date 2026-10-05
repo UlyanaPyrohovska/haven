@@ -1,4 +1,4 @@
-import { Switch, StyleSheet, View } from "react-native";
+import { StyleSheet, Switch, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/app-config";

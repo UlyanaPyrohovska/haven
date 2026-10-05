@@ -126,11 +126,7 @@ function mapCandidateScoringProfile(row: ScoringProfileRow): ScoringProfile {
 	};
 }
 
-function locationBoundingBox(
-	latitude: number,
-	longitude: number,
-	maxKm: number,
-) {
+function locationBoundingBox(latitude: number, longitude: number, maxKm: number) {
 	const latDelta = maxKm / 111;
 	const lonDelta = maxKm / (111 * Math.max(Math.cos((latitude * Math.PI) / 180), 0.01));
 

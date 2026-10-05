@@ -18,7 +18,8 @@ export type RecommendationDetail = RecommendationSummary & {
 	bio: string | null;
 	interests: string[];
 	dailyQuestion: string;
-	questionAnswer: string;
+	questionAnswer: string | null;
+	answerLocked: boolean;
 	crossPathsCount: number | null;
 	distanceKm?: number;
 	locationLabel?: string;

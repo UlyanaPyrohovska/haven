@@ -20,11 +20,7 @@ export default function ProfileSettingsScreen() {
 
 	const privacy = readPrivacySettings(profile.data);
 
-	const locationSummary = locationSettingsSummary(
-		profile.data,
-		t("home.locationUnset"),
-		t("home.noLocation"),
-	);
+	const locationSummary = locationSettingsSummary(profile.data, t("home.locationUnset"), t("home.noLocation"));
 
 	const visibilitySummary = privacy.discoverable
 		? t("profile.settingsScreen.visibility.summaryActive")

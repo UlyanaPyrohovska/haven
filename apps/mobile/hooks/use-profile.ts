@@ -1,6 +1,6 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 
-import { type ProfileRecord, fetchProfile } from "@/lib/api/profile";
+import { fetchProfile, type ProfileRecord } from "@/lib/api/profile";
 
 export const profileQueryKey = ["profile"] as const;
 
