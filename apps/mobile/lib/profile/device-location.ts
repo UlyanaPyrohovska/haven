@@ -18,7 +18,11 @@ const POSITION_TIMEOUT_MS = 20_000;
 const FRESH_POSITION_TIMEOUT_MS = 12_000;
 const GEOCODE_TIMEOUT_MS = 8_000;
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, reason: DeviceLocationFailureReason = "timeout"): Promise<T> {
+function withTimeout<T>(
+	promise: Promise<T>,
+	timeoutMs: number,
+	reason: DeviceLocationFailureReason = "timeout",
+): Promise<T> {
 	return new Promise((resolve, reject) => {
 		const timer = setTimeout(() => reject(new DeviceLocationError(reason)), timeoutMs);
 
@@ -37,10 +41,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, reason: DeviceLo
 
 async function resolveLocationLabel(latitude: number, longitude: number, fallbackLabel: string): Promise<string> {
 	try {
-		const places = await withTimeout(
-			Location.reverseGeocodeAsync({ latitude, longitude }),
-			GEOCODE_TIMEOUT_MS,
-		);
+		const places = await withTimeout(Location.reverseGeocodeAsync({ latitude, longitude }), GEOCODE_TIMEOUT_MS);
 		const place = places[0];
 
 		if (!place) {

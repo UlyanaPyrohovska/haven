@@ -2,12 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { StepProgress } from "@/components/ui/step-progress";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
+
+/** Primary button row + footer chrome (excluding safe-area inset). */
+const FOOTER_CONTENT_HEIGHT = Spacing.lg + 52 + Spacing.lg;
+
 export type FormScreenHeaderButtonProps = {
 	accessibilityLabel: string;
 	onPress: () => void;
@@ -67,26 +72,33 @@ export function FormScreen({
 	const navigation = useNavigation();
 	const { t } = useTranslation();
 
+	const footerInset = footer ? FOOTER_CONTENT_HEIGHT + insets.bottom : 0;
+	const keyboardBottomOffset = footer ? footerInset + Spacing.xl : Spacing.xl;
+
 	return (
-		<KeyboardAvoidingView
-			style={[styles.root, { backgroundColor: theme.background }]}
-			behavior={Platform.OS === "ios" ? "padding" : undefined}
-		>
-			<ScrollView
+		<View style={[styles.root, { backgroundColor: theme.background }]}>
+			<KeyboardAwareScrollView
 				style={styles.scroll}
 				contentContainerStyle={[
 					styles.content,
 					centered && styles.contentCentered,
-					{ paddingTop: insets.top + Spacing.md },
+					{
+						paddingTop: insets.top + Spacing.md,
+						paddingBottom: Spacing.xxl + footerInset,
+					},
 				]}
+				bottomOffset={keyboardBottomOffset}
 				keyboardShouldPersistTaps="handled"
-				keyboardDismissMode="on-drag"
+				keyboardDismissMode="interactive"
 			>
 				{showBack || headerRight ? (
 					<View style={styles.headerRow}>
 						<View style={styles.headerSideStart}>
 							{showBack ? (
-								<FormScreenHeaderButton accessibilityLabel={t("common.back")} onPress={onBack ?? (() => navigation.goBack())}>
+								<FormScreenHeaderButton
+									accessibilityLabel={t("common.back")}
+									onPress={onBack ?? (() => navigation.goBack())}
+								>
 									<Ionicons name="chevron-back" size={20} color={theme.text} />
 								</FormScreenHeaderButton>
 							) : null}
@@ -109,23 +121,25 @@ export function FormScreen({
 				) : null}
 
 				<View style={styles.body}>{children}</View>
-			</ScrollView>
+			</KeyboardAwareScrollView>
 
 			{footer ? (
-				<View
-					style={[
-						styles.footer,
-						{
-							backgroundColor: theme.background,
-							borderTopColor: theme.border,
-							paddingBottom: insets.bottom + Spacing.lg,
-						},
-					]}
-				>
-					{footer}
-				</View>
+				<KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
+					<View
+						style={[
+							styles.footer,
+							{
+								backgroundColor: theme.background,
+								borderTopColor: theme.border,
+								paddingBottom: insets.bottom + Spacing.lg,
+							},
+						]}
+					>
+						{footer}
+					</View>
+				</KeyboardStickyView>
 			) : null}
-		</KeyboardAvoidingView>
+		</View>
 	);
 }
 
@@ -138,7 +152,6 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		paddingHorizontal: Spacing.xl,
-		paddingBottom: Spacing.xxl,
 		gap: Spacing.sm,
 	},
 	contentCentered: {

@@ -385,6 +385,123 @@ list (`fetchMatches`). Queue multiple matches in one session.
 
 ---
 
+## W2.6 — Daily Question redesign (engagement)  ·  mobile (+ small api) · P1
+
+**Problem.** Today the daily question is a lonely multiline `TextInput` embedded in the home feed
+(`apps/mobile/components/home/daily-question-card.tsx`) with 800ms debounced autosave. It has no
+purpose or reward, and the inline text box on the busy home screen is one source of the
+keyboard-overlap bug (W2.7). The **backend is good and stays**: `lib/daily-questions.ts`'s
+`dailyQuestion(date)` rotates `DAILY_QUESTIONS` (same for everyone per UTC day);
+`GET`/`PUT /daily-question/today` persist one answer per profile per day in `daily_question_answers`;
+and every candidate already exposes a `questionAnswer` for today via `resolveCandidateDailyAnswer`
+(`lib/candidate-daily-answer.ts`).
+
+**Goal.** A calm, purposeful daily moment with a *reciprocal* reward: you answer today's question,
+and in return you unlock seeing how the people in today's batch answered the same question; your
+answer shows on your own card to others. Bounded to once a day — no endless feed, no hard streaks
+(deliberately, to stay on the wellbeing side).
+
+### Frontend
+
+1. **Home card becomes a tappable summary, not an input** (`daily-question-card.tsx`). Remove the
+   `TextInput` and all autosave/timer logic. Two states, driven by `fetchTodayDailyQuestion`
+   (`{ question, answer }`):
+   - *Unanswered* — the question shown prominently, a primary `Button` "Share your answer", and
+     subtext "Answer to see what others said today." Tapping routes to the modal below.
+   - *Answered* — a done state: the question, your answer as a quote, a check icon, and a secondary
+     CTA "See today's answers →" routing into the connections feed. Tapping the answer reopens the
+     modal to edit.
+   The card is a `Pressable`; **no keyboard is ever involved on the home screen.**
+
+2. **New focused answer screen** `apps/mobile/app/daily-question.tsx`, presented as a **modal**.
+   Register in `app/_layout.tsx`: `<Stack.Screen name="daily-question" options={{ presentation: "modal" }} />`.
+   Build it on the existing `FormScreen` scaffold (safe-area + keyboard avoidance + sticky footer;
+   fully keyboard-safe after W2.7) so this input is never covered:
+   - Title = today's question. Body = the existing `TextField` component, `multiline`,
+     `maxLength={150}`, `showCounter`, `autoFocus`, with a rotating placeholder.
+   - Recommended: 2–3 `ChipGroup` "starters" that prefill a sentence opener ("Today I…",
+     "I'm grateful for…") to beat the blank page.
+   - Sticky `footer` = `Button` "Share", disabled until the text is non-empty and changed from the
+     loaded answer. On press → `saveTodayDailyQuestion(text)` then `invalidateQueries` on
+     `todayDailyQuestionQueryKey` **and** the recommendation detail keys (so unlocked answers
+     refetch). On success show a brief confirmation (reuse `decision-animation` or a simple check +
+     "Shared — see who else answered"), then `router.back()`. Errors via `ErrorBanner`.
+   - This replaces the debounced autosave with one explicit save — clearer and removes the race-prone
+     timer.
+
+3. **Reveal/unlock (the reciprocal hook).** On the connection detail, show a candidate's
+   `questionAnswer` only if the viewer has answered today; otherwise a locked state ("Answer today's
+   question to see theirs", tap opens the modal). `connection-candidate-screen.tsx` branches on the
+   new `answerLocked` flag below.
+
+### API (small, no migration)
+
+- In `recommendations/service.ts > getRecommendationDetail`: call
+  `dailyQuestionRepository.findAnswerForDate(db, viewer.id, utcToday())`. If the viewer has **not**
+  answered, return `questionAnswer: null` and `answerLocked: true`; otherwise resolve the candidate's
+  answer and `answerLocked: false`.
+- Add `answerLocked: boolean` to `RecommendationDetailSchema` and the mobile `RecommendationDetail`
+  type. Reuses `resolveCandidateDailyAnswer` + `findAnswerForDate`; no new tables.
+
+### i18n & guardrails
+
+Add the new copy under a `dailyQuestion.*` namespace in `locales/en.json` (and other locales), in
+Haven's warm voice. Non-goals: no infinite feed, no nagging notifications, no prominent streak
+counter (a subtle "you've reflected N days" is the absolute most, only if it reads as gentle).
+
+### Acceptance
+
+Home shows both states with no text input; tapping opens the modal; the field is fully visible above
+the keyboard (via W2.7); counter works; Share is gated; saving flips the home card to answered;
+candidate answers are locked before answering and revealed after; no autosave timers remain;
+`pnpm lint` and types pass.
+
+---
+
+## W2.7 — Keyboard-safe inputs, app-wide  ·  mobile · P0 (test-blocking)
+
+**Problem.** Inputs hide behind the keyboard. Root cause: text inputs render in plain scroll
+containers that don't lift the focused field. The home `DailyQuestionCard` input sits in the home
+scroll view with no keyboard avoidance (W2.6 removes that one, but the bug affects any input screen),
+and `FormScreen` uses the minimal `KeyboardAvoidingView` (`behavior="padding"` on iOS, `undefined`
+on Android, no offset), which still mis-sizes with a multiline field plus a sticky footer. Any text
+entry in onboarding or the daily question can land under the keyboard — a hard blocker for the
+usability test, so **P0**.
+
+**Fix.** Adopt `react-native-keyboard-controller` (the current standard; works with a custom Expo
+dev client, which this app already uses) and standardize every input screen on its
+`KeyboardAwareScrollView`, which auto-scrolls the focused input above the keyboard on both platforms.
+
+### Steps
+
+1. **Install + config.** Add `react-native-keyboard-controller` (pin a version matching the project's
+   Expo SDK — check `apps/mobile/package.json`). Add its Expo config plugin to `app.json` `plugins`.
+   Set `expo.android.softwareKeyboardLayoutMode: "resize"` in `app.json` and verify the generated
+   `AndroidManifest.xml` activity has `android:windowSoftInputMode="adjustResize"`.
+2. **Provider.** Wrap the app root in `<KeyboardProvider>` in `app/_layout.tsx`, inside the
+   theme/query providers and above the router stack.
+3. **Standardize the scaffold.** In `components/ui/form-screen.tsx`, replace
+   `KeyboardAvoidingView` + `ScrollView` with the library's `KeyboardAwareScrollView`
+   (`bottomOffset={Spacing.xl}` so the focused field clears the sticky footer), keeping
+   `keyboardShouldPersistTaps="handled"` and `keyboardDismissMode="interactive"`. Make the sticky
+   footer rise with the keyboard using the library's `KeyboardStickyView` (or a translate driven by
+   `useReanimatedKeyboardAnimation`) so the primary button stays reachable while typing.
+4. **Audit other input screens.** `grep -rl "TextInput\|TextField" apps/mobile/app apps/mobile/components`
+   (ignore `ios/`, `android/`, `node_modules`). Every screen with inputs outside `FormScreen`
+   (profile edit, bio, settings) must use `KeyboardAwareScrollView` too. After W2.6 the home screen
+   has no input — confirm nothing else is left in a plain `ScrollView`.
+5. **Rebuild the dev client.** Native module — a JS reload is not enough. Rebuild via `pnpm ios` /
+   `pnpm android` (with `pod install` / prebuild as the config plugin requires).
+
+### Acceptance (test on a physical iOS **and** Android device)
+
+Focusing any input (onboarding bio, auth, profile edit, the daily-question modal) scrolls it fully
+above the keyboard with a small gap; the sticky button stays reachable; tap-outside and drag dismiss
+the keyboard; no layout jump on open/close; verified with the multiline bio (tallest) field. Pull
+this earlier if W2.4's on-device onboarding run hits the bug first.
+
+---
+
 ## W3.1 — Participant logistics  ·  ops · P0
 
 **Accounts.** Better Auth needs a unique email + password ≥ 8. Pre-create participant accounts
@@ -444,5 +561,5 @@ Run `pnpm db:generate && pnpm db:migrate` after the W1.5 / W1.6 schema edits.
 
 W1.1 (parallel, 30 min) → W1.2 scoring + tests → W1.3 generator → W1.4 lazy trigger (feed goes
 live) → W1.5 de-demo → W1.6 cross-paths boost → **M1**. Then W2.1 embeddings → W2.2 cosine →
-W2.3 pool → W2.4 device → W2.5 states → **M2**. Then W3.1 accounts/reset → W3.2 eval → W3.3 pilot
+W2.3 pool → W2.7 keyboard fix (test-blocking) → W2.4 device → W2.5 states → W2.6 daily question → **M2**. Then W3.1 accounts/reset → W3.2 eval → W3.3 pilot
 → W3.4 instruments → **M3**.

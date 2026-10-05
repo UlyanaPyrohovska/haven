@@ -7,9 +7,5 @@ export function useHeaderLocation(enabled = true) {
 	const { t } = useTranslation();
 	const profile = useProfileQuery(enabled);
 
-	return headerLocationDisplay(
-		profile.data,
-		t("home.locationUnset"),
-		t("home.noLocation"),
-	);
+	return headerLocationDisplay(profile.data, t("home.locationUnset"), t("home.noLocation"));
 }

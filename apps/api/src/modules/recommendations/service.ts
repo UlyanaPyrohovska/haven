@@ -1,8 +1,11 @@
 import type { Context } from "hono";
 import { type Db, getDb } from "@/db";
 import { resolveProfilePhotoUrl } from "@/lib/avatar-url";
+import { resolveCandidateDailyAnswer } from "@/lib/candidate-daily-answer";
 import { resolveCandidateMood } from "@/lib/candidate-mood";
+import { dailyQuestion } from "@/lib/daily-questions";
 import { errors } from "@/lib/errors";
+import { utcToday } from "@/lib/mood";
 import {
 	candidateLocationLabel,
 	haversineKm,
@@ -13,8 +16,9 @@ import {
 	shouldShowCrossPaths,
 } from "@/lib/profile-view";
 import { CADENCE, isCooldownElapsed, nextRefreshAtIso, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
-import { DEMO_DAILY_QUESTION, demoPresentation, displayNameForCandidate } from "@/lib/recommendation-demo-data";
+import { demoPresentation, displayNameForCandidate } from "@/lib/recommendation-demo-data";
 import { getSessionUserId } from "@/lib/session";
+import * as dailyQuestionRepository from "@/modules/daily-question/repository";
 import { generateRecommendations } from "./generator";
 import * as repository from "./repository";
 import type { DecisionBody } from "./schemas";
@@ -69,7 +73,6 @@ function summariseCandidate(
 		career: publicFields.career,
 		topInterests: publicFields.topInterests,
 		sharedInterests: publicFields.sharedInterests,
-		questionAnswer: presentation?.questionAnswer ?? "",
 		crossPathsCount: shouldShowCrossPaths(viewer, candidate) ? (presentation?.crossPathsCount ?? 1) : null,
 	};
 }
@@ -95,10 +98,12 @@ export async function getRecommendations({ db, viewer, recCooldownHours }: Viewe
 		summariseCandidate(viewer, candidate as repository.ViewerProfile, recommendation),
 	);
 
+	const todayQuestion = dailyQuestion(utcToday());
+
 	return {
-		recommendations: summaries.map(({ questionAnswer: _qa, crossPathsCount: _cp, ...summary }) => summary),
+		recommendations: summaries.map(({ crossPathsCount: _cp, ...summary }) => summary),
 		count: summaries.length,
-		dailyQuestion: DEMO_DAILY_QUESTION,
+		dailyQuestion: todayQuestion,
 		...(nextRefreshAt ? { nextRefreshAt } : {}),
 	};
 }
@@ -113,6 +118,11 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 	const candidate = row.candidate as repository.ViewerProfile;
 	const isSynthetic = Boolean(candidate.isSynthetic);
 	const mood = await resolveCandidateMood(db, candidate.id, isSynthetic);
+	const today = utcToday();
+	const viewerAnswer = await dailyQuestionRepository.findAnswerForDate(db, viewer.id, today);
+	const viewerHasAnswered = Boolean(viewerAnswer?.answer?.trim());
+	const answerLocked = !viewerHasAnswered;
+	const questionAnswer = viewerHasAnswered ? await resolveCandidateDailyAnswer(db, candidate.id, isSynthetic) : null;
 	const summary = summariseCandidate(viewer, candidate, row.recommendation);
 	const publicFields = publicProfileFields(viewer, candidate);
 	const shareLocation = readPrivacySettings(candidate).shareLocation;
@@ -137,8 +147,9 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 		bio: publicFields.bio,
 		interests: publicFields.interests,
 		sharedInterests: summary.sharedInterests,
-		dailyQuestion: DEMO_DAILY_QUESTION,
-		questionAnswer: summary.questionAnswer,
+		dailyQuestion: dailyQuestion(today),
+		questionAnswer,
+		answerLocked,
 		crossPathsCount: summary.crossPathsCount,
 		distanceKm: distance,
 		locationLabel: candidateLocationLabel(viewer, candidate),

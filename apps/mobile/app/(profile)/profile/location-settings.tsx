@@ -15,8 +15,8 @@ import { saveProfileSettings } from "@/lib/api/profile";
 import { DeviceLocationError, readDeviceLocation } from "@/lib/profile/device-location";
 import {
 	buildHiddenLocationPayload,
-	type LocationPresetId,
 	LOCATION_PRESETS,
+	type LocationPresetId,
 	readLocationSettings,
 	resolveLocationPreset,
 } from "@/lib/profile/location";
@@ -108,11 +108,7 @@ export default function LocationSettingsScreen() {
 
 		try {
 			const updates = buildHiddenLocationPayload();
-			const updatedProfile = await withTimeout(
-				saveProfileSettings(updates),
-				SAVE_TIMEOUT_MS,
-				"save timeout",
-			);
+			const updatedProfile = await withTimeout(saveProfileSettings(updates), SAVE_TIMEOUT_MS, "save timeout");
 			mergeProfileCache(queryClient, updates, updatedProfile);
 			refreshProfileCache(queryClient);
 		} catch {
@@ -142,11 +138,7 @@ export default function LocationSettingsScreen() {
 			};
 
 			mergeProfileCache(queryClient, updates);
-			const updatedProfile = await withTimeout(
-				saveProfileSettings(updates),
-				SAVE_TIMEOUT_MS,
-				"save timeout",
-			);
+			const updatedProfile = await withTimeout(saveProfileSettings(updates), SAVE_TIMEOUT_MS, "save timeout");
 			mergeProfileCache(queryClient, updates, updatedProfile);
 			refreshProfileCache(queryClient);
 		} catch (error) {

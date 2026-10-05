@@ -136,11 +136,7 @@ describe("unilateral and reciprocalScore", () => {
 		expect(score).toBeGreaterThanOrEqual(0);
 		expect(score).toBeLessThanOrEqual(1);
 
-		const withBio = unilateral(
-			{ ...u, bioEmbedding: Array.from({ length: 384 }, () => 1) },
-			v,
-			DEFAULT_WEIGHTS,
-		);
+		const withBio = unilateral({ ...u, bioEmbedding: Array.from({ length: 384 }, () => 1) }, v, DEFAULT_WEIGHTS);
 
 		expect(withBio).not.toBe(score);
 	});

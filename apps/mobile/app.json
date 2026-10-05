@@ -17,7 +17,8 @@
 				"foregroundImage": "./assets/images/android-icon-foreground.png"
 			},
 			"predictiveBackGestureEnabled": false,
-			"package": "com.haven.app"
+			"package": "com.haven.app",
+			"softwareKeyboardLayoutMode": "resize"
 		},
 		"web": {
 			"output": "static",

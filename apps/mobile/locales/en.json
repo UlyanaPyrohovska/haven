@@ -24,11 +24,40 @@
 			}
 		},
 		"todaysQuestion": "Today's Question",
-		"responsePlaceholder": "Write your response...",
 		"profileAccessibilityLabel": "View profile",
 		"settingsAccessibilityLabel": "Open settings",
 		"locationUnset": "Set location",
 		"noLocation": "No location"
+	},
+	"dailyQuestion": {
+		"shareCTA": "Share your answer",
+		"unlockHint": "Answer to see what others said today.",
+		"seeAnswers": "See today's answers →",
+		"editHint": "Tap your answer to edit.",
+		"modalSubtitle": "One short reflection — then you can see how today's connections answered too.",
+		"startersLabel": "Need a nudge?",
+		"starters": {
+			"today": "Today I…",
+			"grateful": "I'm grateful for…",
+			"noticed": "I noticed…"
+		},
+		"starterPrefixes": {
+			"today": "Today I ",
+			"grateful": "I'm grateful for ",
+			"noticed": "I noticed "
+		},
+		"answerLabel": "Your answer",
+		"share": "Share",
+		"saveError": "Couldn't save your answer. Try again.",
+		"sharedTitle": "Shared",
+		"sharedSubtitle": "See who else answered today in your connections.",
+		"lockedPrompt": "Answer today's question to see theirs.",
+		"noAnswerYet": "They haven't answered yet today.",
+		"placeholders": {
+			"one": "A sentence is enough…",
+			"two": "What's on your mind?",
+			"three": "Keep it honest and brief."
+		}
 	},
 	"connections": {
 		"title": "Profile Details",

@@ -7,6 +7,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -99,20 +100,24 @@ function RootLayoutContent({
 	const colorScheme = useColorScheme();
 
 	return (
-		<View style={styles.root}>
-			<ThemeProvider value={colorScheme === "dark" ? NavigationDarkTheme : NavigationLightTheme}>
-				<Stack
-					screenOptions={{
-						headerShown: false,
-						contentStyle: {
-							backgroundColor: colorScheme === "dark" ? Colors.dark.background : Colors.light.background,
-						},
-					}}
-				/>
-				<StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-			</ThemeProvider>
-			{showAnimatedSplash ? <AnimatedSplash onFinish={onSplashFinish} reduceMotion={reduceMotion} /> : null}
-		</View>
+		<KeyboardProvider>
+			<View style={styles.root}>
+				<ThemeProvider value={colorScheme === "dark" ? NavigationDarkTheme : NavigationLightTheme}>
+					<Stack
+						screenOptions={{
+							headerShown: false,
+							contentStyle: {
+								backgroundColor: colorScheme === "dark" ? Colors.dark.background : Colors.light.background,
+							},
+						}}
+					>
+						<Stack.Screen name="daily-question" options={{ presentation: "modal" }} />
+					</Stack>
+					<StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+				</ThemeProvider>
+				{showAnimatedSplash ? <AnimatedSplash onFinish={onSplashFinish} reduceMotion={reduceMotion} /> : null}
+			</View>
+		</KeyboardProvider>
 	);
 }
 

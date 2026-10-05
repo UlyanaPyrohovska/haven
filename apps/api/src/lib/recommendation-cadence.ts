@@ -45,11 +45,7 @@ export function nextRefreshAtIso(lastShown: Date | string, cooldownHours: number
 	return new Date(at.getTime() + cooldownMs(cooldownHours)).toISOString();
 }
 
-export function isCooldownElapsed(
-	lastShown: Date | string | null,
-	cooldownHours: number,
-	nowMs = Date.now(),
-): boolean {
+export function isCooldownElapsed(lastShown: Date | string | null, cooldownHours: number, nowMs = Date.now()): boolean {
 	const at = coerceLastShownAt(lastShown);
 
 	if (!at) {

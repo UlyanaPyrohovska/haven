@@ -307,6 +307,24 @@ export const moodCheckins = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
+// daily_question_answers — one answer per user per calendar day (UTC)
+// ────────────────────────────────────────────────────────────────
+export const dailyQuestionAnswers = pgTable(
+	"daily_question_answers",
+	{
+		id: serial("id").primaryKey(),
+		userProfileId: integer("user_profile_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		answer: varchar("answer", { length: 500 }).notNull(),
+		answerDate: date("answer_date").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => [uniqueIndex("daily_question_answers_profile_date_uniq").on(t.userProfileId, t.answerDate)],
+);
+
+// ────────────────────────────────────────────────────────────────
 // recommendations — audit log of what the system surfaced
 //   critical for the fairness / exposure metrics you'll report on
 // ────────────────────────────────────────────────────────────────

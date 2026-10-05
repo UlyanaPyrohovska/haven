@@ -23,8 +23,8 @@ import {
 	profileSelectedInterests,
 	profileSelfRatings,
 } from "@/lib/profile/display";
-import { publicProfilePreview } from "@/lib/profile/privacy";
 import { ProfilePhotoError, pickProfilePhotoDataUrl, removeProfilePhoto, saveProfilePhoto } from "@/lib/profile/photo";
+import { publicProfilePreview } from "@/lib/profile/privacy";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
 	const theme = useTheme();

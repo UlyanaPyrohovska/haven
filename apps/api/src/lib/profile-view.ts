@@ -166,10 +166,7 @@ export type PublicProfileFields = {
 };
 
 /** Applies a profile owner's privacy toggles to fields shown to other users. */
-export function publicProfileFields(
-	viewer: ProfileRow,
-	candidate: ProfileRow,
-): PublicProfileFields {
+export function publicProfileFields(viewer: ProfileRow, candidate: ProfileRow): PublicProfileFields {
 	const privacy = readPrivacySettings(candidate);
 	const age = profileAge(candidate.birthDate);
 	const interests = privacy.showInterests ? interestLabels(candidate) : [];
