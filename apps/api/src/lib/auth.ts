@@ -1,7 +1,7 @@
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { openAPI } from "better-auth/plugins";
+import { admin, openAPI } from "better-auth/plugins";
 import { getDb } from "@/db";
 import * as schema from "@/modules/auth/auth-schema";
 
@@ -16,7 +16,7 @@ export const createAuth = (bindings: CloudflareBindings) => {
 		emailAndPassword: {
 			enabled: true,
 		},
-		trustedOrigins: ["haven://"],
-		plugins: [openAPI(), expo()],
+		trustedOrigins: ["haven://", "http://localhost:5173"],
+		plugins: [openAPI(), admin(), expo()],
 	});
 };
