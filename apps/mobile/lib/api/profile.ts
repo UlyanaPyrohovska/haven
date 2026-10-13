@@ -8,9 +8,10 @@ import {
 } from "@/constants/profile-taxonomy";
 import { apiFetch } from "@/lib/api/client";
 import type { ProfileDraft } from "@/lib/onboarding/profile-draft";
+import { PRIVACY_KEYS } from "@/lib/profile/privacy";
 
 /** Request body for `PATCH /me`; keys match the `user_profiles` column names. */
-export type ProfilePayload = Record<string, number | string | null>;
+export type ProfilePayload = Record<string, number | string | boolean | null>;
 
 export type ProfileRecord = Record<string, unknown>;
 
@@ -54,6 +55,10 @@ export function buildProfilePayload(draft: ProfileDraft): ProfilePayload {
 	for (const dimension of TraitDimensions) {
 		payload[dimension.prefKey] = partnerShares[dimension.prefKey];
 		payload[dimension.selfKey] = dimension.selfRated ? (draft.self[dimension.selfKey] ?? null) : null;
+	}
+
+	for (const key of PRIVACY_KEYS) {
+		payload[key] = draft.privacy[key];
 	}
 
 	return payload;

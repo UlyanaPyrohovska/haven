@@ -9,6 +9,7 @@ import type {
 	PrefKey,
 	SelfKey,
 } from "@/constants/profile-taxonomy";
+import { DEFAULT_PRIVACY_SETTINGS, type PrivacyKey } from "@/lib/profile/privacy";
 
 /** Mirrors the `user_profiles` columns the onboarding flow collects. */
 export type ProfileDraft = {
@@ -25,6 +26,7 @@ export type ProfileDraft = {
 	/** Importance on a 1–10 scale, normalised into the 100-point `pref_*` split on submit. */
 	partner: Partial<Record<PrefKey, number>>;
 	self: Partial<Record<SelfKey, number>>;
+	privacy: typeof DEFAULT_PRIVACY_SETTINGS;
 };
 
 const emptyDraft: ProfileDraft = {
@@ -38,6 +40,7 @@ const emptyDraft: ProfileDraft = {
 	interests: [],
 	partner: {},
 	self: {},
+	privacy: { ...DEFAULT_PRIVACY_SETTINGS },
 };
 
 type ProfileDraftContextValue = {
@@ -46,6 +49,7 @@ type ProfileDraftContextValue = {
 	toggleInterest: (key: InterestKey) => void;
 	setPartnerImportance: (key: PrefKey, value: number) => void;
 	setSelfRating: (key: SelfKey, value: number) => void;
+	setPrivacySetting: (key: PrivacyKey, value: boolean) => void;
 	reset: () => void;
 };
 
@@ -79,13 +83,17 @@ export function ProfileDraftProvider({ children }: { children: ReactNode }) {
 		setDraft((current) => ({ ...current, self: { ...current.self, [key]: value } }));
 	}, []);
 
+	const setPrivacySetting = useCallback((key: PrivacyKey, value: boolean) => {
+		setDraft((current) => ({ ...current, privacy: { ...current.privacy, [key]: value } }));
+	}, []);
+
 	const reset = useCallback(() => {
 		setDraft(emptyDraft);
 	}, []);
 
 	const value = useMemo(
-		() => ({ draft, updateDraft, toggleInterest, setPartnerImportance, setSelfRating, reset }),
-		[draft, updateDraft, toggleInterest, setPartnerImportance, setSelfRating, reset],
+		() => ({ draft, updateDraft, toggleInterest, setPartnerImportance, setSelfRating, setPrivacySetting, reset }),
+		[draft, updateDraft, toggleInterest, setPartnerImportance, setSelfRating, setPrivacySetting, reset],
 	);
 
 	return <ProfileDraftContext.Provider value={value}>{children}</ProfileDraftContext.Provider>;
