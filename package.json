@@ -19,7 +19,7 @@
 		"check": "pnpm dlx @biomejs/biome check --write"
 	},
 	"private": true,
-	"packageManager": "pnpm@9.0.0",
+	"packageManager": "pnpm@12.11.2",
 	"devDependencies": {
 		"@biomejs/biome": "2.5.1",
 		"@neondatabase/serverless": "^1.1.0",

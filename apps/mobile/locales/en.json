@@ -299,7 +299,17 @@
 			"title": "How you see yourself",
 			"subtitle": "Drag each slider to rate yourself. Nobody else sees these numbers.",
 			"low": "Not really me",
-			"high": "Very much me"
+			"high": "Very much me",
+			"incomplete": "Rate every slider to continue."
+		},
+		"privacy": {
+			"title": "Privacy & visibility",
+			"subtitle": "Choose who can find you and what they see on your profile. You can change this anytime in Settings.",
+			"previewTitle": "Public preview",
+			"previewSubtitle": "Updates as you change the toggles below.",
+			"previewEmpty": "Turn on the toggles below to show more on your public profile.",
+			"moreInterests": "+{{count}} more",
+			"hiddenFromRecommendations": "Your profile won't appear in recommendations until you turn discoverability back on."
 		},
 		"submit": {
 			"error": "We couldn't save your preferences. Please try again."

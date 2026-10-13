@@ -1,34 +1,44 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
-import { ErrorBanner } from "@/components/ui/error-banner";
 import { FormScreen } from "@/components/ui/form-screen";
 import { ScaleLegend } from "@/components/ui/scale-legend";
 import { SliderScale } from "@/components/ui/slider-scale";
 import { SelfDimensions } from "@/constants/profile-taxonomy";
-import { profileQueryKey } from "@/hooks/use-profile";
-import { saveProfile } from "@/lib/api/profile";
+import { useTheme } from "@/hooks/use-theme";
 import { useProfileDraft } from "@/lib/onboarding/profile-draft";
-import { ONBOARDING_STEP_COUNT, onboardingStepNumber, previousOnboardingRoute } from "@/lib/onboarding/steps";
+import {
+	nextOnboardingRoute,
+	ONBOARDING_STEP_COUNT,
+	onboardingStepNumber,
+	previousOnboardingRoute,
+} from "@/lib/onboarding/steps";
 
 export default function SelfStep() {
 	const { t } = useTranslation();
+	const theme = useTheme();
 	const router = useRouter();
-	const queryClient = useQueryClient();
-	const { draft, setSelfRating, reset } = useProfileDraft();
-
-	const submit = useMutation({
-		mutationFn: () => saveProfile(draft),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: profileQueryKey });
-			reset();
-			router.replace("/home");
-		},
-	});
+	const { draft, setSelfRating } = useProfileDraft();
+	const [error, setError] = useState<string | undefined>(undefined);
 
 	const allRated = SelfDimensions.every((dimension) => draft.self[dimension.selfKey] !== undefined);
+
+	const onContinue = () => {
+		if (!allRated) {
+			setError(t("onboarding.self.incomplete"));
+			return;
+		}
+
+		setError(undefined);
+		const next = nextOnboardingRoute("self");
+
+		if (next) {
+			router.replace(next);
+		}
+	};
 
 	return (
 		<FormScreen
@@ -39,13 +49,12 @@ export default function SelfStep() {
 			progress={{ current: onboardingStepNumber("self"), total: ONBOARDING_STEP_COUNT }}
 			footer={
 				<>
-					<ErrorBanner message={submit.isError ? t("onboarding.submit.error") : undefined} />
-					<Button
-						label={t("common.finish")}
-						disabled={!allRated}
-						loading={submit.isPending}
-						onPress={() => submit.mutate()}
-					/>
+					{error ? (
+						<ThemedText type="caption" style={{ color: theme.danger }}>
+							{error}
+						</ThemedText>
+					) : null}
+					<Button label={t("common.continue")} onPress={onContinue} />
 				</>
 			}
 		>
@@ -56,7 +65,10 @@ export default function SelfStep() {
 					key={dimension.selfKey}
 					label={dimension.label}
 					value={draft.self[dimension.selfKey]}
-					onChange={(value) => setSelfRating(dimension.selfKey, value)}
+					onChange={(value) => {
+						setSelfRating(dimension.selfKey, value);
+						setError(undefined);
+					}}
 				/>
 			))}
 		</FormScreen>

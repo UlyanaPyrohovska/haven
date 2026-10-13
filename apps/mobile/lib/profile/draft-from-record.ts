@@ -19,6 +19,7 @@ import {
 } from "@/constants/profile-taxonomy";
 import type { ProfileRecord } from "@/lib/api/profile";
 import type { ProfileDraft } from "@/lib/onboarding/profile-draft";
+import { readPrivacySettings } from "@/lib/profile/privacy";
 
 function readString(value: unknown): string | undefined {
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
@@ -108,5 +109,6 @@ export function profileRecordToDraft(record: ProfileRecord): ProfileDraft {
 		interests: readInterests(record),
 		partner: readPartnerImportance(record),
 		self: readSelfRatings(record),
+		privacy: readPrivacySettings(record),
 	};
 }
