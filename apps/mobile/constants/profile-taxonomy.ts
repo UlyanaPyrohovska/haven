@@ -107,42 +107,46 @@ export const InterestCategories = [
 	{
 		key: "active",
 		label: "Sport & movement",
+		emoji: "🏃",
 		interests: [
-			{ key: "interestSports", label: "Playing sports" },
-			{ key: "interestTvsports", label: "Watching sports" },
-			{ key: "interestExercise", label: "Exercise" },
-			{ key: "interestHiking", label: "Hiking" },
-			{ key: "interestYoga", label: "Yoga" },
+			{ key: "interestSports", label: "Playing sports", emoji: "⚽" },
+			{ key: "interestTvsports", label: "Watching sports", emoji: "🏟️" },
+			{ key: "interestExercise", label: "Exercise", emoji: "💪" },
+			{ key: "interestHiking", label: "Hiking", emoji: "🥾" },
+			{ key: "interestYoga", label: "Yoga", emoji: "🧘" },
 		],
 	},
 	{
 		key: "culture",
 		label: "Arts & culture",
+		emoji: "🖼️",
 		interests: [
-			{ key: "interestMuseums", label: "Museums" },
-			{ key: "interestArt", label: "Art" },
-			{ key: "interestTheater", label: "Theatre" },
-			{ key: "interestReading", label: "Reading" },
+			{ key: "interestMuseums", label: "Museums", emoji: "🏛️" },
+			{ key: "interestArt", label: "Art", emoji: "🎨" },
+			{ key: "interestTheater", label: "Theatre", emoji: "🎭" },
+			{ key: "interestReading", label: "Reading", emoji: "📚" },
 		],
 	},
 	{
 		key: "screens",
 		label: "Music & screens",
+		emoji: "🎧",
 		interests: [
-			{ key: "interestMusic", label: "Music" },
-			{ key: "interestConcerts", label: "Concerts" },
-			{ key: "interestMovies", label: "Movies" },
-			{ key: "interestTv", label: "TV" },
-			{ key: "interestGaming", label: "Gaming" },
+			{ key: "interestMusic", label: "Music", emoji: "🎵" },
+			{ key: "interestConcerts", label: "Concerts", emoji: "🎤" },
+			{ key: "interestMovies", label: "Movies", emoji: "🎬" },
+			{ key: "interestTv", label: "TV", emoji: "📺" },
+			{ key: "interestGaming", label: "Gaming", emoji: "🎮" },
 		],
 	},
 	{
 		key: "social",
 		label: "Going out",
+		emoji: "🌃",
 		interests: [
-			{ key: "interestDining", label: "Dining out" },
-			{ key: "interestClubbing", label: "Clubbing" },
-			{ key: "interestShopping", label: "Shopping" },
+			{ key: "interestDining", label: "Dining out", emoji: "🍽️" },
+			{ key: "interestClubbing", label: "Clubbing", emoji: "🪩" },
+			{ key: "interestShopping", label: "Shopping", emoji: "🛍️" },
 		],
 	},
 ] as const;
@@ -152,6 +156,7 @@ export type InterestKey = (typeof InterestCategories)[number]["interests"][numbe
 export type InterestField = {
 	key: InterestKey;
 	label: string;
+	emoji: string;
 };
 
 /** Flat view of every interest column, for building the submit payload. */
@@ -165,12 +170,12 @@ export const InterestFields: readonly InterestField[] = InterestCategories.flatM
  * answerable about a partner, so it is excluded from the self-rating step.
  */
 export const TraitDimensions = [
-	{ key: "attr", label: "Attractiveness", prefKey: "prefAttr", selfKey: "selfAttr", selfRated: true },
-	{ key: "sinc", label: "Sincerity", prefKey: "prefSinc", selfKey: "selfSinc", selfRated: true },
-	{ key: "intel", label: "Intelligence", prefKey: "prefIntel", selfKey: "selfIntel", selfRated: true },
-	{ key: "fun", label: "Fun", prefKey: "prefFun", selfKey: "selfFun", selfRated: true },
-	{ key: "amb", label: "Ambition", prefKey: "prefAmb", selfKey: "selfAmb", selfRated: true },
-	{ key: "shar", label: "Shared interests", prefKey: "prefShar", selfKey: "selfShar", selfRated: false },
+	{ key: "attr", emoji: "✨", label: "Attractiveness", prefKey: "prefAttr", selfKey: "selfAttr", selfRated: true },
+	{ key: "sinc", emoji: "🤝", label: "Sincerity", prefKey: "prefSinc", selfKey: "selfSinc", selfRated: true },
+	{ key: "intel", emoji: "🧠", label: "Intelligence", prefKey: "prefIntel", selfKey: "selfIntel", selfRated: true },
+	{ key: "fun", emoji: "🎉", label: "Fun", prefKey: "prefFun", selfKey: "selfFun", selfRated: true },
+	{ key: "amb", emoji: "🚀", label: "Ambition", prefKey: "prefAmb", selfKey: "selfAmb", selfRated: true },
+	{ key: "shar", emoji: "🧩", label: "Shared interests", prefKey: "prefShar", selfKey: "selfShar", selfRated: false },
 ] as const;
 
 export type TraitDimension = (typeof TraitDimensions)[number];

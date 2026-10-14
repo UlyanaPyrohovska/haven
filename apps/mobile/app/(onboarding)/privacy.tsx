@@ -14,10 +14,10 @@ import { profileQueryKey } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
 import { saveProfile } from "@/lib/api/profile";
 import { useSession } from "@/lib/auth/client";
-import { profileInitials } from "@/lib/profile/display";
-import { draftPublicProfilePreview } from "@/lib/profile/privacy";
 import { useProfileDraft } from "@/lib/onboarding/profile-draft";
 import { ONBOARDING_STEP_COUNT, onboardingStepNumber, previousOnboardingRoute } from "@/lib/onboarding/steps";
+import { profileInitials } from "@/lib/profile/display";
+import { draftPublicProfilePreview } from "@/lib/profile/privacy";
 
 function PreviewTag({ label }: { label: string }) {
 	const theme = useTheme();
@@ -114,15 +114,14 @@ export default function PrivacyStep() {
 						)}
 					</View>
 				</View>
-
-				{!draft.privacy.discoverable ? (
-					<ThemedText type="caption" style={{ color: theme.muted }}>
-						{t("onboarding.privacy.hiddenFromRecommendations")}
-					</ThemedText>
-				) : null}
 			</View>
 
-			<ProfilePrivacyControls privacy={draft.privacy} onToggle={setPrivacySetting} disabled={submit.isPending} />
+			<ProfilePrivacyControls
+				privacy={draft.privacy}
+				onToggle={setPrivacySetting}
+				disabled={submit.isPending}
+				showVisibility={false}
+			/>
 		</FormScreen>
 	);
 }

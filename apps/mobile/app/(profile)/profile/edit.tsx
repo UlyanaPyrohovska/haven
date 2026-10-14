@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { CustomInterestPicker } from "@/components/profile/custom-interest-picker";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { ChipGroup, MultiChipGroup } from "@/components/ui/chip-group";
@@ -41,8 +42,12 @@ const BIO_MIN_LENGTH = 20;
 
 const interestCategories = InterestCategories.map((category) => ({
 	key: category.key,
-	label: category.label,
-	options: category.interests.map((interest) => ({ value: interest.key, label: interest.label })),
+	label: `${category.emoji} ${category.label}`,
+	options: category.interests.map((interest) => ({
+		value: interest.key,
+		label: interest.label,
+		emoji: interest.emoji,
+	})),
 }));
 
 export default function ProfileEditScreen() {
@@ -130,7 +135,7 @@ export default function ProfileEditScreen() {
 		const nextErrors = {
 			bio: draft.bio.trim().length < BIO_MIN_LENGTH ? t("onboarding.bio.tooShort") : undefined,
 			interests:
-				draft.interests.length < MIN_SELECTED_INTERESTS
+				draft.interests.length + draft.customInterests.length < MIN_SELECTED_INTERESTS
 					? t("onboarding.interests.tooFew", { count: MIN_SELECTED_INTERESTS })
 					: undefined,
 		};
@@ -238,12 +243,19 @@ export default function ProfileEditScreen() {
 				/>
 			))}
 
+			<CustomInterestPicker
+				values={draft.customInterests}
+				onChange={(customInterests) => updateDraft({ customInterests })}
+			/>
+
 			<ThemedText type="label">{t("onboarding.partner.title")}</ThemedText>
 			<ScaleLegend low={t("onboarding.partner.low")} high={t("onboarding.partner.high")} />
 			{TraitDimensions.map((dimension) => (
 				<SliderScale
 					key={dimension.prefKey}
 					label={dimension.label}
+					emoji={dimension.emoji}
+					levels={t("onboarding.partner.levels", { returnObjects: true }) as string[]}
 					value={draft.partner[dimension.prefKey]}
 					onChange={(value) => setPartnerImportance(dimension.prefKey, value)}
 				/>
@@ -255,6 +267,8 @@ export default function ProfileEditScreen() {
 				<SliderScale
 					key={dimension.selfKey}
 					label={dimension.label}
+					emoji={dimension.emoji}
+					levels={t("onboarding.self.levels", { returnObjects: true }) as string[]}
 					value={draft.self[dimension.selfKey]}
 					onChange={(value) => setSelfRating(dimension.selfKey, value)}
 				/>

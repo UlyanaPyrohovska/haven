@@ -9,6 +9,7 @@ import type {
 	PrefKey,
 	SelfKey,
 } from "@/constants/profile-taxonomy";
+import type { LocationPresetId } from "@/lib/profile/location";
 import { DEFAULT_PRIVACY_SETTINGS, type PrivacyKey } from "@/lib/profile/privacy";
 
 /** Mirrors the `user_profiles` columns the onboarding flow collects. */
@@ -23,10 +24,21 @@ export type ProfileDraft = {
 	bio: string;
 	/** Picked interests; everything not listed is submitted as "not interested". */
 	interests: InterestKey[];
+	/** Labels from the shared `custom_interests` catalog. */
+	customInterests: string[];
 	/** Importance on a 1–10 scale, normalised into the 100-point `pref_*` split on submit. */
 	partner: Partial<Record<PrefKey, number>>;
 	self: Partial<Record<SelfKey, number>>;
 	privacy: typeof DEFAULT_PRIVACY_SETTINGS;
+	/** Unset preset leaves location columns untouched; coordinates are only filled for "device". */
+	location: {
+		preset: LocationPresetId | undefined;
+		displayLocation: string | null;
+		latitude: number | null;
+		longitude: number | null;
+		shareLocation: boolean;
+		shareCrossPaths: boolean;
+	};
 };
 
 const emptyDraft: ProfileDraft = {
@@ -38,9 +50,18 @@ const emptyDraft: ProfileDraft = {
 	goal: undefined,
 	bio: "",
 	interests: [],
+	customInterests: [],
 	partner: {},
 	self: {},
 	privacy: { ...DEFAULT_PRIVACY_SETTINGS },
+	location: {
+		preset: undefined,
+		displayLocation: null,
+		latitude: null,
+		longitude: null,
+		shareLocation: true,
+		shareCrossPaths: true,
+	},
 };
 
 type ProfileDraftContextValue = {

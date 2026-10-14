@@ -14,49 +14,32 @@ export class DeviceLocationError extends Error {
 	}
 }
 
-const POSITION_TIMEOUT_MS = 20_000;
-const FRESH_POSITION_TIMEOUT_MS = 12_000;
-const GEOCODE_TIMEOUT_MS = 8_000;
+export const DEVICE_LOCATION_ERROR_KEYS = {
+	permission_denied: "profile.locationScreen.permissionDenied",
+	services_disabled: "profile.locationScreen.servicesDisabled",
+	unavailable: "profile.locationScreen.deviceUnavailable",
+	timeout: "profile.locationScreen.deviceTimeout",
+} as const;
 
-function withTimeout<T>(
-	promise: Promise<T>,
-	timeoutMs: number,
-	reason: DeviceLocationFailureReason = "timeout",
-): Promise<T> {
-	return new Promise((resolve, reject) => {
-		const timer = setTimeout(() => reject(new DeviceLocationError(reason)), timeoutMs);
+const POSITION_TIMEOUT_MS = 10_000;
+const GEOCODE_TIMEOUT_MS = 5_000;
+/** A cached fix this recent is as good as a new one for an area-level location. */
+const LAST_KNOWN_MAX_AGE_MS = 5 * 60_000;
+const LAST_KNOWN_MAX_ACCURACY_M = 3_000;
 
-		promise.then(
-			(value) => {
-				clearTimeout(timer);
-				resolve(value);
-			},
-			(error) => {
-				clearTimeout(timer);
-				reject(error);
-			},
-		);
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const timeout = new Promise<never>((_, reject) => {
+		timer = setTimeout(() => reject(new DeviceLocationError("timeout")), timeoutMs);
 	});
+
+	return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 async function resolveLocationLabel(latitude: number, longitude: number, fallbackLabel: string): Promise<string> {
 	try {
-		const places = await withTimeout(Location.reverseGeocodeAsync({ latitude, longitude }), GEOCODE_TIMEOUT_MS);
-		const place = places[0];
-
-		if (!place) {
-			return fallbackLabel;
-		}
-
-		const city = typeof place.city === "string" ? place.city.trim() : "";
-		const country = typeof place.country === "string" ? place.country.trim() : "";
-		const region = typeof place.region === "string" ? place.region.trim() : "";
-
-		if (city && country) {
-			return `${city}, ${country}`;
-		}
-
-		const parts = [city || region, country].filter((part) => part.length > 0);
+		const [place] = await withTimeout(Location.reverseGeocodeAsync({ latitude, longitude }), GEOCODE_TIMEOUT_MS);
+		const parts = [place?.city?.trim() || place?.region?.trim(), place?.country?.trim()].filter(Boolean);
 
 		return parts.length > 0 ? parts.join(", ") : fallbackLabel;
 	} catch {
@@ -64,68 +47,48 @@ async function resolveLocationLabel(latitude: number, longitude: number, fallbac
 	}
 }
 
-async function readCurrentPosition(timeoutMs: number): Promise<Location.LocationObject> {
-	return withTimeout(
-		Location.getCurrentPositionAsync({
-			accuracy: Location.Accuracy.Balanced,
-			mayShowUserSettingsDialog: true,
-		}),
-		timeoutMs,
-	);
-}
+async function readPosition(): Promise<Location.LocationObject> {
+	const recent = await Location.getLastKnownPositionAsync({
+		maxAge: LAST_KNOWN_MAX_AGE_MS,
+		requiredAccuracy: LAST_KNOWN_MAX_ACCURACY_M,
+	});
 
-async function readPosition(fresh = false): Promise<Location.LocationObject | null> {
-	if (!fresh) {
-		const lastKnown = await Location.getLastKnownPositionAsync();
-
-		if (lastKnown) {
-			return lastKnown;
-		}
-
-		return readCurrentPosition(POSITION_TIMEOUT_MS);
+	if (recent) {
+		return recent;
 	}
 
 	try {
-		return await readCurrentPosition(FRESH_POSITION_TIMEOUT_MS);
+		// Haven only shows an approximate area, so a coarse fix is enough and resolves much faster than GPS.
+		return await withTimeout(
+			Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low, mayShowUserSettingsDialog: true }),
+			POSITION_TIMEOUT_MS,
+		);
 	} catch (error) {
-		const lastKnown = await Location.getLastKnownPositionAsync();
+		const stale = await Location.getLastKnownPositionAsync();
 
-		if (lastKnown) {
-			return lastKnown;
+		if (stale) {
+			return stale;
 		}
 
-		throw error;
+		throw error instanceof DeviceLocationError ? error : new DeviceLocationError("unavailable");
 	}
 }
 
-type ReadDeviceLocationOptions = {
-	/** Skip cached GPS fixes and request a fresh reading. Use when the user explicitly updates location. */
-	fresh?: boolean;
-};
-
-export async function readDeviceLocation(
-	fallbackLabel: string,
-	options: ReadDeviceLocationOptions = {},
-): Promise<DeviceLocationResult> {
-	const servicesEnabled = await Location.hasServicesEnabledAsync();
+export async function readDeviceLocation(fallbackLabel: string): Promise<DeviceLocationResult> {
+	const [servicesEnabled, permission] = await Promise.all([
+		Location.hasServicesEnabledAsync(),
+		Location.requestForegroundPermissionsAsync(),
+	]);
 
 	if (!servicesEnabled) {
 		throw new DeviceLocationError("services_disabled");
 	}
 
-	const permission = await Location.requestForegroundPermissionsAsync();
-
 	if (!permission.granted) {
 		throw new DeviceLocationError("permission_denied");
 	}
 
-	const position = await readPosition(options.fresh ?? false);
-
-	if (!position) {
-		throw new DeviceLocationError("unavailable");
-	}
-
-	const { latitude, longitude } = position.coords;
+	const { latitude, longitude } = (await readPosition()).coords;
 	const label = await resolveLocationLabel(latitude, longitude, fallbackLabel);
 
 	return { latitude, longitude, label };

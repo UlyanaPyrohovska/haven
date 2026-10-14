@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
 	date,
@@ -178,6 +178,8 @@ export const userProfiles = pgTable(
 		interestMusic: smallint("interest_music"),
 		interestShopping: smallint("interest_shopping"),
 		interestYoga: smallint("interest_yoga"),
+		/** Canonical labels from `custom_interests`; scored as extra binary interest dimensions. */
+		customInterests: text("custom_interests").array().notNull().default(sql`'{}'::text[]`),
 
 		// Preferences — 6-dim (what the user is looking for)
 		prefAttr: real("pref_attr"),
@@ -215,6 +217,22 @@ export const userProfiles = pgTable(
 		index("user_profiles_looking_for_idx").on(t.lookingFor),
 		index("user_profiles_lat_lon_idx").on(t.latitude, t.longitude),
 	],
+);
+
+// ────────────────────────────────────────────────────────────────
+// custom_interests — shared catalog of user-created interests, offered as suggestions
+// ────────────────────────────────────────────────────────────────
+export const customInterests = pgTable(
+	"custom_interests",
+	{
+		id: serial("id").primaryKey(),
+		/** Display spelling from whoever created it first. */
+		label: varchar("label", { length: 30 }).notNull(),
+		/** Lower-cased, whitespace-collapsed label; dedupe key. */
+		key: varchar("key", { length: 30 }).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => [uniqueIndex("custom_interests_key_idx").on(t.key)],
 );
 
 // ────────────────────────────────────────────────────────────────

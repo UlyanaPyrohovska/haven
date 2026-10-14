@@ -1,6 +1,7 @@
 import { and, asc, eq, exists, getTableColumns, ne, not, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { interactions, recommendations, userEmbeddings, userProfiles } from "@/db/schema";
+import { customInterestKey } from "@/lib/custom-interests";
 import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile-view";
 import { coerceLastShownAt } from "@/lib/recommendation-cadence";
 import type { ScoringProfile } from "@/lib/scoring";
@@ -40,6 +41,7 @@ const scoringProfileSelect = {
 	interestMusic: userProfiles.interestMusic,
 	interestShopping: userProfiles.interestShopping,
 	interestYoga: userProfiles.interestYoga,
+	customInterests: userProfiles.customInterests,
 	prefAttr: userProfiles.prefAttr,
 	prefSinc: userProfiles.prefSinc,
 	prefIntel: userProfiles.prefIntel,
@@ -60,6 +62,7 @@ type ScoringProfileRow = {
 	lookingFor: number;
 	latitude: number | null;
 	longitude: number | null;
+	customInterests: string[];
 	bio: unknown;
 } & Record<(typeof INTEREST_KEYS)[number], number | null> &
 	Record<(typeof PREF_KEYS)[number], number | null> &
@@ -106,6 +109,7 @@ function mapScoringProfileRow(row: ScoringProfileRow): ScoringViewerProfile {
 		latitude: row.latitude,
 		longitude: row.longitude,
 		interests: INTEREST_KEYS.map((key) => row[key]),
+		customInterests: row.customInterests.map(customInterestKey),
 		pref: PREF_KEYS.map((key) => row[key]),
 		self: SELF_KEYS.map((key) => row[key]),
 		bioEmbedding: parseBioEmbedding(row.bio),
@@ -118,6 +122,7 @@ function mapCandidateScoringProfile(row: ScoringProfileRow): ScoringProfile {
 	return {
 		id: mapped.id,
 		interests: mapped.interests,
+		customInterests: mapped.customInterests,
 		pref: mapped.pref,
 		self: mapped.self,
 		latitude: mapped.latitude,

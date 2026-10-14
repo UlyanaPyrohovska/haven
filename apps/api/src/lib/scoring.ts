@@ -3,6 +3,8 @@ import { haversineKm } from "@/lib/profile-view";
 export type ScoringProfile = {
 	id: number;
 	interests: (number | null)[];
+	/** Lower-cased custom interest labels; each one is an extra binary interest dimension. */
+	customInterests?: readonly string[];
 	pref: (number | null)[];
 	self: (number | null)[];
 	latitude: number | null;
@@ -36,6 +38,9 @@ export const GEO_DECAY_TAU_KM = 25;
 const INTEREST_DIM = 17;
 const TRAIT_DIM = 6;
 const INTEREST_NEUTRAL = 5;
+/** Custom interests mirror the 10/1 values onboarding writes for picked/unpicked fixed interests. */
+const CUSTOM_INTEREST_ON = 10;
+const CUSTOM_INTEREST_OFF = 1;
 const SELF_NEUTRAL = 5;
 /** Equal share of the 100-point preference split. */
 const PREF_NEUTRAL = 100 / TRAIT_DIM;
@@ -95,12 +100,25 @@ function clampUnitInterval(value: number): number {
 	return value;
 }
 
+/**
+ * Cosine over the 17 fixed interests plus one dimension per custom interest either side holds.
+ * With no custom interests on either side this is the plain 17-dim cosine.
+ */
 export function interestSimilarity(
 	a: readonly (number | null | undefined)[],
 	b: readonly (number | null | undefined)[],
+	customA: readonly string[] = [],
+	customB: readonly string[] = [],
 ): number {
 	const va = fillDim(a, INTEREST_DIM, INTEREST_NEUTRAL);
 	const vb = fillDim(b, INTEREST_DIM, INTEREST_NEUTRAL);
+	const setA = new Set(customA);
+	const setB = new Set(customB);
+
+	for (const label of new Set([...setA, ...setB])) {
+		va.push(setA.has(label) ? CUSTOM_INTEREST_ON : CUSTOM_INTEREST_OFF);
+		vb.push(setB.has(label) ? CUSTOM_INTEREST_ON : CUSTOM_INTEREST_OFF);
+	}
 
 	return clampUnitInterval(rawCosine(va, vb));
 }
@@ -138,7 +156,7 @@ export function bioSimilarity(a: number[] | null | undefined, b: number[] | null
 }
 
 export function unilateral(u: ScoringProfile, v: ScoringProfile, w: ScoringWeights = DEFAULT_WEIGHTS): number {
-	const interest = interestSimilarity(u.interests, v.interests);
+	const interest = interestSimilarity(u.interests, v.interests, u.customInterests, v.customInterests);
 	const geo = geoProximity(u, v);
 	const pref = preferenceMatch(u.pref, v.self);
 	const bio = bioSimilarity(u.bioEmbedding, v.bioEmbedding);

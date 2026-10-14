@@ -1,5 +1,6 @@
 import { z } from "@hono/zod-openapi";
 import { ageFromBirthDate, MAX_AGE, MIN_AGE, parseIsoDate } from "@/lib/age";
+import { CUSTOM_INTEREST_MAX_LENGTH, customInterestError, MAX_CUSTOM_INTERESTS } from "@/lib/custom-interests";
 import {
 	DatingGoals,
 	FriendsGoals,
@@ -60,6 +61,17 @@ const goal = z.enum(ProfileGoals).nullable().optional();
 
 const privacyToggle = z.boolean().optional();
 
+/** User-created interests; validated here, then deduped against the shared catalog in the service. */
+const customInterestLabel = z.string().superRefine((value, ctx) => {
+	const error = customInterestError(value);
+
+	if (error) {
+		ctx.addIssue({ code: "custom", message: error });
+	}
+});
+
+const customInterests = z.array(customInterestLabel).max(MAX_CUSTOM_INTERESTS).optional();
+
 export const ProfileUpdateSchema = z
 	.object({
 		displayName: nullableText(80),
@@ -88,6 +100,7 @@ export const ProfileUpdateSchema = z
 		interestMusic: likert,
 		interestShopping: likert,
 		interestYoga: likert,
+		customInterests,
 
 		prefAttr: points,
 		prefSinc: points,
@@ -140,6 +153,29 @@ export const ErrorSchema = z
 		message: z.string(),
 	})
 	.openapi("Error");
+
+export const CustomInterestSearchQuerySchema = z.object({
+	q: z.string().max(CUSTOM_INTEREST_MAX_LENGTH).optional(),
+});
+
+export const CustomInterestSearchResponseSchema = z
+	.object({
+		interests: z.array(z.string()),
+	})
+	.openapi("CustomInterestSearchResponse");
+
+/** Length and bad-word checks run in the service so the client gets the specific reason back. */
+export const CreateCustomInterestBodySchema = z
+	.object({
+		label: z.string().max(100),
+	})
+	.openapi("CreateCustomInterestBody");
+
+export const CustomInterestResponseSchema = z
+	.object({
+		label: z.string(),
+	})
+	.openapi("CustomInterestResponse");
 
 export const ProfileResponseSchema = z
 	.object({

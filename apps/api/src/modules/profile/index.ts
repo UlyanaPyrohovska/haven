@@ -13,4 +13,16 @@ profile.openapi(routes.patchMeRoute, async (c) => {
 	return c.json(await service.patchProfile(c, updates), 200);
 });
 
+// GET /interests/custom
+profile.openapi(routes.searchCustomInterestsRoute, async (c) => {
+	const { q } = c.req.valid("query");
+	return c.json(await service.searchCustomInterests(c, q), 200);
+});
+
+// POST /interests/custom
+profile.openapi(routes.createCustomInterestRoute, async (c) => {
+	const { label } = c.req.valid("json");
+	return c.json(await service.createCustomInterest(c, label), 200);
+});
+
 export default profile;

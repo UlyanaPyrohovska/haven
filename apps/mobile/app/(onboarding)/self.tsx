@@ -64,6 +64,8 @@ export default function SelfStep() {
 				<SliderScale
 					key={dimension.selfKey}
 					label={dimension.label}
+					emoji={dimension.emoji}
+					levels={t("onboarding.self.levels", { returnObjects: true }) as string[]}
 					value={draft.self[dimension.selfKey]}
 					onChange={(value) => {
 						setSelfRating(dimension.selfKey, value);
