@@ -3,7 +3,8 @@ import { Platform, type TextStyle } from "react-native";
 export const Colors = {
 	brand: {
 		ink: "#484848",
-		splash: "#dcdcdc",
+		/** Native splash + AnimatedSplash background; keep in sync with app.json. */
+		splash: "#F5B942",
 		white: "#ffffff",
 	},
 	palette: {

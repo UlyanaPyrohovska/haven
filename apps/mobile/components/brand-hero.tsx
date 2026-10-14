@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
 	},
 	wordmark: {
 		marginTop: Spacing.lg,
-		// Kodchasan sits with generous side bearings; matches the splash wordmark spacing.
+		// Kodchasan sits with generous side bearings.
 		letterSpacing: 2,
 	},
 	tagline: {

@@ -17,6 +17,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import "@/lib/i18n";
 import { ThemePreferenceProvider } from "@/lib/theme/preference";
 
+// Hidden by AnimatedSplash once its first frame is laid out.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
@@ -58,12 +59,6 @@ export default function RootLayout() {
 
 	// A missing font shouldn't block launch; the brand text falls back to the system face.
 	const appReady = preferencesReady && (fontsLoaded || fontError !== null);
-
-	useEffect(() => {
-		if (appReady) {
-			void SplashScreen.hideAsync();
-		}
-	}, [appReady]);
 
 	const onSplashFinish = useCallback(() => {
 		setShowAnimatedSplash(false);
