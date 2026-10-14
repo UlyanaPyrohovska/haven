@@ -122,7 +122,12 @@ export function profileAgeLabel(profile: ProfileRecord): string | undefined {
 }
 
 export function profileSelectedInterests(profile: ProfileRecord): string[] {
-	return InterestFields.filter((field) => profile[field.key] === INTEREST_SELECTED).map((field) => field.label);
+	const fixed = InterestFields.filter((field) => profile[field.key] === INTEREST_SELECTED).map(
+		(field) => `${field.emoji} ${field.label}`,
+	);
+	const custom = Array.isArray(profile.customInterests) ? (profile.customInterests as string[]) : [];
+
+	return [...fixed, ...custom.map((label) => `✨ ${label}`)];
 }
 
 export function profileSelfRatings(profile: ProfileRecord): { label: string; value: number }[] {

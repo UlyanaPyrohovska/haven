@@ -56,12 +56,7 @@ export default function VisibilitySettingsScreen() {
 		>
 			{saveError ? <ErrorBanner message={saveError} /> : null}
 
-			<ProfilePrivacyControls
-				privacy={privacy}
-				onToggle={onTogglePrivacy}
-				disabled={disabled}
-				busy={busy}
-			/>
+			<ProfilePrivacyControls privacy={privacy} onToggle={onTogglePrivacy} disabled={disabled} busy={busy} />
 		</FormScreen>
 	);
 }

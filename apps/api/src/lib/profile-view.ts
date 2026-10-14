@@ -224,16 +224,27 @@ export function selectedInterestKeys(profile: ProfileRow): InterestKey[] {
 	});
 }
 
+/** User-created interest labels stored on the profile; empty for rows without the column. */
+export function customInterestLabels(profile: ProfileRow): string[] {
+	const value = profile.customInterests;
+
+	return Array.isArray(value) ? value.filter((label): label is string => typeof label === "string") : [];
+}
+
 export function interestLabels(profile: ProfileRow): string[] {
-	return selectedInterestKeys(profile).map((key) => INTEREST_LABELS[key]);
+	return [...selectedInterestKeys(profile).map((key) => INTEREST_LABELS[key]), ...customInterestLabels(profile)];
 }
 
 export function sharedInterestLabels(viewer: ProfileRow, candidate: ProfileRow): string[] {
 	const viewerKeys = new Set(selectedInterestKeys(viewer));
+	const viewerCustom = new Set(customInterestLabels(viewer));
 
-	return selectedInterestKeys(candidate)
-		.filter((key) => viewerKeys.has(key))
-		.map((key) => INTEREST_LABELS[key]);
+	return [
+		...selectedInterestKeys(candidate)
+			.filter((key) => viewerKeys.has(key))
+			.map((key) => INTEREST_LABELS[key]),
+		...customInterestLabels(candidate).filter((label) => viewerCustom.has(label)),
+	];
 }
 
 export function haversineKm(

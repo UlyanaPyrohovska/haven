@@ -130,6 +130,7 @@
 			"subtitle": "Choose what city or area you show in Haven and what we can use for matching.",
 			"hiddenLabel": "Location hidden",
 			"deviceLabel": "Near me",
+			"locating": "Finding your area…",
 			"saveError": "We couldn't save your location settings. Please try again.",
 			"permissionDenied": "Location access is off. Enable it in Settings to use your current location.",
 			"servicesDisabled": "Location services are turned off on this device.",
@@ -284,15 +285,24 @@
 		},
 		"interests": {
 			"title": "Your interests",
-			"subtitle": "Tap everything you're into. This is what we match you on, so pick freely.",
+			"subtitle": "Tap everything you're into ✨ This is what we match you on, so pick freely.",
 			"selected": "{{count}} selected",
-			"tooFew": "Pick at least {{count}} interests to continue."
+			"enough": "{{count}} selected 🎉 Nice mix!",
+			"tooFew": "Pick at least {{count}} interests to continue.",
+			"custom": {
+				"label": "✨ From the community",
+				"add": "Missing something? Add your own",
+				"placeholder": "e.g. Bouldering, Board games",
+				"submit": "Add interest",
+				"full": "You can add up to {{count}} of your own."
+			}
 		},
 		"partner": {
 			"title": "What matters in others",
 			"subtitle": "Drag each slider to show how much it matters to you. We balance the weightings for you.",
 			"low": "Doesn't matter",
 			"high": "Matters most",
+			"levels": ["Doesn't matter", "A little", "Somewhat", "A lot", "Essential"],
 			"incomplete": "Set every slider to continue."
 		},
 		"self": {
@@ -300,16 +310,21 @@
 			"subtitle": "Drag each slider to rate yourself. Nobody else sees these numbers.",
 			"low": "Not really me",
 			"high": "Very much me",
+			"levels": ["Not really me", "A little", "Somewhat", "Mostly", "Totally me"],
 			"incomplete": "Rate every slider to continue."
 		},
 		"privacy": {
-			"title": "Privacy & visibility",
-			"subtitle": "Choose who can find you and what they see on your profile. You can change this anytime in Settings.",
+			"title": "Privacy",
+			"subtitle": "Choose what others see on your profile. You can change this anytime in Settings.",
 			"previewTitle": "Public preview",
 			"previewSubtitle": "Updates as you change the toggles below.",
 			"previewEmpty": "Turn on the toggles below to show more on your public profile.",
-			"moreInterests": "+{{count}} more",
-			"hiddenFromRecommendations": "Your profile won't appear in recommendations until you turn discoverability back on."
+			"moreInterests": "+{{count}} more"
+		},
+		"location": {
+			"title": "Location",
+			"subtitle": "Haven shows only an approximate area, never your exact position. You can change this anytime in Settings.",
+			"crossPathsHint": "Cross paths lets you see people you've been near. Both of you need it on."
 		},
 		"submit": {
 			"error": "We couldn't save your preferences. Please try again."

@@ -1,90 +1,97 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1783292590874,
-			"tag": "0000_sparkling_dakota_north",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1784326670117,
-			"tag": "0001_robust_otto_octavius",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1785331776480,
-			"tag": "0002_motionless_switch",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1785331786383,
-			"tag": "0003_tan_shape",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "7",
-			"when": 1785331900000,
-			"tag": "0004_looking_for",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "7",
-			"when": 1789067856416,
-			"tag": "0005_profile_photo_url",
-			"breakpoints": true
-		},
-		{
-			"idx": 6,
-			"version": "7",
-			"when": 1789068000000,
-			"tag": "0006_mood_checkins",
-			"breakpoints": true
-		},
-		{
-			"idx": 7,
-			"version": "7",
-			"when": 1789068100000,
-			"tag": "0007_profile_privacy",
-			"breakpoints": true
-		},
-		{
-			"idx": 8,
-			"version": "7",
-			"when": 1789068200000,
-			"tag": "0008_location_settings",
-			"breakpoints": true
-		},
-		{
-			"idx": 9,
-			"version": "7",
-			"when": 1789068300000,
-			"tag": "0009_daily_question_answers",
-			"breakpoints": true
-		},
-		{
-			"idx": 10,
-			"version": "7",
-			"when": 1789068400000,
-			"tag": "0010_display_name",
-			"breakpoints": true
-		},
-		{
-			"idx": 11,
-			"version": "7",
-			"when": 1789068500000,
-			"tag": "0011_admin_plugin",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1783292590874,
+      "tag": "0000_sparkling_dakota_north",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784326670117,
+      "tag": "0001_robust_otto_octavius",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785331776480,
+      "tag": "0002_motionless_switch",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785331786383,
+      "tag": "0003_tan_shape",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785331900000,
+      "tag": "0004_looking_for",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789067856416,
+      "tag": "0005_profile_photo_url",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789068000000,
+      "tag": "0006_mood_checkins",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789068100000,
+      "tag": "0007_profile_privacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789068200000,
+      "tag": "0008_location_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789068300000,
+      "tag": "0009_daily_question_answers",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789068400000,
+      "tag": "0010_display_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789068500000,
+      "tag": "0011_admin_plugin",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792013167728,
+      "tag": "0012_custom_interests",
+      "breakpoints": true
+    }
+  ]
 }

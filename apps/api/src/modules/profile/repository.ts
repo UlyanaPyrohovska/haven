@@ -1,6 +1,7 @@
-import { eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns, inArray, like, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { user, userProfiles } from "@/db/schema";
+import { customInterests, user, userProfiles } from "@/db/schema";
+import { customInterestKey } from "@/lib/custom-interests";
 import type { ProfileUpdate } from "./schemas";
 
 const { email: _email, passwordHash: _passwordHash, ...publicProfileColumns } = getTableColumns(userProfiles);
@@ -50,4 +51,43 @@ export async function insertProfile(db: Db, userId: string, updates: ProfileUpda
 		.returning(publicProfileColumns);
 
 	return row ?? null;
+}
+
+/** Adds new labels to the shared catalog and returns the canonical spelling for each one, in order. */
+export async function upsertCustomInterests(db: Db, labels: readonly string[]) {
+	if (labels.length === 0) {
+		return [];
+	}
+
+	const rows = labels.map((label) => ({ label, key: customInterestKey(label) }));
+
+	await db.insert(customInterests).values(rows).onConflictDoNothing({ target: customInterests.key });
+
+	const stored = await db
+		.select({ label: customInterests.label, key: customInterests.key })
+		.from(customInterests)
+		.where(
+			inArray(
+				customInterests.key,
+				rows.map((row) => row.key),
+			),
+		);
+	const labelByKey = new Map(stored.map((row) => [row.key, row.label]));
+
+	return rows.map((row) => labelByKey.get(row.key) ?? row.label);
+}
+
+// shortcut: usage is counted per row with a scan of user_profiles, add a usage_count column if the catalog grows large.
+const customInterestUsage = sql<number>`(select count(*) from ${userProfiles} where ${customInterests.label} = any(${userProfiles.customInterests}))`;
+
+export async function searchCustomInterests(db: Db, query: string, limit = 20) {
+	const key = customInterestKey(query).replace(/[\\%_]/g, "\\$&");
+	const rows = await db
+		.select({ label: customInterests.label })
+		.from(customInterests)
+		.where(key ? like(customInterests.key, `%${key}%`) : undefined)
+		.orderBy(desc(customInterestUsage), customInterests.label)
+		.limit(limit);
+
+	return rows.map((row) => row.label);
 }

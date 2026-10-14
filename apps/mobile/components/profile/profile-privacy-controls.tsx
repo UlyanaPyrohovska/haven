@@ -5,33 +5,43 @@ import { ThemedText } from "@/components/themed-text";
 import { MenuCard, MenuDivider } from "@/components/ui/menu-row";
 import { SettingToggleRow } from "@/components/ui/setting-toggle-row";
 import { Spacing } from "@/constants/app-config";
-import { type PrivacyKey, type PrivacySettings } from "@/lib/profile/privacy";
+import type { PrivacyKey, PrivacySettings } from "@/lib/profile/privacy";
 
 type ProfilePrivacyControlsProps = {
 	privacy: PrivacySettings;
 	onToggle: (key: PrivacyKey, value: boolean) => void;
 	disabled?: boolean;
 	busy?: boolean;
+	/** Onboarding hides the discoverability card; new profiles start discoverable. */
+	showVisibility?: boolean;
 };
 
-export function ProfilePrivacyControls({ privacy, onToggle, disabled = false, busy = false }: ProfilePrivacyControlsProps) {
+export function ProfilePrivacyControls({
+	privacy,
+	onToggle,
+	disabled = false,
+	busy = false,
+	showVisibility = true,
+}: ProfilePrivacyControlsProps) {
 	const { t } = useTranslation();
 
 	return (
 		<>
-			<MenuCard>
-				<View style={styles.sectionHeader}>
-					<ThemedText type="label">{t("profile.settingsScreen.visibility.title")}</ThemedText>
-					{busy ? <ActivityIndicator size="small" /> : null}
-				</View>
-				<SettingToggleRow
-					label={t("profile.settingsScreen.visibility.discoverable")}
-					subtitle={t("profile.settingsScreen.visibility.discoverableHint")}
-					value={privacy.discoverable}
-					onValueChange={(value) => onToggle("discoverable", value)}
-					disabled={disabled}
-				/>
-			</MenuCard>
+			{showVisibility ? (
+				<MenuCard>
+					<View style={styles.sectionHeader}>
+						<ThemedText type="label">{t("profile.settingsScreen.visibility.title")}</ThemedText>
+						{busy ? <ActivityIndicator size="small" /> : null}
+					</View>
+					<SettingToggleRow
+						label={t("profile.settingsScreen.visibility.discoverable")}
+						subtitle={t("profile.settingsScreen.visibility.discoverableHint")}
+						value={privacy.discoverable}
+						onValueChange={(value) => onToggle("discoverable", value)}
+						disabled={disabled}
+					/>
+				</MenuCard>
+			) : null}
 
 			<MenuCard>
 				<View style={styles.sectionHeader}>

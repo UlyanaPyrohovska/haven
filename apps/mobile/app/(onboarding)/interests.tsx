@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CustomInterestPicker } from "@/components/profile/custom-interest-picker";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { MultiChipGroup } from "@/components/ui/chip-group";
@@ -19,18 +20,22 @@ import {
 /** Chip options keyed by column name, built once since the taxonomy is static. */
 const categories = InterestCategories.map((category) => ({
 	key: category.key,
-	label: category.label,
-	options: category.interests.map((interest) => ({ value: interest.key, label: interest.label })),
+	label: `${category.emoji} ${category.label}`,
+	options: category.interests.map((interest) => ({
+		value: interest.key,
+		label: interest.label,
+		emoji: interest.emoji,
+	})),
 }));
 
 export default function InterestsStep() {
 	const { t } = useTranslation();
 	const theme = useTheme();
 	const router = useRouter();
-	const { draft, toggleInterest } = useProfileDraft();
+	const { draft, toggleInterest, updateDraft } = useProfileDraft();
 	const [error, setError] = useState<string | undefined>(undefined);
 
-	const selectedCount = draft.interests.length;
+	const selectedCount = draft.interests.length + draft.customInterests.length;
 	const hasEnough = selectedCount >= MIN_SELECTED_INTERESTS;
 
 	const onContinue = () => {
@@ -57,7 +62,10 @@ export default function InterestsStep() {
 			footer={
 				<>
 					<ThemedText type="caption" style={{ color: error ? theme.danger : theme.muted }}>
-						{error ?? t("onboarding.interests.selected", { count: selectedCount })}
+						{error ??
+							t(hasEnough ? "onboarding.interests.enough" : "onboarding.interests.selected", {
+								count: selectedCount,
+							})}
 					</ThemedText>
 					<Button label={t("common.continue")} onPress={onContinue} />
 				</>
@@ -75,6 +83,14 @@ export default function InterestsStep() {
 					}}
 				/>
 			))}
+
+			<CustomInterestPicker
+				values={draft.customInterests}
+				onChange={(customInterests) => {
+					updateDraft({ customInterests });
+					setError(undefined);
+				}}
+			/>
 		</FormScreen>
 	);
 }

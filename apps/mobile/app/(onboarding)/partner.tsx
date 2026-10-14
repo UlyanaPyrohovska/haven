@@ -64,6 +64,8 @@ export default function PartnerStep() {
 				<SliderScale
 					key={dimension.prefKey}
 					label={dimension.label}
+					emoji={dimension.emoji}
+					levels={t("onboarding.partner.levels", { returnObjects: true }) as string[]}
 					value={draft.partner[dimension.prefKey]}
 					onChange={(value) => {
 						setPartnerImportance(dimension.prefKey, value);

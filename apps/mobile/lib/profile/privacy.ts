@@ -59,6 +59,8 @@ export function draftToPreviewRecord(draft: ProfileDraft): ProfileRecord {
 		record[field.key] = draft.interests.includes(field.key) ? INTEREST_SELECTED : INTEREST_UNSELECTED;
 	}
 
+	record.customInterests = draft.customInterests;
+
 	for (const key of PRIVACY_KEYS) {
 		record[key] = draft.privacy[key];
 	}

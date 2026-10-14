@@ -14,11 +14,7 @@ function resolveApiUrl(): string {
 	const configured = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 
 	// Android emulator: `localhost` is the emulator itself; host loopback is 10.0.2.2.
-	if (
-		Platform.OS === "android" &&
-		!Constants.isDevice &&
-		configured.includes("localhost")
-	) {
+	if (Platform.OS === "android" && !Constants.isDevice && configured.includes("localhost")) {
 		return configured.replace("localhost", "10.0.2.2");
 	}
 

@@ -1,7 +1,8 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
 import { displayNameFromAuthName } from "@/lib/candidate-display";
-import { errors } from "@/lib/errors";
+import { cleanCustomInterestLabel, customInterestError, dedupeCustomInterests } from "@/lib/custom-interests";
+import { errors, type ServiceError } from "@/lib/errors";
 import { isProfileComplete, type ProfileRow } from "@/lib/profile-view";
 import { getSessionUserId } from "@/lib/session";
 import * as recommendationService from "@/modules/recommendations/service";
@@ -45,6 +46,13 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 	const db = getDb(c.env.DATABASE_URL);
 	const profileId = await repository.findProfileIdByUserId(db, userId);
 	const payload = normalizeProfileUpdate(updates);
+
+	if (payload.customInterests) {
+		payload.customInterests = await repository.upsertCustomInterests(
+			db,
+			dedupeCustomInterests(payload.customInterests),
+		);
+	}
 	const existing = await repository.findProfileByUserId(db, userId);
 	const wasComplete = existing ? isProfileComplete(existing as ProfileRow) : false;
 
@@ -67,4 +75,25 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 	}
 
 	return { profile };
+}
+
+export async function searchCustomInterests(c: Context<{ Bindings: CloudflareBindings }>, query = "") {
+	await requireUserId(c);
+	const db = getDb(c.env.DATABASE_URL);
+
+	return { interests: await repository.searchCustomInterests(db, query) };
+}
+
+export async function createCustomInterest(c: Context<{ Bindings: CloudflareBindings }>, label: string) {
+	await requireUserId(c);
+	const message = customInterestError(label);
+
+	if (message) {
+		throw { status: 400, code: "INVALID_INTEREST", message } satisfies ServiceError;
+	}
+
+	const db = getDb(c.env.DATABASE_URL);
+	const [canonical] = await repository.upsertCustomInterests(db, [cleanCustomInterestLabel(label)]);
+
+	return { label: canonical };
 }

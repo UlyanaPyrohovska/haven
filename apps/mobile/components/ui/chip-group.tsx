@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { Radius, Spacing } from "@/constants/app-config";
@@ -6,11 +6,13 @@ import { useTheme } from "@/hooks/use-theme";
 
 export type OptionChipProps = {
 	label: string;
+	/** Rendered outside the label so Android measures it with the system font and doesn't wrap the chip. */
+	emoji?: string;
 	selected: boolean;
 	onPress: () => void;
 };
 
-export function OptionChip({ label, selected, onPress }: OptionChipProps) {
+export function OptionChip({ label, emoji, selected, onPress }: OptionChipProps) {
 	const theme = useTheme();
 
 	return (
@@ -26,7 +28,8 @@ export function OptionChip({ label, selected, onPress }: OptionChipProps) {
 				},
 			]}
 		>
-			<ThemedText type="label" style={{ color: selected ? theme.onTint : theme.text }}>
+			{emoji ? <Text style={styles.emoji}>{emoji}</Text> : null}
+			<ThemedText type="label" numberOfLines={1} style={{ color: selected ? theme.onTint : theme.text }}>
 				{label}
 			</ThemedText>
 		</Pressable>
@@ -36,6 +39,7 @@ export function OptionChip({ label, selected, onPress }: OptionChipProps) {
 export type ChipGroupOption<T> = {
 	value: T;
 	label: string;
+	emoji?: string;
 };
 
 export type ChipGroupProps<T> = {
@@ -67,6 +71,7 @@ export function ChipGroup<T extends string | number>({
 					<OptionChip
 						key={String(option.value)}
 						label={option.label}
+						emoji={option.emoji}
 						selected={value === option.value}
 						onPress={() => onChange(option.value)}
 					/>
@@ -109,6 +114,7 @@ export function MultiChipGroup<T extends string | number>({
 					<OptionChip
 						key={String(option.value)}
 						label={option.label}
+						emoji={option.emoji}
 						selected={values.includes(option.value)}
 						onPress={() => onToggle(option.value)}
 					/>
@@ -120,12 +126,18 @@ export function MultiChipGroup<T extends string | number>({
 
 const styles = StyleSheet.create({
 	chip: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: Spacing.xs,
 		borderRadius: Radius.pill,
 		paddingHorizontal: Spacing.lg,
 		paddingVertical: Spacing.md,
 	},
 	group: {
 		gap: Spacing.sm,
+	},
+	emoji: {
+		fontSize: 16,
 	},
 	chips: {
 		flexDirection: "row",

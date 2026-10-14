@@ -8,10 +8,11 @@ import {
 } from "@/constants/profile-taxonomy";
 import { apiFetch } from "@/lib/api/client";
 import type { ProfileDraft } from "@/lib/onboarding/profile-draft";
+import { buildHiddenLocationPayload } from "@/lib/profile/location";
 import { PRIVACY_KEYS } from "@/lib/profile/privacy";
 
 /** Request body for `PATCH /me`; keys match the `user_profiles` column names. */
-export type ProfilePayload = Record<string, number | string | boolean | null>;
+export type ProfilePayload = Record<string, number | string | boolean | string[] | null>;
 
 export type ProfileRecord = Record<string, unknown>;
 
@@ -50,6 +51,8 @@ export function buildProfilePayload(draft: ProfileDraft): ProfilePayload {
 		payload[field.key] = draft.interests.includes(field.key) ? INTEREST_SELECTED : INTEREST_UNSELECTED;
 	}
 
+	payload.customInterests = draft.customInterests;
+
 	const partnerShares = normalisePartnerImportance(draft.partner);
 
 	for (const dimension of TraitDimensions) {
@@ -59,6 +62,21 @@ export function buildProfilePayload(draft: ProfileDraft): ProfilePayload {
 
 	for (const key of PRIVACY_KEYS) {
 		payload[key] = draft.privacy[key];
+	}
+
+	const { location } = draft;
+	payload.shareLocation = location.shareLocation;
+	payload.shareCrossPaths = location.shareCrossPaths;
+
+	if (location.preset === "hidden") {
+		Object.assign(payload, buildHiddenLocationPayload());
+	} else if (location.preset === "device" && location.latitude !== null && location.longitude !== null) {
+		Object.assign(payload, {
+			locationHidden: false,
+			displayLocation: location.displayLocation,
+			latitude: location.latitude,
+			longitude: location.longitude,
+		});
 	}
 
 	return payload;

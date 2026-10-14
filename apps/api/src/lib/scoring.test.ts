@@ -46,6 +46,16 @@ describe("interestSimilarity", () => {
 
 		expect(interestSimilarity(filled, withNulls)).toBeCloseTo(1, 5);
 	});
+
+	it("raises the score for shared custom interests and lowers it for unshared ones", () => {
+		const a = Array.from({ length: 17 }, (_, i) => (i < 9 ? 10 : 1));
+		const b = Array.from({ length: 17 }, (_, i) => (i < 5 ? 10 : 1));
+		const base = interestSimilarity(a, b);
+
+		expect(interestSimilarity(a, b, [], [])).toBe(base);
+		expect(interestSimilarity(a, b, ["bouldering"], ["bouldering"])).toBeGreaterThan(base);
+		expect(interestSimilarity(a, b, ["bouldering"], ["knitting"])).toBeLessThan(base);
+	});
 });
 
 describe("preferenceMatch", () => {
