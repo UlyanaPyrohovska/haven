@@ -11,6 +11,7 @@ import { MenuCard, MenuDivider, MenuRow } from "@/components/ui/menu-row";
 import { useProfileQuery } from "@/hooks/use-profile";
 import { deleteAccount } from "@/lib/api/profile";
 import { signOut } from "@/lib/auth/client";
+import { resetToLogin } from "@/lib/auth/navigation";
 import { API_URL } from "@/lib/config/env";
 import { locationSettingsSummary } from "@/lib/profile/location";
 import { readPrivacySettings } from "@/lib/profile/privacy";
@@ -47,7 +48,7 @@ export default function ProfileSettingsScreen() {
 	const onSignOut = async () => {
 		await signOut();
 		queryClient.clear();
-		router.replace("/login");
+		resetToLogin(router);
 	};
 
 	const removeAccount = useMutation({
@@ -57,7 +58,7 @@ export default function ProfileSettingsScreen() {
 			// The server already dropped the session; this clears the local cookie.
 			await signOut().catch(() => {});
 			queryClient.clear();
-			router.replace("/login");
+			resetToLogin(router);
 		},
 	});
 

@@ -71,3 +71,11 @@ export async function navigateAfterAuth(router: Router, authResult?: AuthActionR
 		router.replace("/");
 	}
 }
+
+/** Drops the whole stack before showing login so signed-in screens unmount and stop refetching. */
+export function resetToLogin(router: Router): void {
+	if (router.canDismiss()) {
+		router.dismissAll();
+	}
+	router.replace("/login");
+}

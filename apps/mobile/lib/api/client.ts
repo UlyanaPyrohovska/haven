@@ -19,7 +19,8 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 		},
 	});
 
-	if (response.status === 401) {
+	// No cookie means already signed out; signing out again would loop navigation to login.
+	if (response.status === 401 && cookie) {
 		void signOutOnUnauthorized();
 	}
 

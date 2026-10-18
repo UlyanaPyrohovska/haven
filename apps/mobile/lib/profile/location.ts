@@ -9,8 +9,8 @@ export type LocationPreset = {
 };
 
 export const LOCATION_PRESETS: readonly LocationPreset[] = [
-	{ id: "device", labelKey: "profile.locationScreen.presets.device", emoji: "📍" },
-	{ id: "hidden", labelKey: "profile.locationScreen.presets.hidden", emoji: "🙈" },
+	{ id: "device", labelKey: "profile.locationScreen.presets.device", emoji: "" },
+	{ id: "hidden", labelKey: "profile.locationScreen.presets.hidden", emoji: "" },
 ];
 
 export type LocationSettings = {
