@@ -6,7 +6,8 @@ Read this first. Keep context small: read docs before code, and read code only f
 1. This file.
 2. `docs/path-a-implementation.md` — implementation spec per task, with conventions and file paths.
 3. The `README.md` of the app you're touching (`apps/api`, `apps/mobile`, `apps/backoffice`).
-4. `BACKLOG.md` only when you need ticket context. Status markers: `[ ]` todo, `[~]` in progress, `[x]` done.
+4. `docs/FEATURES.md` for what already exists (one section per feature, with status and paths).
+5. `BACKLOG.md` only when you need ticket context. Status markers: `[ ]` todo, `[~]` in progress, `[x]` done.
 
 Do not scan the whole repo. Skip `node_modules/`, `.pnpm-store/`, `.turbo/`, `pnpm-lock.yaml`, `apps/backoffice/dist/`, `apps/mobile/ios|android/` (generated), and `drizzle/meta/*_snapshot.json` unless the task is about them.
 
@@ -71,4 +72,5 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - Don't edit: generated `ios/`, `android/`, `dist/`, lockfile (unless adding deps), migration snapshots, `worker-configuration.d.ts`.
 - Don't run destructive git commands (reset --hard, force push, checkout of others' changes). The working tree may already have staged work in progress; don't stage, reset, or revert files you didn't touch.
 - When you finish a task from `docs/path-a-implementation.md`, mark its heading there in the same change: `## [x] W1.2 — …` (done), `[~]` (in progress or partial, with a one-line note under the heading saying what is missing), `[ ]` (todo). Also update the matching `BACKLOG.md` marker if the task is a ticket.
+- When you add or change a user-facing or staff-facing feature, update `docs/FEATURES.md` in the same change: add or edit its section (what it does, a **How it works** technical explanation — data flow, tables, key functions and design decisions —, screens/routes/code paths, status live/partial/planned, and what is missing when partial). If the change affects the cross-cutting design, update the Architecture overview there too. Removing a feature removes its section.
 - Keep answers short. Don't summarize the codebase back unless asked.

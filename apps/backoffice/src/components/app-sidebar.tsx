@@ -1,4 +1,4 @@
-import { ShieldIcon, UsersIcon } from "lucide-react";
+import { NetworkIcon, ShieldIcon, UsersIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
 	Sidebar,
@@ -14,6 +14,7 @@ import {
 
 const navItems = [
 	{ title: "Users", href: "/users", icon: UsersIcon, description: "Platform profiles" },
+	{ title: "Graph", href: "/graph", icon: NetworkIcon, description: "Interactions and simulation" },
 	{ title: "Staff", href: "/staff", icon: ShieldIcon, description: "Backoffice accounts" },
 ] as const;
 

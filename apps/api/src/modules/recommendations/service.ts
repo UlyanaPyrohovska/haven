@@ -76,19 +76,39 @@ function summariseCandidate(
 	};
 }
 
+type EnsureBatchResult =
+	| { status: "generated"; count: number }
+	| { status: "cooldown"; nextRefreshAt?: string }
+	| { status: "skipped" };
+
+/** Daily-drop rule: a new batch only when nothing is pending, the profile is complete and the cooldown elapsed. */
+export async function ensureBatch(
+	db: Db,
+	viewer: repository.ViewerProfile,
+	recCooldownHours: number,
+): Promise<EnsureBatchResult> {
+	const pending = await repository.countPendingRecommendations(db, viewer.id);
+
+	if (pending > 0 || !isProfileComplete(viewer)) {
+		return { status: "skipped" };
+	}
+
+	const lastShown = await repository.getLastBatchShownAt(db, viewer.id);
+
+	if (!isCooldownElapsed(lastShown, recCooldownHours)) {
+		return { status: "cooldown", nextRefreshAt: lastShown ? nextRefreshAtIso(lastShown, recCooldownHours) : undefined };
+	}
+
+	return { status: "generated", count: await generateRecommendations(db, viewer.id, { k: CADENCE.batchSize }) };
+}
+
 export async function getRecommendations({ db, viewer, recCooldownHours }: ViewerContext) {
 	let nextRefreshAt: string | undefined;
 
-	const pending = await repository.countPendingRecommendations(db, viewer.id);
+	const batch = await ensureBatch(db, viewer, recCooldownHours);
 
-	if (pending === 0 && isProfileComplete(viewer)) {
-		const lastShown = await repository.getLastBatchShownAt(db, viewer.id);
-
-		if (isCooldownElapsed(lastShown, recCooldownHours)) {
-			await generateRecommendations(db, viewer.id, { k: CADENCE.batchSize });
-		} else if (lastShown) {
-			nextRefreshAt = nextRefreshAtIso(lastShown, recCooldownHours);
-		}
+	if (batch.status === "cooldown") {
+		nextRefreshAt = batch.nextRefreshAt;
 	}
 
 	const rows = await repository.listPendingRecommendations(db, viewer.id);
@@ -170,43 +190,59 @@ export async function postDecision({ db, viewer }: ViewerContext, candidateId: n
 		throw errors.not_found;
 	}
 
-	const decisionValue = body.decision === "accept" ? 1 : 0;
-	const existingInteraction = await repository.findInteractionBetween(db, viewer.id, candidateId);
-	const candidateProfile = await repository.findCandidateCoordinates(db, candidateId);
-
-	const distance = haversineKm(
-		viewer.latitude as number | null,
-		viewer.longitude as number | null,
-		candidateProfile?.latitude ?? null,
-		candidateProfile?.longitude ?? null,
+	const { matched } = await recordDecision(
+		db,
+		{ id: viewer.id, latitude: viewer.latitude as number | null, longitude: viewer.longitude as number | null },
+		candidateId,
+		body.decision === "accept" ? 1 : 0,
 	);
-
-	let matched = false;
-
-	if (existingInteraction) {
-		const viewerIsA = existingInteraction.userA === viewer.id;
-		const updates = viewerIsA ? { decA: decisionValue } : { decB: decisionValue };
-		const decA = viewerIsA ? decisionValue : existingInteraction.decA;
-		const decB = viewerIsA ? existingInteraction.decB : decisionValue;
-		matched = decA === 1 && decB === 1;
-
-		await repository.updateInteraction(db, existingInteraction.id, { ...updates, match: matched });
-	} else {
-		await repository.insertInteraction(db, {
-			userA: viewer.id,
-			userB: candidateId,
-			decA: decisionValue,
-			decB: null,
-			match: false,
-			distanceKm: distance ?? null,
-		});
-	}
 
 	await repository.markRecommendationActedOn(db, pendingId);
 
 	const remainingCount = await repository.countPendingRecommendations(db, viewer.id);
 
 	return { matched, remainingCount };
+}
+
+/** Writes one side of the directed pair; a match is both sides accepting. Shared with the simulation engine. */
+export async function recordDecision(
+	db: Db,
+	actor: { id: number; latitude: number | null; longitude: number | null },
+	otherId: number,
+	decisionValue: 0 | 1,
+): Promise<{ matched: boolean }> {
+	const existingInteraction = await repository.findInteractionBetween(db, actor.id, otherId);
+
+	if (existingInteraction) {
+		const actorIsA = existingInteraction.userA === actor.id;
+		const updates = actorIsA ? { decA: decisionValue } : { decB: decisionValue };
+		const decA = actorIsA ? decisionValue : existingInteraction.decA;
+		const decB = actorIsA ? existingInteraction.decB : decisionValue;
+		const matched = decA === 1 && decB === 1;
+
+		await repository.updateInteraction(db, existingInteraction.id, { ...updates, match: matched });
+
+		return { matched };
+	}
+
+	const otherProfile = await repository.findCandidateCoordinates(db, otherId);
+	const distance = haversineKm(
+		actor.latitude,
+		actor.longitude,
+		otherProfile?.latitude ?? null,
+		otherProfile?.longitude ?? null,
+	);
+
+	await repository.insertInteraction(db, {
+		userA: actor.id,
+		userB: otherId,
+		decA: decisionValue,
+		decB: null,
+		match: false,
+		distanceKm: distance ?? null,
+	});
+
+	return { matched: false };
 }
 
 /**

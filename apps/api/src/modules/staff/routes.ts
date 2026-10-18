@@ -80,3 +80,39 @@ export const deleteUserRoute = createRoute({
 		404: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Not found" },
 	},
 });
+
+export const simulationTickRoute = createRoute({
+	method: "post",
+	path: "/staff/simulation/tick",
+	tags: ["Staff"],
+	summary: "Run one simulation tick: agents reply, act on fresh batches, real users get due drops (staff)",
+	request: {
+		body: { content: { "application/json": { schema: schemas.SimulationTickBodySchema } }, required: false },
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.SimulationTickResponseSchema } },
+			description: "Tick stats",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+	},
+});
+
+export const interactionGraphRoute = createRoute({
+	method: "get",
+	path: "/staff/graph",
+	tags: ["Staff"],
+	summary: "Interaction graph for one pool (staff)",
+	request: {
+		query: schemas.InteractionGraphQuerySchema,
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.InteractionGraphResponseSchema } },
+			description: "Nodes and edges",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+	},
+});

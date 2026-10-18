@@ -79,6 +79,8 @@ export type ListCandidatePoolOptions = {
 	maxKm?: number | null;
 	limit?: number;
 	annShortlistLimit?: number;
+	/** Simulation agents only recommend each other, so they never drain a real user's pool. */
+	syntheticOnly?: boolean;
 };
 
 function parseBioEmbedding(value: unknown): number[] | null {
@@ -163,13 +165,17 @@ function noInteractionWith(viewerId: number) {
 	);
 }
 
-function poolConditions(viewer: ScoringViewerProfile, maxKm: number | null | undefined) {
+function poolConditions(viewer: ScoringViewerProfile, maxKm: number | null | undefined, syntheticOnly = false) {
 	const conditions = [
 		ne(userProfiles.id, viewer.id),
 		eq(userProfiles.discoverable, true),
 		eq(userProfiles.lookingFor, viewer.lookingFor),
 		noInteractionWith(viewer.id),
 	];
+
+	if (syntheticOnly) {
+		conditions.push(eq(userProfiles.isSynthetic, true));
+	}
 
 	if (maxKm != null && viewer.latitude != null && viewer.longitude != null) {
 		conditions.push(locationBoundingBox(viewer.latitude, viewer.longitude, maxKm));
@@ -189,6 +195,20 @@ export async function findScoringProfileById(db: Db, profileId: number): Promise
 	return row ? mapScoringProfileRow(row as ScoringProfileRow) : null;
 }
 
+export async function listScoringProfilesByIds(db: Db, profileIds: number[]): Promise<ScoringViewerProfile[]> {
+	if (profileIds.length === 0) {
+		return [];
+	}
+
+	const rows = await db
+		.select(scoringProfileSelect)
+		.from(userProfiles)
+		.leftJoin(userEmbeddings, eq(userEmbeddings.userProfileId, userProfiles.id))
+		.where(inArray(userProfiles.id, profileIds));
+
+	return rows.map((row) => mapScoringProfileRow(row as ScoringProfileRow));
+}
+
 export async function listCandidatePool(
 	db: Db,
 	viewer: ScoringViewerProfile,
@@ -197,7 +217,7 @@ export async function listCandidatePool(
 	const limit = opts.limit ?? 500;
 	const annShortlistLimit = opts.annShortlistLimit ?? 200;
 	const maxKm = opts.maxKm ?? null;
-	const whereClause = poolConditions(viewer, maxKm);
+	const whereClause = poolConditions(viewer, maxKm, opts.syntheticOnly);
 	const baseQuery = db
 		.select(scoringProfileSelect)
 		.from(userProfiles)

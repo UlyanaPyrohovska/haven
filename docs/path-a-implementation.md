@@ -314,6 +314,46 @@ ranking exactly.
 
 ---
 
+## [~] W1.7 — Simulation engine + synthetic agents + interaction graph  ·  api/backoffice · P2
+
+> Status: code done, unit tests pass. Still to do: run a tick against the dev DB from `/graph`, and check an agent's reply to a real user's like on device.
+
+The 2000 synthetic profiles become **agents** that act on their own recommendations, so the
+network grows and real participants can actually match a synthetic candidate. Previously, when a
+real user accepted a synthetic candidate, `interactions.dec_b` stayed null forever.
+
+**Decision rule** (`src/lib/agent-decision.ts`, pure). An agent accepts with probability
+`σ((unilateral(agent→other) − threshold) / temperature)`. The draw is seeded by
+`tickId:agentId:otherId`, so a tick is reproducible. `AGENT = { threshold: 0.55, temperature: 0.08 }`
+are ablation knobs. Only the agent's own directional score is used.
+
+**Tick** (`src/modules/simulation/engine.ts > runTick`), one simulated day:
+1. Agents reply to likes waiting on them (`dec_b IS NULL`). Only likes that came from an acted-on
+   recommendation are answered, so the one-sided dataset rows are left alone.
+2. A random sample of agents (`AGENT.defaultTickLimit`) gets a fresh batch if none is pending,
+   then decides on it. Agent pools are **synthetic-only** (`syntheticOnly` pool option). If an
+   agent liked a real user first, the pair would leave that user's pool for good (the pool excludes
+   any existing interaction). Real users reach agents through their own feed.
+3. Every real, discoverable user gets their daily drop if it is due (`ensureBatch`, the same rule as
+   the lazy `GET /recommendations` path).
+
+`recordDecision` (the interaction write and match rule) is shared by `postDecision` and the engine.
+
+**Triggers.** Worker cron `*/30 * * * *` (`wrangler.jsonc`) runs a tick only when the
+`SIMULATION_ENABLED` var is `"true"`. The default is `"false"`. Staff can run a tick on demand with
+`POST /staff/simulation/tick`.
+
+**Backoffice.** `/graph` page (`react-force-graph-2d`), fed by `GET /staff/graph?lookingFor&edges&since&limit`.
+Real users and agents are coloured differently. A solid edge is a match and an arrow is a one-way
+like. Node size is degree. The view can be filtered by pool, edge type and time window, and a click
+opens the user detail page. The endpoint returns only ids and display names, never coordinates.
+
+**Thesis note:** agents are synthetic and never count as participants in the evaluation. Report
+their threshold and temperature with the results. Since the dataset interactions keep their seed
+`created_at`, the `since` filter separates simulated activity from historical activity.
+
+---
+
 ## [ ] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
 
 **File:** `research/embeddings/generate_embeddings.py` (new `research/` tree). Local only — do

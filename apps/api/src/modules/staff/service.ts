@@ -1,10 +1,13 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
+import { displayNameForCandidate } from "@/lib/candidate-display";
 import { errors } from "@/lib/errors";
+import { resolveRecCooldownHours } from "@/lib/recommendation-cadence";
 import { requireStaffAdmin } from "@/lib/session";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
+import { runTick } from "@/modules/simulation/engine";
 import * as repository from "./repository";
-import type { StaffUserListQuery, StaffUserUpdate } from "./schemas";
+import type { InteractionGraphQuery, StaffUserListQuery, StaffUserUpdate } from "./schemas";
 
 function serializeAuthUser(row: NonNullable<Awaited<ReturnType<typeof repository.findAuthUserById>>>) {
 	return {
@@ -132,4 +135,40 @@ export async function deleteUser(c: Context<{ Bindings: CloudflareBindings }>, p
 	}
 
 	return { deleted: true, profileId };
+}
+
+export async function simulationTick(c: Context<{ Bindings: CloudflareBindings }>, limit?: number) {
+	await requireStaffAdmin(c);
+
+	return runTick(getDb(c.env.DATABASE_URL), {
+		limit,
+		cooldownHours: resolveRecCooldownHours(c.env.REC_COOLDOWN_HOURS),
+	});
+}
+
+/** Ids and display names only — never coordinates. */
+export async function interactionGraph(c: Context<{ Bindings: CloudflareBindings }>, query: InteractionGraphQuery) {
+	await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+
+	const edges = await repository.listGraphEdges(db, query);
+	const degree = new Map<number, number>();
+
+	for (const edge of edges) {
+		degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
+		degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+	}
+
+	const profiles = await repository.listGraphNodes(db, [...degree.keys()]);
+
+	return {
+		nodes: profiles.map((profile) => ({
+			id: profile.id,
+			name: displayNameForCandidate(profile, `#${profile.id}`),
+			isSynthetic: profile.isSynthetic,
+			lookingFor: profile.lookingFor,
+			degree: degree.get(profile.id) ?? 0,
+		})),
+		edges,
+	};
 }
