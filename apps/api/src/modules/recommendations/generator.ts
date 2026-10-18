@@ -1,5 +1,13 @@
 import type { Db } from "@/db";
-import { CADENCE, DEFAULT_WEIGHTS, reciprocalScore, type ScoringWeights } from "@/lib/scoring";
+import {
+	applyCrossPathsBoost,
+	CADENCE,
+	CROSS_PATHS,
+	DEFAULT_WEIGHTS,
+	reciprocalScore,
+	type ScoringProfile,
+	type ScoringWeights,
+} from "@/lib/scoring";
 import * as repository from "./repository";
 
 /** Max candidates scored per generation pass (full scan at ~2k users). */
@@ -15,7 +23,31 @@ export type GenerateRecommendationsOptions = {
 	k?: number;
 	maxKm?: number | null;
 	weights?: ScoringWeights;
+	/** Cross-paths boost strength; 0 reproduces the pure reciprocal ranking (thesis ablation). */
+	crossPathsLambda?: number;
 };
+
+export type RankedCandidate = { candidateId: number; score: number };
+
+/** Reciprocal score with the cross-paths boost, best first. Missing counts (no row / opted out) mean 0. */
+export function rankCandidates(
+	viewer: ScoringProfile,
+	pool: ScoringProfile[],
+	crossings: ReadonlyMap<number, { count: number }>,
+	k: number,
+	weights: ScoringWeights = DEFAULT_WEIGHTS,
+	crossPathsLambda: number = CROSS_PATHS.lambda,
+): RankedCandidate[] {
+	return pool
+		.map((candidate) => {
+			const { reciprocal } = reciprocalScore(viewer, candidate, weights);
+			const count = crossings.get(candidate.id)?.count ?? 0;
+
+			return { candidateId: candidate.id, score: applyCrossPathsBoost(reciprocal, count, crossPathsLambda) };
+		})
+		.sort((a, b) => b.score - a.score)
+		.slice(0, k);
+}
 
 /** One exposure-limited batch (default {@link CADENCE.batchSize}) for the daily drop. */
 export async function generateRecommendations(
@@ -39,14 +71,12 @@ export async function generateRecommendations(
 		annShortlistLimit: ANN_SHORTLIST_LIMIT,
 	});
 
-	const ranked = pool
-		.map((candidate) => {
-			const { reciprocal } = reciprocalScore(viewer, candidate, weights);
-
-			return { candidateId: candidate.id, score: reciprocal };
-		})
-		.sort((a, b) => b.score - a.score)
-		.slice(0, k);
+	const crossings = await repository.listCrossings(
+		db,
+		viewerId,
+		pool.map((candidate) => candidate.id),
+	);
+	const ranked = rankCandidates(viewer, pool, crossings, k, weights, opts.crossPathsLambda);
 
 	await repository.replaceRecommendations(
 		db,

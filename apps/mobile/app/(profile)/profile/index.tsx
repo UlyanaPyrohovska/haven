@@ -10,6 +10,7 @@ import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemedText } from "@/components/themed-text";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { FormScreen, FormScreenHeaderButton } from "@/components/ui/form-screen";
+import { InterestChip, InterestChipRow } from "@/components/ui/interest-chip";
 import { MenuCard, MenuDivider, MenuRow } from "@/components/ui/menu-row";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useProfileQuery } from "@/hooks/use-profile";
@@ -241,13 +242,11 @@ export default function ProfileScreen() {
 
 				{interests.length > 0 ? (
 					<Section title={t("profile.interests")}>
-						<View style={styles.chips}>
+						<InterestChipRow>
 							{interests.map((interest) => (
-								<View key={interest} style={[styles.chip, { backgroundColor: theme.field, borderColor: theme.border }]}>
-									<ThemedText type="caption">{interest}</ThemedText>
-								</View>
+								<InterestChip key={interest} label={interest} />
 							))}
-						</View>
+						</InterestChipRow>
 					</Section>
 				) : null}
 
@@ -340,16 +339,5 @@ const styles = StyleSheet.create({
 	},
 	divider: {
 		height: StyleSheet.hairlineWidth,
-	},
-	chips: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: Spacing.sm,
-	},
-	chip: {
-		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
-		paddingHorizontal: Spacing.md,
-		paddingVertical: Spacing.sm,
 	},
 });

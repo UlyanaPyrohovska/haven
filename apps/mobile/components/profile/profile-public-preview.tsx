@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
+import { InterestChip, InterestChipRow } from "@/components/ui/interest-chip";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
 import { profileInitials } from "@/lib/profile/display";
@@ -18,26 +19,6 @@ type ProfilePublicPreviewProps = {
 	bio?: string;
 	interests: string[];
 };
-
-function InterestTag({ label, inverted = false }: { label: string; inverted?: boolean }) {
-	const theme = useTheme();
-
-	return (
-		<View
-			style={[
-				styles.tag,
-				{
-					backgroundColor: inverted ? theme.text : theme.accentSoft,
-					borderColor: inverted ? theme.text : theme.tint,
-				},
-			]}
-		>
-			<ThemedText type="caption" style={{ color: inverted ? theme.background : theme.tint }}>
-				{label}
-			</ThemedText>
-		</View>
-	);
-}
 
 export function ProfilePublicPreview({
 	visible,
@@ -101,10 +82,12 @@ export function ProfilePublicPreview({
 							{ageLabel ? <ThemedText style={styles.photoOverlaySubtext}>{ageLabel}</ThemedText> : null}
 							{career ? <ThemedText style={styles.photoOverlaySubtext}>{career}</ThemedText> : null}
 							{photoInterests.length > 0 ? (
-								<View style={styles.tagRow}>
-									{photoInterests.map((interest) => (
-										<InterestTag key={interest} label={interest} inverted />
-									))}
+								<View style={styles.photoTags}>
+									<InterestChipRow>
+										{photoInterests.map((interest) => (
+											<InterestChip key={interest} label={interest} onPhoto />
+										))}
+									</InterestChipRow>
 								</View>
 							) : null}
 						</View>
@@ -122,11 +105,11 @@ export function ProfilePublicPreview({
 					{interests.length > 0 ? (
 						<View style={styles.block}>
 							<ThemedText type="label">{t("profile.interests")}</ThemedText>
-							<View style={styles.tagRow}>
+							<InterestChipRow>
 								{interests.map((interest) => (
-									<InterestTag key={interest} label={interest} />
+									<InterestChip key={interest} label={interest} />
 								))}
-							</View>
+							</InterestChipRow>
 						</View>
 					) : null}
 				</ScrollView>
@@ -190,17 +173,8 @@ const styles = StyleSheet.create({
 		color: "#ffffff",
 		opacity: 0.92,
 	},
-	tagRow: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: Spacing.sm,
+	photoTags: {
 		marginTop: Spacing.sm,
-	},
-	tag: {
-		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
-		paddingHorizontal: Spacing.md,
-		paddingVertical: Spacing.xs,
 	},
 	block: {
 		gap: Spacing.sm,

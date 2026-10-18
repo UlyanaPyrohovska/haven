@@ -52,6 +52,9 @@ export const RecommendationDetailSchema = z
 		questionAnswer: z.string().nullable(),
 		answerLocked: z.boolean(),
 		crossPathsCount: z.number().int().nullable(),
+		/** Public landmark label of the last (simulated) crossing; never a user's coordinates. */
+		crossPathsPlace: z.string().nullable(),
+		crossPathsLastAt: z.string().datetime().nullable(),
 		distanceKm: z.number().optional(),
 		locationLabel: z.string().optional(),
 		actedOn: z.boolean(),

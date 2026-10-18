@@ -24,10 +24,10 @@ export const INTEREST_KEYS = [
 export type InterestKey = (typeof INTEREST_KEYS)[number];
 
 export const INTEREST_LABELS: Record<InterestKey, string> = {
-	interestSports: "Sports",
-	interestTvsports: "TV sports",
+	interestSports: "Playing sports",
+	interestTvsports: "Watching sports",
 	interestExercise: "Exercise",
-	interestDining: "Dining",
+	interestDining: "Dining out",
 	interestMuseums: "Museums",
 	interestArt: "Art",
 	interestHiking: "Hiking",

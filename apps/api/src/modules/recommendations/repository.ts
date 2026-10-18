@@ -1,6 +1,7 @@
-import { and, asc, eq, exists, getTableColumns, ne, not, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, getTableColumns, inArray, ne, not, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db";
-import { interactions, recommendations, userEmbeddings, userProfiles } from "@/db/schema";
+import { crossings, interactions, recommendations, userEmbeddings, userProfiles } from "@/db/schema";
 import { customInterestKey } from "@/lib/custom-interests";
 import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile-view";
 import { coerceLastShownAt } from "@/lib/recommendation-cadence";
@@ -243,6 +244,51 @@ export async function replaceRecommendations(db: Db, viewerId: number, rows: Rec
 		});
 
 	await db.batch([deletePending, upsertPending]);
+}
+
+export type Crossing = { count: number; lastPlace: string | null; lastCrossedAt: Date | null };
+
+/**
+ * Crossings between the viewer and each candidate (keyed by candidate id). Pairs where either
+ * side turned off `shareCrossPaths` are excluded, so callers can treat absence as count 0.
+ */
+export async function listCrossings(db: Db, viewerId: number, candidateIds: number[]): Promise<Map<number, Crossing>> {
+	const counts = new Map<number, Crossing>();
+
+	if (candidateIds.length === 0) {
+		return counts;
+	}
+
+	const profileA = alias(userProfiles, "crossing_a");
+	const profileB = alias(userProfiles, "crossing_b");
+	const rows = await db
+		.select({
+			userA: crossings.userA,
+			userB: crossings.userB,
+			count: crossings.count,
+			lastPlace: crossings.lastPlace,
+			lastCrossedAt: crossings.lastCrossedAt,
+		})
+		.from(crossings)
+		.innerJoin(profileA, eq(profileA.id, crossings.userA))
+		.innerJoin(profileB, eq(profileB.id, crossings.userB))
+		.where(
+			and(
+				or(
+					and(eq(crossings.userA, viewerId), inArray(crossings.userB, candidateIds)),
+					and(eq(crossings.userB, viewerId), inArray(crossings.userA, candidateIds)),
+				),
+				eq(profileA.shareCrossPaths, true),
+				eq(profileB.shareCrossPaths, true),
+			),
+		);
+
+	for (const row of rows) {
+		const { userA, userB, ...crossing } = row;
+		counts.set(userA === viewerId ? userB : userA, crossing);
+	}
+
+	return counts;
 }
 
 export async function findViewerByUserId(db: Db, userId: string): Promise<ViewerProfile | null> {

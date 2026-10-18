@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+	applyCrossPathsBoost,
 	bioSimilarity,
+	crossPathsNorm,
 	DEFAULT_WEIGHTS,
 	geoProximity,
 	interestSimilarity,
@@ -149,5 +151,35 @@ describe("unilateral and reciprocalScore", () => {
 		const withBio = unilateral({ ...u, bioEmbedding: Array.from({ length: 384 }, () => 1) }, v, DEFAULT_WEIGHTS);
 
 		expect(withBio).not.toBe(score);
+	});
+});
+
+describe("crossPathsNorm", () => {
+	it("is 0 for no crossings", () => {
+		expect(crossPathsNorm(0)).toBe(0);
+	});
+
+	it("is monotonic and saturates below 1", () => {
+		const values = [1, 2, 3, 5, 10, 50].map((count) => crossPathsNorm(count));
+
+		for (let i = 1; i < values.length; i++) {
+			expect(values[i]).toBeGreaterThan(values[i - 1]);
+		}
+		expect(values.at(-1)).toBeLessThan(1);
+		expect(crossPathsNorm(3)).toBeCloseTo(0.632, 3);
+	});
+});
+
+describe("applyCrossPathsBoost", () => {
+	it("leaves the reciprocal unchanged with no crossings", () => {
+		expect(applyCrossPathsBoost(0.42, 0)).toBe(0.42);
+	});
+
+	it("leaves the reciprocal unchanged at lambda 0", () => {
+		expect(applyCrossPathsBoost(0.42, 7, 0)).toBe(0.42);
+	});
+
+	it("lifts a crossed candidate above an equal uncrossed one", () => {
+		expect(applyCrossPathsBoost(0.5, 2)).toBeGreaterThan(applyCrossPathsBoost(0.5, 0));
 	});
 });

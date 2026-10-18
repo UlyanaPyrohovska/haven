@@ -19,112 +19,102 @@ type DecisionOverlayProps = {
 	onFinished: () => void;
 };
 
-/** Accept: expanding golden rings. Decline: card folds away — no swipe. */
+/** Accept: soft golden rings. Decline: card fades down and away — no swipe, no veil. */
 export function DecisionOverlay({ kind, onFinished }: DecisionOverlayProps) {
 	const ringOne = useSharedValue(0);
 	const ringTwo = useSharedValue(0);
 	const flash = useSharedValue(0);
-	const fold = useSharedValue(0);
-
-	useEffect(() => {
-		if (kind !== "accept") {
-			return;
-		}
-
-		ringOne.value = 0;
-		ringTwo.value = 0;
-		flash.value = 0;
-		ringOne.value = withSequence(
-			withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }),
-			withTiming(1, { duration: 0 }, () => {
-				runOnJS(onFinished)();
-			}),
-		);
-		ringTwo.value = withDelay(120, withTiming(1, { duration: 560, easing: Easing.out(Easing.cubic) }));
-		flash.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.quad) });
-	}, [flash, kind, onFinished, ringOne, ringTwo]);
-
-	useEffect(() => {
-		if (kind !== "decline") {
-			return;
-		}
-
-		fold.value = 0;
-		fold.value = withSequence(
-			withTiming(1, { duration: 420, easing: Easing.inOut(Easing.cubic) }),
-			withTiming(1, { duration: 0 }, () => {
-				runOnJS(onFinished)();
-			}),
-		);
-	}, [fold, kind, onFinished]);
-
-	const ringOneStyle = useAnimatedStyle(() => ({
-		opacity: 1 - ringOne.value,
-		transform: [{ scale: 0.4 + ringOne.value * 2.2 }],
-	}));
-
-	const ringTwoStyle = useAnimatedStyle(() => ({
-		opacity: 0.7 * (1 - ringTwo.value),
-		transform: [{ scale: 0.2 + ringTwo.value * 2.8 }],
-	}));
-
-	const flashStyle = useAnimatedStyle(() => ({
-		opacity: 0.35 * (1 - flash.value),
-	}));
-
-	const foldStyle = useAnimatedStyle(() => ({
-		opacity: fold.value * 0.25,
-	}));
-
-	if (!kind) {
-		return null;
-	}
-
-	if (kind === "accept") {
-		return (
-			<View pointerEvents="none" style={styles.root}>
-				<Animated.View style={[styles.flash, flashStyle]} />
-				<Animated.View style={[styles.ring, ringOneStyle]} />
-				<Animated.View style={[styles.ring, styles.ringInner, ringTwoStyle]} />
-			</View>
-		);
-	}
-
-	return (
-		<View pointerEvents="none" style={styles.root}>
-			<Animated.View style={[styles.foldVeil, foldStyle]} />
-		</View>
-	);
-}
-
-export function useDecisionCardStyle(kind: DecisionKind | null) {
-	const cardScale = useSharedValue(1);
-	const cardOpacity = useSharedValue(1);
-	const cardRotate = useSharedValue(0);
+	const timer = useSharedValue(0);
 
 	useEffect(() => {
 		if (kind === "accept") {
-			cardScale.value = 1;
-			cardOpacity.value = 1;
-			cardRotate.value = 0;
-			cardScale.value = withTiming(1.04, { duration: 320, easing: Easing.out(Easing.cubic) });
-			cardOpacity.value = withDelay(180, withTiming(0, { duration: 360 }));
+			ringOne.value = 0;
+			ringTwo.value = 0;
+			flash.value = 0;
+			ringOne.value = withTiming(1, { duration: 720, easing: Easing.out(Easing.cubic) }, (finished) => {
+				if (finished) runOnJS(onFinished)();
+			});
+			ringTwo.value = withDelay(140, withTiming(1, { duration: 760, easing: Easing.out(Easing.cubic) }));
+			flash.value = withSequence(
+				withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) }),
+				withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) }),
+			);
 			return;
 		}
 
 		if (kind === "decline") {
-			cardScale.value = 1;
-			cardOpacity.value = 1;
-			cardRotate.value = 0;
-			cardRotate.value = withTiming(-8, { duration: 420, easing: Easing.inOut(Easing.cubic) });
-			cardScale.value = withTiming(0.88, { duration: 420, easing: Easing.inOut(Easing.cubic) });
-			cardOpacity.value = withTiming(0, { duration: 420 });
+			timer.value = 0;
+			timer.value = withTiming(1, { duration: DECLINE_MS }, (finished) => {
+				if (finished) runOnJS(onFinished)();
+			});
 		}
-	}, [cardOpacity, cardRotate, cardScale, kind]);
+	}, [flash, kind, onFinished, ringOne, ringTwo, timer]);
+
+	// Fade rings in over the first 15% so they never pop at full opacity.
+	const ringOneStyle = useAnimatedStyle(() => ({
+		opacity: Math.min(1, ringOne.value / 0.15) * (1 - ringOne.value),
+		transform: [{ scale: 0.6 + ringOne.value * 1.8 }],
+	}));
+
+	const ringTwoStyle = useAnimatedStyle(() => ({
+		opacity: 0.7 * Math.min(1, ringTwo.value / 0.15) * (1 - ringTwo.value),
+		transform: [{ scale: 0.4 + ringTwo.value * 2.4 }],
+	}));
+
+	const flashStyle = useAnimatedStyle(() => ({
+		opacity: 0.25 * flash.value,
+	}));
+
+	if (kind !== "accept") {
+		return null;
+	}
+
+	return (
+		<View pointerEvents="none" style={styles.root}>
+			<Animated.View style={[styles.flash, flashStyle]} />
+			<Animated.View style={[styles.ring, ringOneStyle]} />
+			<Animated.View style={[styles.ring, styles.ringInner, ringTwoStyle]} />
+		</View>
+	);
+}
+
+const DECLINE_MS = 380;
+
+/** Card entrance once `ready`, then accept/decline exit. */
+export function useDecisionCardStyle(kind: DecisionKind | null, ready: boolean) {
+	const cardScale = useSharedValue(0.97);
+	const cardOpacity = useSharedValue(0);
+	const cardTranslateY = useSharedValue(12);
+
+	useEffect(() => {
+		if (!ready) {
+			return;
+		}
+
+		const easing = Easing.out(Easing.cubic);
+		cardOpacity.value = withTiming(1, { duration: 320, easing });
+		cardScale.value = withTiming(1, { duration: 360, easing });
+		cardTranslateY.value = withTiming(0, { duration: 360, easing });
+	}, [cardOpacity, cardScale, cardTranslateY, ready]);
+
+	useEffect(() => {
+		if (kind === "accept") {
+			cardScale.value = withTiming(1.03, { duration: 360, easing: Easing.out(Easing.cubic) });
+			cardOpacity.value = withDelay(200, withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) }));
+			return;
+		}
+
+		if (kind === "decline") {
+			const easing = Easing.in(Easing.cubic);
+			cardScale.value = withTiming(0.96, { duration: DECLINE_MS, easing });
+			cardTranslateY.value = withTiming(24, { duration: DECLINE_MS, easing });
+			cardOpacity.value = withTiming(0, { duration: DECLINE_MS, easing });
+		}
+	}, [cardOpacity, cardScale, cardTranslateY, kind]);
 
 	return useAnimatedStyle(() => ({
 		opacity: cardOpacity.value,
-		transform: [{ scale: cardScale.value }, { rotate: `${cardRotate.value}deg` }],
+		transform: [{ translateY: cardTranslateY.value }, { scale: cardScale.value }],
 	}));
 }
 
@@ -148,9 +138,5 @@ const styles = StyleSheet.create({
 	},
 	ringInner: {
 		borderColor: Colors.palette.honeyLight,
-	},
-	foldVeil: {
-		...StyleSheet.absoluteFill,
-		backgroundColor: Colors.brand.ink,
 	},
 });

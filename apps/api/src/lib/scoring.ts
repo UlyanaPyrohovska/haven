@@ -32,6 +32,12 @@ export const CADENCE = {
 	cooldownHours: 24,
 } as const;
 
+/** "Crossed paths" re-rank: boost strength (keep ≤ 0.25 so it doesn't double-count geo) and saturation scale. */
+export const CROSS_PATHS = {
+	lambda: 0.2,
+	K: 3,
+} as const;
+
 /** Distance decay scale for `geoProximity` (km). */
 export const GEO_DECAY_TAU_KM = 25;
 
@@ -191,4 +197,14 @@ export function reciprocalScore(
 	const reciprocal = sum === 0 ? 0 : (2 * pUToV * qVToU) / sum;
 
 	return { reciprocal, pUToV, qVToU };
+}
+
+/** Saturating crossing-count norm in [0, 1): norm(3) ≈ 0.63 with the default K. */
+export function crossPathsNorm(count: number, K: number = CROSS_PATHS.K): number {
+	return count > 0 ? 1 - Math.exp(-count / K) : 0;
+}
+
+/** Symmetric serendipity nudge applied once to the reciprocal score (not inside `unilateral`). */
+export function applyCrossPathsBoost(reciprocal: number, count: number, lambda: number = CROSS_PATHS.lambda): number {
+	return reciprocal * (1 + lambda * crossPathsNorm(count));
 }

@@ -130,6 +130,13 @@ export function profileSelectedInterests(profile: ProfileRecord): string[] {
 	return [...fixed, ...custom.map((label) => `✨ ${label}`)];
 }
 
+/** Adds the taxonomy emoji to an interest label from the API, matching `profileSelectedInterests`. */
+export function interestWithEmoji(label: string): string {
+	const field = InterestFields.find((item) => item.label === label);
+
+	return field ? `${field.emoji} ${field.label}` : `✨ ${label}`;
+}
+
 export function profileSelfRatings(profile: ProfileRecord): { label: string; value: number }[] {
 	return SelfDimensions.flatMap((dimension) => {
 		const value = readNumber(profile[dimension.selfKey]);
