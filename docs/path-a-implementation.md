@@ -231,7 +231,9 @@ that day. No per-candidate dependency.
 
 ---
 
-## [ ] W1.6 — "You've crossed paths" boost  ·  api/db · P2  ·  extends W1.2 + W1.3
+## [~] W1.6 — "You've crossed paths" boost  ·  api/db · P2  ·  extends W1.2 + W1.3
+
+> Status: code, migration `0014` and seed script are done and tests pass. Still to do: `pnpm db:migrate`, then `pnpm db:seed-crossings`, then an on-device check of the detail count.
 
 Serendipity re-ranking layer on top of the reciprocal score: candidates you keep crossing
 paths with get surfaced again. **Simulated (seeded), not tracked** — no encounter logging of

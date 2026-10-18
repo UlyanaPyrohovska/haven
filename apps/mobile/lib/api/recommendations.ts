@@ -21,6 +21,9 @@ export type RecommendationDetail = RecommendationSummary & {
 	questionAnswer: string | null;
 	answerLocked: boolean;
 	crossPathsCount: number | null;
+	/** Landmark label of the last crossing (approximate area, never coordinates). */
+	crossPathsPlace: string | null;
+	crossPathsLastAt: string | null;
 	distanceKm?: number;
 	locationLabel?: string;
 	actedOn: boolean;

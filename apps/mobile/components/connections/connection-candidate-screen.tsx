@@ -8,6 +8,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "reac
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionDock, connectionDockClearance } from "@/components/connections/connection-dock";
+import { CrossPathsCard } from "@/components/connections/cross-paths-card";
 import { type DecisionKind, DecisionOverlay, useDecisionCardStyle } from "@/components/connections/decision-animation";
 import { ProfileBadges } from "@/components/connections/profile-badges";
 import { LocationPill } from "@/components/location/location-pill";
@@ -17,6 +18,7 @@ import { BackHomeButton } from "@/components/ui/back-home-button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { InterestChip, InterestChipRow } from "@/components/ui/interest-chip";
 import { FontSize, Radius, Spacing } from "@/constants/app-config";
 import { useHeaderLocation } from "@/hooks/use-header-location";
 import { useTheme } from "@/hooks/use-theme";
@@ -29,26 +31,7 @@ import {
 	recommendationsQueryKey,
 } from "@/lib/api/recommendations";
 import { blockUser, type ReportReason, ReportReasons, reportUser } from "@/lib/api/safety";
-
-function InterestTag({ label, inverted = false }: { label: string; inverted?: boolean }) {
-	const theme = useTheme();
-
-	return (
-		<View
-			style={[
-				styles.tag,
-				{
-					backgroundColor: inverted ? theme.text : theme.accentSoft,
-					borderColor: inverted ? theme.text : theme.tint,
-				},
-			]}
-		>
-			<ThemedText type="caption" style={{ color: inverted ? theme.background : theme.tint }}>
-				{label}
-			</ThemedText>
-		</View>
-	);
-}
+import { interestWithEmoji } from "@/lib/profile/display";
 
 type ConnectionCandidateScreenProps = {
 	candidateId: number;
@@ -118,13 +101,13 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 	const [safetyDialog, setSafetyDialog] = useState<"report" | "block" | null>(null);
 	const [reportReason, setReportReason] = useState<ReportReason | undefined>();
 
-	const cardStyle = useDecisionCardStyle(decisionKind);
-
 	const connection = useQuery({
 		queryKey: recommendationQueryKey(candidateId),
 		queryFn: () => fetchRecommendation(candidateId),
 		enabled: Number.isFinite(candidateId),
 	});
+
+	const cardStyle = useDecisionCardStyle(decisionKind, Boolean(connection.data));
 
 	const decide = useMutation({
 		mutationFn: (decision: DecisionKind) => postRecommendationDecision(candidateId, decision),
@@ -217,7 +200,9 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 	}
 
 	const data = connection.data;
-	const photoInterests = data.interests.slice(0, 3);
+	const shared = new Set(data.sharedInterests);
+	const otherInterests = data.interests.filter((interest) => !shared.has(interest));
+	const overlaySubtext = [data.ageLabel, data.career].filter(Boolean).join(" · ");
 
 	return (
 		<View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -247,27 +232,21 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 					</View>
 				</View>
 
-				<ThemedText type="label" style={styles.sectionTitle}>
-					{t("connections.title")}
-				</ThemedText>
-
 				<Animated.View style={cardStyle}>
 					<View style={[styles.photoCard, { backgroundColor: theme.field, borderColor: theme.border }]}>
-						<Image source={{ uri: data.photoUrl }} style={styles.photoImage} contentFit="cover" />
+						<Image source={{ uri: data.photoUrl }} style={styles.photoImage} contentFit="cover" contentPosition="top" />
 						<View style={styles.photoScrim} />
 
 						<View style={styles.photoOverlay}>
 							<ThemedText type="title" style={styles.photoOverlayText}>
 								{data.displayName}
 							</ThemedText>
-							{data.ageLabel ? <ThemedText style={styles.photoOverlaySubtext}>{data.ageLabel}</ThemedText> : null}
-							<ProfileBadges mood={data.mood} isSynthetic={data.isSynthetic} inverted />
-							<View style={styles.tagRow}>
-								{photoInterests.map((interest) => (
-									<InterestTag key={interest} label={interest} inverted />
-								))}
-							</View>
+							{overlaySubtext ? <ThemedText style={styles.photoOverlaySubtext}>{overlaySubtext}</ThemedText> : null}
 						</View>
+					</View>
+
+					<View style={styles.badgesRow}>
+						<ProfileBadges mood={data.mood} isSynthetic={data.isSynthetic} />
 					</View>
 
 					<DailyQuestionAnswerBlock
@@ -276,34 +255,72 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 						answerLocked={data.answerLocked}
 					/>
 
-					<View style={styles.block}>
-						<ThemedText type="label">{t("connections.whyMatched")}</ThemedText>
-						<View style={styles.tagRow}>
-							{data.sharedInterests.map((interest) => (
-								<InterestTag key={interest} label={interest} />
-							))}
+					{data.bio ? (
+						<View style={styles.block}>
+							<ThemedText type="label">{t("profile.about")}</ThemedText>
+							<View style={[styles.answerBubble, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+								<ThemedText style={{ lineHeight: 22 }}>{data.bio}</ThemedText>
+							</View>
 						</View>
-					</View>
+					) : null}
+
+					{data.sharedInterests.length > 0 ? (
+						<View style={styles.block}>
+							<ThemedText type="label">{t("connections.whyMatched")}</ThemedText>
+							<InterestChipRow>
+								{data.sharedInterests.map((interest) => (
+									<InterestChip key={interest} label={interestWithEmoji(interest)} highlighted />
+								))}
+							</InterestChipRow>
+						</View>
+					) : null}
+
+					{otherInterests.length > 0 ? (
+						<View style={styles.block}>
+							<ThemedText type="label">{t("profile.interests")}</ThemedText>
+							<InterestChipRow>
+								{otherInterests.map((interest) => (
+									<InterestChip key={interest} label={interestWithEmoji(interest)} />
+								))}
+							</InterestChipRow>
+						</View>
+					) : null}
 
 					{data.crossPathsCount != null ? (
-						<ThemedText style={[styles.crossPaths, { color: theme.muted }]}>
-							{t("connections.crossPaths", { count: data.crossPathsCount })}
-						</ThemedText>
+						<View style={styles.block}>
+							<CrossPathsCard
+								count={data.crossPathsCount}
+								place={data.crossPathsPlace}
+								lastCrossedAt={data.crossPathsLastAt}
+							/>
+						</View>
 					) : null}
 					{candidateLocationLabel ? (
-						<ThemedText style={[styles.crossPaths, { color: theme.muted }]}>
+						<ThemedText style={[styles.nearby, { color: theme.muted }]}>
 							{t("connections.nearbyLabel", { location: candidateLocationLabel })}
 						</ThemedText>
 					) : null}
 				</Animated.View>
 
 				<View style={styles.safetyRow}>
-					<ThemedText type="link" style={{ color: theme.muted }} onPress={() => setSafetyDialog("report")}>
-						{t("connections.safety.report")}
-					</ThemedText>
-					<ThemedText type="link" style={{ color: theme.muted }} onPress={() => setSafetyDialog("block")}>
-						{t("connections.safety.block")}
-					</ThemedText>
+					{(
+						[
+							{ kind: "report", icon: "flag-outline" },
+							{ kind: "block", icon: "ban-outline" },
+						] as const
+					).map(({ kind, icon }) => (
+						<Pressable
+							key={kind}
+							accessibilityRole="button"
+							onPress={() => setSafetyDialog(kind)}
+							style={({ pressed }) => [styles.safetyButton, { borderColor: theme.danger, opacity: pressed ? 0.7 : 1 }]}
+						>
+							<Ionicons name={icon} size={18} color={theme.danger} />
+							<ThemedText type="bodySemiBold" style={{ color: theme.danger }}>
+								{t(`connections.safety.${kind}`)}
+							</ThemedText>
+						</Pressable>
+					))}
 				</View>
 			</ScrollView>
 
@@ -408,16 +425,14 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		paddingHorizontal: Spacing.xs,
 	},
-	sectionTitle: {
-		marginTop: Spacing.sm,
-	},
 	photoCard: {
 		borderRadius: Radius.lg,
 		borderWidth: StyleSheet.hairlineWidth,
 		overflow: "hidden",
+		marginTop: Spacing.sm,
 	},
 	photoImage: {
-		height: 320,
+		aspectRatio: 4 / 5,
 		width: "100%",
 	},
 	photoScrim: {
@@ -425,8 +440,11 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
-		height: 160,
-		backgroundColor: "rgba(0, 0, 0, 0.42)",
+		height: 96,
+		backgroundColor: "rgba(0, 0, 0, 0.35)",
+	},
+	badgesRow: {
+		marginTop: Spacing.md,
 	},
 	photoOverlay: {
 		position: "absolute",
@@ -441,18 +459,6 @@ const styles = StyleSheet.create({
 	photoOverlaySubtext: {
 		color: "#ffffff",
 		opacity: 0.92,
-	},
-	tagRow: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: Spacing.sm,
-		marginTop: Spacing.sm,
-	},
-	tag: {
-		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
-		paddingHorizontal: Spacing.md,
-		paddingVertical: Spacing.xs,
 	},
 	block: {
 		gap: Spacing.sm,
@@ -476,11 +482,20 @@ const styles = StyleSheet.create({
 	},
 	safetyRow: {
 		flexDirection: "row",
-		justifyContent: "center",
-		gap: Spacing.xl,
+		gap: Spacing.md,
 		marginTop: Spacing.xl,
 	},
-	crossPaths: {
+	safetyButton: {
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: Spacing.sm,
+		height: 48,
+		borderRadius: Radius.pill,
+		borderWidth: 1,
+	},
+	nearby: {
 		marginTop: Spacing.lg,
 		textAlign: "center",
 		fontSize: FontSize.md,

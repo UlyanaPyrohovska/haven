@@ -315,6 +315,26 @@ export const friendships = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
+// crossings — simulated (seeded) "crossed paths" counts, undirected, stored with a < b
+// ────────────────────────────────────────────────────────────────
+export const crossings = pgTable(
+	"crossings",
+	{
+		userA: integer("user_a")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		userB: integer("user_b")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		count: smallint("count").notNull().default(0),
+		lastCrossedAt: timestamp("last_crossed_at"),
+		lastPlace: varchar("last_place", { length: 200 }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.userA, t.userB] }), index("crossings_user_b_idx").on(t.userB)],
+);
+
+// ────────────────────────────────────────────────────────────────
 // mood_checkins — one mood per user per calendar day (UTC)
 // ────────────────────────────────────────────────────────────────
 export const moodCheckins = pgTable(

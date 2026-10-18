@@ -12,6 +12,7 @@
 		"db:studio": "pnpm --filter api db:studio",
 		"db:seed": "pnpm --filter api db:seed",
 		"db:seed-demo": "pnpm --filter api db:seed-demo",
+		"db:seed-crossings": "pnpm --filter api db:seed-crossings",
 		"db:visualizer": "pnpm --filter api db:visualizer",
 		"types": "turbo types",
 		"lint": "pnpm dlx @biomejs/biome lint --write",

@@ -29,15 +29,6 @@ export type ViewerContext = {
 	recCooldownHours: number;
 };
 
-function crossPathsCountFor(viewer: ProfileRow, candidate: ProfileRow): number | null {
-	if (!shouldShowCrossPaths(viewer, candidate)) {
-		return null;
-	}
-
-	// W1.6: return crossing count from DB.
-	return null;
-}
-
 export async function requireViewer(c: Context<{ Bindings: CloudflareBindings }>): Promise<ViewerContext> {
 	const authUserId = await getSessionUserId(c);
 
@@ -82,7 +73,6 @@ function summariseCandidate(
 		career: publicFields.career,
 		topInterests: publicFields.topInterests,
 		sharedInterests: publicFields.sharedInterests,
-		crossPathsCount: crossPathsCountFor(viewer, candidate),
 	};
 }
 
@@ -110,7 +100,7 @@ export async function getRecommendations({ db, viewer, recCooldownHours }: Viewe
 	const todayQuestion = dailyQuestion(utcToday());
 
 	return {
-		recommendations: summaries.map(({ crossPathsCount: _cp, ...summary }) => summary),
+		recommendations: summaries,
 		count: summaries.length,
 		dailyQuestion: todayQuestion,
 		...(nextRefreshAt ? { nextRefreshAt } : {}),
@@ -133,6 +123,9 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 	const answerLocked = !viewerHasAnswered;
 	const questionAnswer = viewerHasAnswered ? await resolveCandidateDailyAnswer(db, candidate.id, isSynthetic) : null;
 	const summary = summariseCandidate(viewer, candidate, row.recommendation);
+	const crossing = shouldShowCrossPaths(viewer, candidate)
+		? (await repository.listCrossings(db, viewer.id, [candidate.id])).get(candidate.id)
+		: undefined;
 	const publicFields = publicProfileFields(viewer, candidate);
 	const shareLocation = readPrivacySettings(candidate).shareLocation;
 	const distance = shareLocation
@@ -159,7 +152,9 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 		dailyQuestion: dailyQuestion(today),
 		questionAnswer,
 		answerLocked,
-		crossPathsCount: summary.crossPathsCount,
+		crossPathsCount: crossing?.count ?? null,
+		crossPathsPlace: crossing?.lastPlace ?? null,
+		crossPathsLastAt: crossing?.lastCrossedAt?.toISOString() ?? null,
 		distanceKm: distance,
 		locationLabel: candidateLocationLabel(viewer, candidate),
 		actedOn: row.recommendation.actedOn,
