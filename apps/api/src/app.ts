@@ -4,6 +4,7 @@ import auth from "./modules/auth";
 import chat from "./modules/chat";
 import dailyQuestion from "./modules/daily-question";
 import legal from "./modules/legal";
+import links from "./modules/links";
 import mood from "./modules/mood";
 import profile from "./modules/profile";
 import recommendations from "./modules/recommendations";
@@ -22,6 +23,7 @@ export const createApp = () => {
 	app.route("/", safety);
 	app.route("/", chat);
 	app.route("/", legal);
+	app.route("/", links);
 
 	app.notFound(notFoundHandler);
 

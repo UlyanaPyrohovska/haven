@@ -260,8 +260,22 @@
 		"login": {
 			"title": "Welcome back",
 			"submit": "Sign in",
-			"footerPrompt": "New to Haven?",
-			"footerAction": "Create an account"
+			"createAccount": "Create an account",
+			"forgotPassword": "Forgot password?"
+		},
+		"forgot": {
+			"title": "Reset your password",
+			"subtitle": "Enter your account email and we'll send you a link to choose a new password.",
+			"submit": "Send reset link",
+			"sent": "If an account exists for that email, a reset link is on its way. Open it on this phone."
+		},
+		"reset": {
+			"title": "Choose a new password",
+			"submit": "Save password",
+			"requestNew": "Send a new link"
+		},
+		"verify": {
+			"title": "Confirming your email…"
 		},
 		"register": {
 			"title": "Create your account",
@@ -295,7 +309,14 @@
 			"invalidCredentials": "Wrong email or password.",
 			"emailTaken": "An account already exists for that email.",
 			"network": "Can't reach Haven right now. Check your connection.",
-			"generic": "Something went wrong. Please try again."
+			"generic": "Something went wrong. Please try again.",
+			"emailNotVerified": "Confirm your email first. We just sent you a new link."
+		},
+		"notices": {
+			"checkEmail": "We sent a confirmation link to your email. Open it on this phone and you'll be signed in.",
+			"passwordReset": "Password changed. Sign in with your new password.",
+			"verifyLinkInvalid": "That link expired or was already used. Sign in and we'll send a new one.",
+			"resetLinkInvalid": "That link expired or was already used. Request a new one."
 		}
 	},
 	"onboarding": {

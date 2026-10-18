@@ -19,6 +19,8 @@ export function describeAuthError(error: AuthErrorLike | null | undefined): stri
 		case "USER_ALREADY_EXISTS":
 		case "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL":
 			return i18n.t("auth.errors.emailTaken");
+		case "EMAIL_NOT_VERIFIED":
+			return i18n.t("auth.errors.emailNotVerified");
 		default:
 			break;
 	}

@@ -1,9 +1,20 @@
 /**
  * Creates (or refreshes) the App Review demo login with a finished profile and a fresh
  * recommendation batch. Goes through the running API so passwords are hashed by Better Auth.
+ * A new account is marked email-verified directly in the DB (DATABASE_URL from .env), since
+ * sign-in requires verification and the demo inbox is not real.
  *
  *   DEMO_EMAIL=... DEMO_PASSWORD=... pnpm db:seed-demo -- https://<api-host>
  */
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { config } from "dotenv";
+import pg from "pg";
+
+const apiRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
+config({ path: join(apiRoot, "../..", ".env") });
+config({ path: join(apiRoot, ".env") });
+
 const apiUrl = (process.argv.slice(2).find((arg) => arg !== "--") ?? "http://localhost:8787").replace(/\/$/, "");
 const email = process.env.DEMO_EMAIL;
 const password = process.env.DEMO_PASSWORD;
@@ -15,6 +26,16 @@ if (!email || !password) {
 // Better Auth checks Origin on cookie-based requests; this one is in trustedOrigins.
 const origin = "http://localhost:5173";
 
+async function markEmailVerified() {
+	const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+	await client.connect();
+	try {
+		await client.query('UPDATE "user" SET email_verified = true WHERE email = $1', [email]);
+	} finally {
+		await client.end();
+	}
+}
+
 async function authenticate(): Promise<string> {
 	const post = (path: string, body: object) =>
 		fetch(`${apiUrl}/auth${path}`, {
@@ -23,10 +44,17 @@ async function authenticate(): Promise<string> {
 			body: JSON.stringify(body),
 		});
 
+	// No-op for a new account; unblocks an existing one left unverified.
+	await markEmailVerified();
 	let response = await post("/sign-in/email", { email, password });
 
 	if (!response.ok) {
-		response = await post("/sign-up/email", { email, password, name: "Alex Demo" });
+		const signUp = await post("/sign-up/email", { email, password, name: "Alex Demo" });
+		if (!signUp.ok) {
+			throw new Error(`Sign-up failed (${signUp.status}): ${await signUp.text()}`);
+		}
+		await markEmailVerified();
+		response = await post("/sign-in/email", { email, password });
 	}
 
 	if (!response.ok) {

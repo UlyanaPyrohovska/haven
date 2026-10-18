@@ -16,7 +16,12 @@
 		"bindings": [{ "name": "CHAT", "class_name": "ChatRoom" }]
 	},
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom"] }],
+	// Verification emails via Cloudflare Email Sending. The sender domain must be onboarded:
+	// `npx wrangler email sending enable <domain>`. remote: true makes `wrangler dev` send real mail.
+	"send_email": [{ "name": "EMAIL", "remote": true }],
 	"vars": {
-		"SIMULATION_ENABLED": "false"
+		"SIMULATION_ENABLED": "false",
+		// Must be an address on the onboarded domain.
+		"EMAIL_FROM": "no-reply@pirogotter.dev"
 	}
 }

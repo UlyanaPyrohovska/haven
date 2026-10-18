@@ -69,6 +69,45 @@ Users sign up and log in with email and password.
 - Screens: `app/(auth)/login.tsx`, `app/(auth)/register.tsx`
 - Code: `lib/auth/`; API `src/lib/auth.ts`, `src/lib/session.ts`
 
+### Email verification and password reset — partial
+New users must confirm their email before they can sign in. Opening the link on the phone signs
+them in. Users who forget their password can reset it by email.
+
+**How it works:**
+- Better Auth runs with `requireEmailVerification`, `sendOnSignUp`, `sendOnSignIn` and
+  `autoSignInAfterVerification`. Sign-up returns no session. A sign-in by an unverified user fails
+  with `EMAIL_NOT_VERIFIED` and sends a fresh link, so there is no separate resend endpoint.
+- Emails go through the Cloudflare Email Sending Worker binding `EMAIL` (`send_email` in
+  `wrangler.jsonc`), from the `EMAIL_FROM` var (`no-reply@pirogotter.dev`). No API key is involved.
+  A failed send logs the binding's `E_*` code, never the link.
+- Templates live in code (`src/lib/email-templates.ts`), not in the DB. They are pure functions
+  that return `{ subject, html, text }`, and they HTML-escape the user's name. Keeping them in code
+  makes them versioned and typed, and sending needs no DB read.
+- **Verify link:** email clients need https links, so the email points to `GET /links/verify-email`
+  (`modules/links`). That route redirects to `haven://verify-email?token=…` without using up the
+  token. The app's `verify-email` screen then redeems it with `authClient.verifyEmail`. The
+  response's session cookie is stored by the Expo client, so the user lands on home or onboarding
+  already signed in. If the token is bad, the user goes to login with an error notice.
+  The token is redeemed in the app rather than the browser because a browser session would never
+  reach the app.
+- **Password reset:** `forgot-password` calls `requestPasswordReset` with
+  `redirectTo: haven://reset-password`. It shows the same message whether or not the account
+  exists. The emailed link uses Better Auth's `/auth/reset-password/:token`, which redirects to
+  `haven://reset-password?token=…` (or `?error=INVALID_TOKEN`). `reset-password` calls
+  `resetPassword`. `revokeSessionsOnPasswordReset` signs out the user's other devices.
+- Migration `0016_verify_existing_users` marks accounts created before this change as verified.
+  `seed-demo-account.ts` verifies the demo account directly in the DB.
+
+**Missing:** links only work on a phone with the app installed; on desktop the `haven://` redirect
+does nothing. Not yet tested end to end on a device.
+
+**Where:**
+- Screens: `app/(auth)/login.tsx` (forgot-password link, create-account button),
+  `register.tsx`, `verify-email.tsx`, `forgot-password.tsx`, `reset-password.tsx`
+- Code: `lib/auth/client.ts` (`RESET_PASSWORD_REDIRECT_URL`), `lib/auth/errors.ts`; API
+  `src/lib/auth.ts`, `src/lib/email-templates.ts`, `src/modules/links/index.ts`,
+  `drizzle/0016_verify_existing_users.sql`
+
 ### Onboarding — live
 A step-by-step profile setup:
 1. Basics.
