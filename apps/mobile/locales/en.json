@@ -7,11 +7,14 @@
 		"title": "Haven",
 		"greeting": "Hello {{name}}",
 		"newConnections": "New Connections",
+		"connectionsHint": "People waiting to meet you",
+		"connectionsEmptyHint": "No new people yet. See your matches",
 		"moodPrompt": "What is your mood today?",
 		"mood": {
 			"accessibilityLabel": "Check in with your mood",
-			"checkInHint": "Tap to check in",
-			"updateHint": "Tap to update",
+			"label": "Today's mood",
+			"checkIn": "Check in",
+			"edit": "Change",
 			"save": "Save mood",
 			"saveError": "Couldn't save your mood. Try again.",
 			"options": {
@@ -32,7 +35,8 @@
 	"dailyQuestion": {
 		"shareCTA": "Share your answer",
 		"unlockHint": "Answer to see what others said today.",
-		"seeAnswers": "See today's answers →",
+		"seeAnswers": "See today's answers",
+		"answered": "Answered",
 		"editHint": "Tap your answer to edit.",
 		"modalSubtitle": "One short reflection — then you can see how today's connections answered too.",
 		"startersLabel": "Need a nudge?",
@@ -63,7 +67,7 @@
 		"title": "Profile Details",
 		"aiAgentBadge": "AI agent",
 		"realPersonBadge": "Real person",
-		"whyMatched": "Why you've matched?",
+		"whyMatched": "Why you matched",
 		"crossPaths_one": "You've crossed paths {{count}} time",
 		"crossPaths_other": "You've crossed paths {{count}} times",
 		"crossPathsCard": {
@@ -86,7 +90,7 @@
 		"caughtUpSubtitle": "New people on {{date}}.",
 		"backHome": "Back to home",
 		"matchedTitle": "It's a match!",
-		"matchedMessage": "{{name}} accepted too. You can message each other soon.",
+		"matchedMessage": "{{name}} accepted too. Say hi from your matches.",
 		"continueBrowsing": "See next connection",
 		"safety": {
 			"report": "Report",
@@ -106,11 +110,21 @@
 			"blockMessage": "You won’t see each other in recommendations or matches again.",
 			"blockConfirm": "Block",
 			"error": "Something went wrong. Please try again."
+		},
+		"matchedOn": "Matched on {{date}}",
+		"compatibility": "{{percent}}% match",
+		"matchReasons": {
+			"sharedInterests": "You're into the same things",
+			"theirType": "{{name}} fits what you're looking for",
+			"yourType": "You fit what {{name}} is looking for",
+			"nearby": "You live close to each other",
+			"crossedPaths": "You've crossed paths before",
+			"compatible": "Your profiles line up well overall"
 		}
 	},
 	"matches": {
 		"title": "Matches",
-		"subtitle": "People who said yes back",
+		"subtitle": "Your matches and conversations",
 		"empty": "No mutual matches yet. Keep exploring connections!"
 	},
 	"profile": {
@@ -367,5 +381,18 @@
 		"submit": {
 			"error": "We couldn't save your preferences. Please try again."
 		}
+	},
+	"chat": {
+		"placeholder": "Write a message…",
+		"send": "Send message",
+		"typing": "typing…",
+		"viewProfile": "View {{name}}'s profile",
+		"viewProfileHint": "Tap to view profile",
+		"openConversation": "Open conversation with {{name}}",
+		"youPrefix": "You: {{message}}",
+		"sayHi": "New match — say hi!",
+		"empty": "You matched with {{name}}. Start the conversation!",
+		"demoNotice": "This is a demo profile. It sent an opener but can't reply.",
+		"sendError": "Message not sent. Check your connection and try again."
 	}
 }

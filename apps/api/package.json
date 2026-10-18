@@ -13,6 +13,7 @@
 		"db:seed": "tsx scripts/seed.ts",
 		"db:seed-demo": "tsx scripts/seed-demo-account.ts",
 		"db:seed-crossings": "tsx scripts/seed-crossings.ts",
+		"db:seed-matches": "tsx scripts/seed-matches.ts",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},

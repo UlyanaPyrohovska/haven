@@ -66,34 +66,34 @@ export function MoodCard() {
 				style={({ pressed }) => [
 					styles.card,
 					{
-						backgroundColor: theme.accentSoft,
-						borderColor: theme.tint,
+						backgroundColor: theme.surface,
+						borderColor: theme.border,
 						opacity: pressed ? 0.85 : 1,
 					},
 				]}
 			>
-				{showLoading ? (
-					<ActivityIndicator color={theme.tint} />
-				) : selectedMood ? (
-					<>
+				<View style={[styles.emojiBubble, { backgroundColor: theme.accentSoft }]}>
+					{showLoading ? (
+						<ActivityIndicator color={theme.tint} />
+					) : selectedMood ? (
 						<ThemedText style={styles.emoji}>{MoodEmoji[selectedMood]}</ThemedText>
-						<ThemedText type="subtitle" style={styles.selectedLabel}>
-							{t(`home.mood.options.${selectedMood}`)}
-						</ThemedText>
-						<ThemedText type="caption" style={{ color: theme.muted }}>
-							{t("home.mood.updateHint")}
-						</ThemedText>
-					</>
-				) : (
-					<>
-						<ThemedText type="subtitle" style={styles.prompt}>
-							{t("home.moodPrompt")}
-						</ThemedText>
-						<ThemedText type="caption" style={{ color: theme.muted }}>
-							{t("home.mood.checkInHint")}
-						</ThemedText>
-					</>
-				)}
+					) : (
+						<Ionicons name="happy-outline" size={28} color={theme.tint} />
+					)}
+				</View>
+				<View style={styles.cardText}>
+					<ThemedText type="caption" style={[styles.eyebrow, { color: theme.muted }]}>
+						{t("home.mood.label")}
+					</ThemedText>
+					<ThemedText type="subtitle" numberOfLines={1}>
+						{selectedMood ? t(`home.mood.options.${selectedMood}`) : t("home.moodPrompt")}
+					</ThemedText>
+				</View>
+				<View style={[styles.actionPill, { backgroundColor: theme.accentSoft }]}>
+					<ThemedText type="caption" style={[styles.actionText, { color: theme.tint }]}>
+						{selectedMood ? t("home.mood.edit") : t("home.mood.checkIn")}
+					</ThemedText>
+				</View>
 			</Pressable>
 
 			<Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
@@ -173,24 +173,40 @@ export function MoodCard() {
 
 const styles = StyleSheet.create({
 	card: {
-		minHeight: 120,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: Spacing.lg,
+		padding: Spacing.lg,
 		borderRadius: Radius.lg,
 		borderWidth: StyleSheet.hairlineWidth,
+	},
+	emojiBubble: {
+		width: 52,
+		height: 52,
+		borderRadius: Radius.pill,
 		alignItems: "center",
 		justifyContent: "center",
-		paddingHorizontal: Spacing.xl,
-		paddingVertical: Spacing.xl,
-		gap: Spacing.xs,
-	},
-	prompt: {
-		textAlign: "center",
-	},
-	selectedLabel: {
-		textAlign: "center",
 	},
 	emoji: {
-		fontSize: 40,
-		lineHeight: 48,
+		fontSize: 28,
+		lineHeight: 34,
+	},
+	cardText: {
+		flex: 1,
+		minWidth: 0,
+		gap: 2,
+	},
+	eyebrow: {
+		textTransform: "uppercase",
+		letterSpacing: 1,
+	},
+	actionPill: {
+		borderRadius: Radius.pill,
+		paddingHorizontal: Spacing.md,
+		paddingVertical: Spacing.xs,
+	},
+	actionText: {
+		fontWeight: "600",
 	},
 	modalRoot: {
 		flex: 1,

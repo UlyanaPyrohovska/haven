@@ -199,6 +199,33 @@ export function reciprocalScore(
 	return { reciprocal, pUToV, qVToU };
 }
 
+export type ScoreBreakdown = {
+	interest: number;
+	geo: number;
+	/** How well v fits what u is looking for. */
+	prefUToV: number;
+	/** How well u fits what v is looking for. */
+	prefVToU: number;
+	bio: number | null;
+	reciprocal: number;
+};
+
+/** Per-component view of `reciprocalScore`, used to explain a match. */
+export function scoreBreakdown(
+	u: ScoringProfile,
+	v: ScoringProfile,
+	w: ScoringWeights = DEFAULT_WEIGHTS,
+): ScoreBreakdown {
+	return {
+		interest: interestSimilarity(u.interests, v.interests, u.customInterests, v.customInterests),
+		geo: geoProximity(u, v),
+		prefUToV: preferenceMatch(u.pref, v.self),
+		prefVToU: preferenceMatch(v.pref, u.self),
+		bio: bioSimilarity(u.bioEmbedding, v.bioEmbedding),
+		reciprocal: reciprocalScore(u, v, w).reciprocal,
+	};
+}
+
 /** Saturating crossing-count norm in [0, 1): norm(3) ≈ 0.63 with the default K. */
 export function crossPathsNorm(count: number, K: number = CROSS_PATHS.K): number {
 	return count > 0 ? 1 - Math.exp(-count / K) : 0;

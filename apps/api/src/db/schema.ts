@@ -414,3 +414,24 @@ export const reports = pgTable(
 	},
 	(t) => [index("reports_reported_id_idx").on(t.reportedId)],
 );
+
+// ────────────────────────────────────────────────────────────────
+// messages — chat between matched profiles; the conversation is the matched interaction
+// ────────────────────────────────────────────────────────────────
+export const messages = pgTable(
+	"messages",
+	{
+		id: serial("id").primaryKey(),
+		interactionId: integer("interaction_id")
+			.notNull()
+			.references(() => interactions.id, { onDelete: "cascade" }),
+		senderId: integer("sender_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		body: text("body").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		/** Set when the recipient opens the thread. */
+		readAt: timestamp("read_at"),
+	},
+	(t) => [index("messages_interaction_created_idx").on(t.interactionId, t.createdAt)],
+);

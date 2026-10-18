@@ -3,6 +3,8 @@ import { getDb } from "@/db";
 import { resolveRecCooldownHours } from "@/lib/recommendation-cadence";
 import { runTick } from "@/modules/simulation/engine";
 
+export { ChatRoom } from "@/chat-room";
+
 const app = createApp();
 
 export default {

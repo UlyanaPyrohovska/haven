@@ -1,3 +1,4 @@
+import type { ChatMessage } from "@/lib/api/chat";
 import { apiFetch } from "@/lib/api/client";
 import type { MoodSlug } from "@/lib/mood";
 
@@ -29,6 +30,17 @@ export type RecommendationDetail = RecommendationSummary & {
 	actedOn: boolean;
 	mood: MoodSlug | null;
 	isSynthetic: boolean;
+	/** Present only when both sides accepted. */
+	match: MatchDetail | null;
+};
+
+export type MatchReason = "sharedInterests" | "theirType" | "yourType" | "nearby" | "crossedPaths" | "compatible";
+
+export type MatchDetail = {
+	matchedAt: string;
+	/** Reciprocal compatibility in [0, 1]. */
+	compatibility: number;
+	reasons: MatchReason[];
 };
 
 export type MatchSummary = {
@@ -38,6 +50,10 @@ export type MatchSummary = {
 	ageLabel?: string;
 	topInterests: string[];
 	matchedAt: string;
+	isSynthetic: boolean;
+	lastMessage: ChatMessage | null;
+	unreadCount: number;
+	lastActivityAt: string;
 };
 
 export type RecommendationsListResponse = {

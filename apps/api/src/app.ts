@@ -1,6 +1,7 @@
 import { notFoundHandler } from "./lib/http/errors";
 import { createOpenAPIApp, withOpenApiDoc } from "./lib/openapi";
 import auth from "./modules/auth";
+import chat from "./modules/chat";
 import dailyQuestion from "./modules/daily-question";
 import legal from "./modules/legal";
 import mood from "./modules/mood";
@@ -19,6 +20,7 @@ export const createApp = () => {
 	app.route("/", dailyQuestion);
 	app.route("/", recommendations);
 	app.route("/", safety);
+	app.route("/", chat);
 	app.route("/", legal);
 
 	app.notFound(notFoundHandler);

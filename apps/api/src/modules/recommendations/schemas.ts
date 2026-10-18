@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { MatchReasons } from "@/lib/match-reasons";
 
 const moodSlugValues = ["happy", "calm", "excited", "tired", "low", "stressed"] as const;
 
@@ -60,6 +61,14 @@ export const RecommendationDetailSchema = z
 		actedOn: z.boolean(),
 		mood: MoodSlugSchema.nullable(),
 		isSynthetic: z.boolean(),
+		/** Present only when both sides accepted. */
+		match: z
+			.object({
+				matchedAt: z.string().datetime(),
+				compatibility: z.number(),
+				reasons: z.array(z.enum(MatchReasons)),
+			})
+			.nullable(),
 	})
 	.openapi("RecommendationDetail");
 
@@ -86,6 +95,12 @@ export const MatchSummarySchema = z
 		ageLabel: z.string().optional(),
 		topInterests: z.array(z.string()),
 		matchedAt: z.string(),
+		isSynthetic: z.boolean(),
+		lastMessage: z
+			.object({ id: z.number().int(), senderId: z.number().int(), body: z.string(), createdAt: z.string().datetime() })
+			.nullable(),
+		unreadCount: z.number().int(),
+		lastActivityAt: z.string().datetime(),
 	})
 	.openapi("MatchSummary");
 

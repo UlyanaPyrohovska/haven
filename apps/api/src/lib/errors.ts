@@ -27,6 +27,16 @@ export const errors = {
 		code: "NO_PROFILE",
 		message: "Complete onboarding before browsing connections",
 	},
+	invalid_message: {
+		status: 400,
+		code: "INVALID_MESSAGE",
+		message: "Message must be between 1 and 1000 characters",
+	},
+	not_matched: {
+		status: 403,
+		code: "NOT_MATCHED",
+		message: "You can only message your matches",
+	},
 	internal_error: {
 		status: 500,
 		code: "INTERNAL_ERROR",
