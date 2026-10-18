@@ -9,6 +9,7 @@ import {
 	preferenceMatch,
 	reciprocalScore,
 	type ScoringProfile,
+	scoreBreakdown,
 	unilateral,
 } from "@/lib/scoring";
 
@@ -181,5 +182,18 @@ describe("applyCrossPathsBoost", () => {
 
 	it("lifts a crossed candidate above an equal uncrossed one", () => {
 		expect(applyCrossPathsBoost(0.5, 2)).toBeGreaterThan(applyCrossPathsBoost(0.5, 0));
+	});
+});
+
+describe("scoreBreakdown", () => {
+	it("splits the preference term by direction and matches reciprocalScore", () => {
+		const u = makeProfile({ id: 1, pref: [100, 0, 0, 0, 0, 0], self: [1, 5, 5, 5, 5, 5] });
+		const v = makeProfile({ id: 2, pref: [100, 0, 0, 0, 0, 0], self: [10, 1, 1, 1, 1, 1] });
+
+		const breakdown = scoreBreakdown(u, v);
+
+		expect(breakdown.prefUToV).toBeGreaterThan(breakdown.prefVToU);
+		expect(breakdown.bio).toBeNull();
+		expect(breakdown.reciprocal).toBeCloseTo(reciprocalScore(u, v).reciprocal, 10);
 	});
 });

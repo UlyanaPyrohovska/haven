@@ -21,6 +21,7 @@ apps/mobile (Expo 54, Expo Router, react-query)      apps/backoffice (Vite + Rea
 apps/api — Cloudflare Worker (Hono + @hono/zod-openapi)  ── cron trigger (simulation tick)
         │  modules/<feature>/{routes,schemas,service,repository}.ts
         │  src/lib/* = pure domain logic (scoring, cadence, view shaping)
+        ├──────────────► ChatRoom Durable Object (EU jurisdiction, one per conversation, sockets only)
         ▼
 Neon Postgres (aws-eu-central-1, pgvector) via drizzle-orm/neon-http
 ```
@@ -42,6 +43,8 @@ Neon Postgres (aws-eu-central-1, pgvector) via drizzle-orm/neon-http
   so the two pools never mix.
 - **Mobile.** Server state goes through react-query and the typed clients in `lib/api/*`. All
   text lives in `locales/en.json`.
+- **Realtime.** Chat sockets go to the `ChatRoom` Durable Object (`CHAT` binding), always created
+  with `jurisdiction("eu")`. It holds no data: Neon stays the only store.
 - **Synthetic vs real.** The `is_synthetic` flag marks the 2000 dataset profiles. They get a
   deterministic mood, daily answer, name and avatar so that every card looks complete.
 
@@ -164,12 +167,85 @@ Accept or decline plays a decision animation.
   `POST /recommendations/{candidateId}/decision`, `POST /recommendations/regenerate` (study reset)
 
 ### Matches — live
-A match is two people who both accepted each other.
+A match is two people who both accepted each other. The Matches screen is an inbox: one row per
+match with photo, name, last message preview, time and unread count, most recent activity first.
+The home dock's messages button shows the total unread count across matches (summed from the same
+`GET /matches` query, hidden at 0, capped at "99+"). Chat sockets are per-conversation, so home
+refetches that query on focus and polls it every 30 s while focused.
+Opening a match from the chat header shows their profile in **match mode**:
+- the accept/decline dock is replaced by a "Send message" button,
+- a **Why you matched** card shows compatibility %, the matched date, up to five reasons and the
+  shared interests,
+- report and block stay. Either one ends the match and returns to the inbox.
 
-**How it works:** `GET /matches` reads `interactions` rows with `match = true` on either side.
-Because interactions are stored as undirected pairs, a match exists exactly once.
+The chat header also has report and block buttons. They work for every peer, including synthetic
+(demo) profiles. Either one ends the match and returns to the inbox.
 
-**Where:** screen `app/matches.tsx`
+**How it works:**
+- `GET /matches` reads `interactions` rows with `match = true` on either side. Interactions are
+  undirected pairs, so a match exists exactly once. Each row also gets `lastMessage`,
+  `unreadCount` and `lastActivityAt` from `listInboxStats` (one `DISTINCT ON` and one grouped
+  count over `messages`).
+- `GET /recommendations/{candidateId}` adds `match: { matchedAt, compatibility, reasons }` when the
+  pair is matched. `describeMatch` reloads both scoring profiles and calls `scoreBreakdown`
+  (`scoring.ts`, pure). That function splits `reciprocalScore` into interest, geo, bio and the two
+  directed preference terms. `matchReasons` (`src/lib/match-reasons.ts`) turns the components into
+  slugs with fixed thresholds:
+  - `sharedInterests`: at least one shared active interest, or interest ≥ 0.75,
+  - `theirType`: they fit your preferences (pref u→v ≥ 0.8),
+  - `yourType`: you fit theirs (pref v→u ≥ 0.8),
+  - `nearby`: geo ≥ 0.6, **only** if the candidate shares location,
+  - `crossedPaths`: count > 0, already gated by `shouldShowCrossPaths`,
+  - `compatible`: the fallback, so the list is never empty.
+- `matchedAt` is the interaction's `created_at` (the first like). There is no separate matched-at
+  column.
+
+**Where:**
+- Screens: `app/matches/index.tsx`, `app/connections/[candidateId].tsx` (match mode in
+  `components/connections/connection-candidate-screen.tsx`, `why-matched-card.tsx`)
+- Code: `components/chat/conversation-row.tsx`, `lib/api/recommendations.ts`
+- API: `GET /matches`, `GET /recommendations/{candidateId}`
+
+### Chat — live
+Matched users message each other in real time, with a typing indicator. A synthetic match sends
+one opener and then shows a "demo profile, can't reply" notice.
+
+**How it works:**
+- **Storage.** `messages` (`interaction_id`, `sender_id`, `body`, `created_at`, `read_at`). The
+  conversation is the matched interaction. Every chat endpoint resolves the pair with
+  `findInteractionBetween` and returns 403 `NOT_MATCHED` unless `match = true`. Messages are kept
+  after a block, so staff can review them for a report.
+- **Sending.** `POST /matches/{candidateId}/messages` trims the body (1–1000 chars,
+  `normalizeMessageBody`), inserts it into Neon, then calls `ChatRoom.broadcast` over RPC. A failed
+  broadcast is logged and does not fail the send. Clients catch up on reconnect.
+- **Realtime.** `GET /matches/{candidateId}/ws` checks the session and the match, then forwards the
+  upgrade to `env.CHAT.jurisdiction("eu").idFromName(interactionId)`. The Worker sets the
+  `X-Haven-Profile-Id` header server-side and overrides any value the client sent.
+  `ChatRoom` (`src/chat-room.ts`) uses hibernatable WebSockets:
+  - it pushes `{ type: "message" }` frames,
+  - it relays `{ type: "typing" }` pings to the other participant only,
+  - it never touches the database.
+- **Ending.** Block and report call `ChatRoom.close()`, which closes sockets with code 4003. The
+  client does not reconnect after that code.
+- **Reading.** `GET /matches/{candidateId}/messages?before=<id>` returns 50 messages per page,
+  newest first. `POST /matches/{candidateId}/read` sets `read_at` on the other side's messages.
+- **Synthetic opener.** The first time a synthetic match is listed or opened with no messages, it
+  inserts `syntheticOpener(sharedInterests, interactionId)` (`src/lib/chat.ts`, deterministic).
+  This is a check-then-insert, so two concurrent first opens could double-post (marked as a
+  shortcut).
+- **Mobile.** `useChatSocket` (`lib/chat/use-chat-socket.ts`) opens the RN WebSocket with the
+  Better Auth cookie in a header (RN has no cookie jar). It reconnects with backoff (1 s → 30 s)
+  and when the app comes back to the foreground. New messages are written into the react-query
+  cache. Sends are optimistic: a temporary negative id is replaced by the server row, and on
+  failure the draft is restored.
+
+**Where:**
+- Screens: `app/matches/[candidateId].tsx`
+- Code: `components/chat/`, `lib/api/chat.ts`, `lib/chat/`
+- API: `modules/chat/`, `src/chat-room.ts`, `src/lib/chat.ts`
+
+**Missing:** push notifications for new messages (D5), attachments, edit/delete, read receipts shown
+to the sender, unmatch without blocking.
 
 ### Daily question — live
 One question per day, the same for everyone. You answer once per day, and your answer can appear
@@ -213,7 +289,9 @@ One mood per day, shown as context on candidate cards.
 - Reports are stored in `reports`. `reporter_id` is set to null if the reporter deletes their
   account, so the report stays available to staff.
 
-**Where:** API `POST /users/{candidateId}/block`, `POST /users/{candidateId}/report`
+**Where:** API `POST /users/{candidateId}/block`, `POST /users/{candidateId}/report`. Mobile
+`components/connections/safety-dialogs.tsx`, used by the candidate/match profile screen and the chat
+thread `app/matches/[candidateId].tsx`.
 
 ### Match notifications — planned
 Push notification on a new match (BACKLOG D5).

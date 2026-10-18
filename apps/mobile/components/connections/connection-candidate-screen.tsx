@@ -11,11 +11,13 @@ import { ConnectionDock, connectionDockClearance } from "@/components/connection
 import { CrossPathsCard } from "@/components/connections/cross-paths-card";
 import { type DecisionKind, DecisionOverlay, useDecisionCardStyle } from "@/components/connections/decision-animation";
 import { ProfileBadges } from "@/components/connections/profile-badges";
+import { SafetyDialogs, type SafetyKind } from "@/components/connections/safety-dialogs";
+import { WhyMatchedCard } from "@/components/connections/why-matched-card";
 import { LocationPill } from "@/components/location/location-pill";
 import { ProfileHeaderButton } from "@/components/profile/profile-header-button";
 import { ThemedText } from "@/components/themed-text";
 import { BackHomeButton } from "@/components/ui/back-home-button";
-import { ChipGroup } from "@/components/ui/chip-group";
+import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { InterestChip, InterestChipRow } from "@/components/ui/interest-chip";
@@ -30,7 +32,6 @@ import {
 	recommendationQueryKey,
 	recommendationsQueryKey,
 } from "@/lib/api/recommendations";
-import { blockUser, type ReportReason, ReportReasons, reportUser } from "@/lib/api/safety";
 import { interestWithEmoji } from "@/lib/profile/display";
 
 type ConnectionCandidateScreenProps = {
@@ -92,14 +93,14 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 	const { t } = useTranslation();
 	const theme = useTheme();
 	const insets = useSafeAreaInsets();
+	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [decisionKind, setDecisionKind] = useState<DecisionKind | null>(null);
 	const [matchedDialog, setMatchedDialog] = useState(false);
 	const [messageDialog, setMessageDialog] = useState(false);
 	const [matchedName, setMatchedName] = useState("");
 	const [pendingMatch, setPendingMatch] = useState(false);
-	const [safetyDialog, setSafetyDialog] = useState<"report" | "block" | null>(null);
-	const [reportReason, setReportReason] = useState<ReportReason | undefined>();
+	const [safetyDialog, setSafetyDialog] = useState<SafetyKind | null>(null);
 
 	const connection = useQuery({
 		queryKey: recommendationQueryKey(candidateId),
@@ -135,16 +136,18 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 		return next ?? null;
 	}, [queryClient]);
 
-	const safety = useMutation({
-		mutationFn: (kind: "report" | "block") =>
-			kind === "report" && reportReason ? reportUser(candidateId, reportReason) : blockUser(candidateId),
-		onSuccess: async () => {
-			setSafetyDialog(null);
-			await queryClient.invalidateQueries({ queryKey: matchesQueryKey });
-			const next = await prefetchNextCandidate();
-			await onAdvance(next ? 1 : 0);
-		},
-	});
+	const onSafetyDone = useCallback(async () => {
+		await queryClient.invalidateQueries({ queryKey: matchesQueryKey });
+
+		// A match is reached from the inbox; the thread is gone after a block, so return to the inbox.
+		if (connection.data?.match) {
+			router.dismissTo("/matches");
+			return;
+		}
+
+		const next = await prefetchNextCandidate();
+		await onAdvance(next ? 1 : 0);
+	}, [queryClient, connection.data?.match, router, prefetchNextCandidate, onAdvance]);
 
 	const finishAdvance = useCallback(async () => {
 		await onAdvance(decide.data?.remainingCount ?? 0);
@@ -200,6 +203,7 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 	}
 
 	const data = connection.data;
+	const match = data.match;
 	const shared = new Set(data.sharedInterests);
 	const otherInterests = data.interests.filter((interest) => !shared.has(interest));
 	const overlaySubtext = [data.ageLabel, data.career].filter(Boolean).join(" · ");
@@ -264,7 +268,11 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 						</View>
 					) : null}
 
-					{data.sharedInterests.length > 0 ? (
+					{match ? (
+						<View style={styles.block}>
+							<WhyMatchedCard match={match} name={data.displayName} sharedInterests={data.sharedInterests} />
+						</View>
+					) : data.sharedInterests.length > 0 ? (
 						<View style={styles.block}>
 							<ThemedText type="label">{t("connections.whyMatched")}</ThemedText>
 							<InterestChipRow>
@@ -324,13 +332,28 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 				</View>
 			</ScrollView>
 
-			<ConnectionDock
-				bottomInset={insets.bottom}
-				disabled={data.actedOn || decisionKind !== null || decide.isPending}
-				onAccept={() => onDecision("accept")}
-				onDecline={() => onDecision("decline")}
-				onMessage={() => setMessageDialog(true)}
-			/>
+			{match ? (
+				<View
+					style={[
+						styles.matchFooter,
+						{
+							paddingBottom: insets.bottom + Spacing.md,
+							backgroundColor: theme.background,
+							borderTopColor: theme.border,
+						},
+					]}
+				>
+					<Button label={t("connections.message")} onPress={() => router.push(`/matches/${candidateId}` as Href)} />
+				</View>
+			) : (
+				<ConnectionDock
+					bottomInset={insets.bottom}
+					disabled={data.actedOn || decisionKind !== null || decide.isPending}
+					onAccept={() => onDecision("accept")}
+					onDecline={() => onDecision("decline")}
+					onMessage={() => setMessageDialog(true)}
+				/>
+			)}
 
 			<DecisionOverlay kind={decisionKind} onFinished={onAnimationFinished} />
 
@@ -347,42 +370,13 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 				}}
 			/>
 
-			<Dialog
-				visible={safetyDialog === "report"}
-				icon="flag-outline"
-				tone="danger"
-				title={t("connections.safety.reportTitle", { name: data.displayName })}
-				message={t("connections.safety.reportMessage")}
-				confirmLabel={t("connections.safety.reportConfirm")}
-				onConfirm={() => reportReason && safety.mutate("report")}
-				cancelLabel={t("common.cancel")}
-				onCancel={() => setSafetyDialog(null)}
-				loading={safety.isPending}
-			>
-				<ChipGroup
-					label={t("connections.safety.reasonLabel")}
-					hideLabel
-					options={ReportReasons.map((value) => ({ value, label: t(`connections.safety.reasons.${value}`) }))}
-					value={reportReason}
-					onChange={setReportReason}
-				/>
-				{safety.isError ? <ErrorBanner message={t("connections.safety.error")} /> : null}
-			</Dialog>
-
-			<Dialog
-				visible={safetyDialog === "block"}
-				icon="ban-outline"
-				tone="danger"
-				title={t("connections.safety.blockTitle", { name: data.displayName })}
-				message={t("connections.safety.blockMessage")}
-				confirmLabel={t("connections.safety.blockConfirm")}
-				onConfirm={() => safety.mutate("block")}
-				cancelLabel={t("common.cancel")}
-				onCancel={() => setSafetyDialog(null)}
-				loading={safety.isPending}
-			>
-				{safety.isError ? <ErrorBanner message={t("connections.safety.error")} /> : null}
-			</Dialog>
+			<SafetyDialogs
+				candidateId={candidateId}
+				name={data.displayName}
+				kind={safetyDialog}
+				onClose={() => setSafetyDialog(null)}
+				onDone={onSafetyDone}
+			/>
 
 			<Dialog
 				visible={messageDialog}
@@ -494,6 +488,15 @@ const styles = StyleSheet.create({
 		height: 48,
 		borderRadius: Radius.pill,
 		borderWidth: 1,
+	},
+	matchFooter: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		paddingHorizontal: Spacing.xl,
+		paddingTop: Spacing.md,
+		borderTopWidth: StyleSheet.hairlineWidth,
 	},
 	nearby: {
 		marginTop: Spacing.lg,

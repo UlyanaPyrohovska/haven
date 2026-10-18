@@ -28,55 +28,64 @@ export function DailyQuestionCard() {
 	const openModal = () => router.push("/daily-question" as Href);
 
 	return (
-		<View
-			style={[
-				styles.card,
-				{
-					backgroundColor: theme.accentSoft,
-					borderColor: theme.tint,
-				},
-			]}
-		>
-			<ThemedText type="label">{t("home.todaysQuestion")}</ThemedText>
+		<View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+			<View style={styles.header}>
+				<Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.tint} />
+				<ThemedText type="caption" style={[styles.eyebrow, { color: theme.muted }]}>
+					{t("home.todaysQuestion")}
+				</ThemedText>
+				{answered ? (
+					<View style={[styles.badge, { backgroundColor: theme.accentSoft }]}>
+						<Ionicons name="checkmark" size={12} color={theme.tint} />
+						<ThemedText type="caption" style={[styles.badgeText, { color: theme.tint }]}>
+							{t("dailyQuestion.answered")}
+						</ThemedText>
+					</View>
+				) : null}
+			</View>
 
 			{showLoading ? (
 				<ActivityIndicator color={theme.tint} />
-			) : answered ? (
-				<>
-					<Pressable
-						accessibilityRole="button"
-						onPress={openModal}
-						style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-					>
-						<ThemedText type="subtitle" style={styles.question}>
-							{question}
-						</ThemedText>
-						<View style={styles.answeredRow}>
-							<Ionicons name="checkmark-circle" size={22} color={theme.tint} />
-							<ThemedText style={[styles.answerQuote, { color: theme.text }]}>{`"${answer}"`}</ThemedText>
-						</View>
-					</Pressable>
-					<Button
-						label={t("dailyQuestion.seeAnswers")}
-						variant="secondary"
-						onPress={() => router.push("/connections" as Href)}
-					/>
-					<ThemedText type="caption" style={{ color: theme.muted, textAlign: "center" }}>
-						{t("dailyQuestion.editHint")}
-					</ThemedText>
-				</>
 			) : (
-				<Pressable
-					accessibilityRole="button"
-					onPress={openModal}
-					style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, gap: Spacing.md })}
-				>
+				<>
 					<ThemedText type="subtitle" style={styles.question}>
 						{question}
 					</ThemedText>
-					<ThemedText style={{ color: theme.muted, textAlign: "center" }}>{t("dailyQuestion.unlockHint")}</ThemedText>
-					<Button label={t("dailyQuestion.shareCTA")} onPress={openModal} />
-				</Pressable>
+
+					{answered ? (
+						<>
+							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel={t("dailyQuestion.editHint")}
+								onPress={openModal}
+								style={({ pressed }) => [
+									styles.answer,
+									{ backgroundColor: theme.accentSoft, borderColor: theme.tint, opacity: pressed ? 0.85 : 1 },
+								]}
+							>
+								<ThemedText style={[styles.answerText, { color: theme.text }]}>{answer}</ThemedText>
+								<Ionicons name="pencil" size={16} color={theme.muted} />
+							</Pressable>
+							<Pressable
+								accessibilityRole="button"
+								onPress={() => router.push("/connections" as Href)}
+								style={({ pressed }) => [styles.linkRow, { opacity: pressed ? 0.6 : 1 }]}
+							>
+								<ThemedText style={[styles.linkText, { color: theme.tint }]}>
+									{t("dailyQuestion.seeAnswers")}
+								</ThemedText>
+								<Ionicons name="chevron-forward" size={18} color={theme.tint} />
+							</Pressable>
+						</>
+					) : (
+						<>
+							<ThemedText type="caption" style={{ color: theme.muted }}>
+								{t("dailyQuestion.unlockHint")}
+							</ThemedText>
+							<Button label={t("dailyQuestion.shareCTA")} onPress={openModal} />
+						</>
+					)}
+				</>
 			)}
 		</View>
 	);
@@ -86,25 +95,54 @@ const styles = StyleSheet.create({
 	card: {
 		borderRadius: Radius.lg,
 		borderWidth: StyleSheet.hairlineWidth,
-		paddingHorizontal: Spacing.xl,
-		paddingVertical: Spacing.xl,
+		padding: Spacing.lg,
 		gap: Spacing.md,
-		alignItems: "stretch",
+	},
+	header: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: Spacing.sm,
+	},
+	eyebrow: {
+		flex: 1,
+		textTransform: "uppercase",
+		letterSpacing: 1,
+	},
+	badge: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 2,
+		borderRadius: Radius.pill,
+		paddingHorizontal: Spacing.sm,
+		paddingVertical: 2,
+	},
+	badgeText: {
+		fontWeight: "600",
 	},
 	question: {
-		textAlign: "center",
 		lineHeight: 28,
-		marginBottom: Spacing.sm,
 	},
-	answeredRow: {
+	answer: {
 		flexDirection: "row",
 		alignItems: "flex-start",
 		gap: Spacing.sm,
+		borderLeftWidth: 3,
+		borderRadius: Radius.sm,
+		padding: Spacing.md,
 	},
-	answerQuote: {
+	answerText: {
 		flex: 1,
 		fontSize: FontSize.md,
 		lineHeight: 24,
 		fontStyle: "italic",
+	},
+	linkRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		alignSelf: "flex-start",
+		gap: Spacing.xs,
+	},
+	linkText: {
+		fontWeight: "600",
 	},
 });

@@ -9,10 +9,12 @@ interface __BaseEnv_CloudflareBindings {
 	REC_COOLDOWN_HOURS?: string;
 	/** "true" lets the cron trigger run the simulation tick (wrangler.jsonc vars). */
 	SIMULATION_ENABLED?: string;
+	CHAT: DurableObjectNamespace<import("./src/index").ChatRoom>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./src/index");
+		durableNamespaces: "ChatRoom";
 	}
 	interface Env extends __BaseEnv_CloudflareBindings {}
 }

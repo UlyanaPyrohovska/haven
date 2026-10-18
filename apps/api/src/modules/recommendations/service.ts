@@ -6,6 +6,7 @@ import { displayNameForCandidate } from "@/lib/candidate-display";
 import { resolveCandidateMood } from "@/lib/candidate-mood";
 import { dailyQuestion } from "@/lib/daily-questions";
 import { errors } from "@/lib/errors";
+import { matchReasons } from "@/lib/match-reasons";
 import { utcToday } from "@/lib/mood";
 import {
 	candidateLocationLabel,
@@ -14,10 +15,14 @@ import {
 	type ProfileRow,
 	publicProfileFields,
 	readPrivacySettings,
+	sharedInterestLabels,
 	shouldShowCrossPaths,
 } from "@/lib/profile-view";
 import { CADENCE, isCooldownElapsed, nextRefreshAtIso, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
+import { scoreBreakdown } from "@/lib/scoring";
 import { getSessionUserId } from "@/lib/session";
+import * as chatRepository from "@/modules/chat/repository";
+import { ensureSyntheticOpener, toMessagePayload } from "@/modules/chat/service";
 import * as dailyQuestionRepository from "@/modules/daily-question/repository";
 import { generateRecommendations } from "./generator";
 import * as repository from "./repository";
@@ -127,8 +132,21 @@ export async function getRecommendations({ db, viewer, recCooldownHours }: Viewe
 	};
 }
 
+/**
+ * A match can outlive its recommendation row (seeded matches, pending rows replaced by a new batch),
+ * so the profile opened from chat falls back to the matched interaction.
+ */
+async function matchWithoutRecommendation(db: Db, viewerId: number, candidateId: number) {
+	const interaction = await repository.findInteractionBetween(db, viewerId, candidateId);
+	const candidate = interaction?.match ? await repository.findCandidateProfile(db, candidateId) : null;
+
+	return candidate ? { recommendation: { id: 0, rank: null, score: null, actedOn: true }, candidate } : null;
+}
+
 export async function getRecommendationDetail({ db, viewer }: ViewerContext, candidateId: number) {
-	const row = await repository.findRecommendationWithCandidate(db, viewer.id, candidateId);
+	const row =
+		(await repository.findRecommendationWithCandidate(db, viewer.id, candidateId)) ??
+		(await matchWithoutRecommendation(db, viewer.id, candidateId));
 
 	if (!row) {
 		throw errors.not_found;
@@ -157,6 +175,15 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 			)
 		: undefined;
 
+	const interaction = await repository.findInteractionBetween(db, viewer.id, candidate.id);
+	const match = interaction?.match
+		? await describeMatch(db, viewer, candidate, {
+				matchedAt: interaction.createdAt,
+				shareLocation,
+				crossPathsCount: crossing?.count ?? null,
+			})
+		: null;
+
 	return {
 		recommendationId: summary.recommendationId,
 		candidateId: summary.candidateId,
@@ -180,6 +207,38 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 		actedOn: row.recommendation.actedOn,
 		mood,
 		isSynthetic,
+		match,
+	};
+}
+
+/** Why two matched profiles fit, from the same scoring the recommender used. */
+async function describeMatch(
+	db: Db,
+	viewer: repository.ViewerProfile,
+	candidate: repository.ViewerProfile,
+	context: { matchedAt: Date; shareLocation: boolean; crossPathsCount: number | null },
+) {
+	const profiles = await repository.listScoringProfilesByIds(db, [viewer.id, candidate.id]);
+	const viewerScoring = profiles.find((profile) => profile.id === viewer.id);
+	const candidateScoring = profiles.find((profile) => profile.id === candidate.id);
+
+	if (!viewerScoring || !candidateScoring) {
+		return null;
+	}
+
+	const breakdown = scoreBreakdown(viewerScoring, candidateScoring);
+	const sharedInterestCount = readPrivacySettings(candidate).showInterests
+		? sharedInterestLabels(viewer, candidate).length
+		: 0;
+
+	return {
+		matchedAt: context.matchedAt.toISOString(),
+		compatibility: breakdown.reciprocal,
+		reasons: matchReasons(breakdown, {
+			sharedInterestCount,
+			shareLocation: context.shareLocation,
+			crossPathsCount: context.crossPathsCount,
+		}),
 	};
 }
 
@@ -284,6 +343,11 @@ export async function regenerate({ db, viewer }: ViewerContext) {
 
 export async function getMatches({ db, viewer }: ViewerContext) {
 	const interactionRows = await repository.listMatchInteractions(db, viewer.id);
+	const stats = await chatRepository.listInboxStats(
+		db,
+		interactionRows.map((interaction) => interaction.id),
+		viewer.id,
+	);
 
 	const matches = await Promise.all(
 		interactionRows.map(async (interaction) => {
@@ -295,6 +359,11 @@ export async function getMatches({ db, viewer }: ViewerContext) {
 			}
 
 			const publicFields = publicProfileFields(viewer, candidate);
+			const conversation = stats.get(interaction.id);
+			const lastMessage =
+				conversation?.lastMessage ??
+				(await ensureSyntheticOpener(db, interaction.id, viewer, { ...candidate, id: candidateId }, false));
+			const matchedAt = interaction.createdAt.toISOString();
 
 			return {
 				candidateId,
@@ -307,12 +376,19 @@ export async function getMatches({ db, viewer }: ViewerContext) {
 				photoUrl: resolveProfilePhotoUrl({ ...candidate, id: candidateId }),
 				ageLabel: publicFields.ageLabel,
 				topInterests: publicFields.topInterests,
-				matchedAt: interaction.createdAt.toISOString(),
+				matchedAt,
+				isSynthetic: Boolean(candidate.isSynthetic),
+				lastMessage: lastMessage ? toMessagePayload(lastMessage) : null,
+				// A fresh synthetic opener is unread too.
+				unreadCount: conversation?.lastMessage ? conversation.unreadCount : lastMessage ? 1 : 0,
+				lastActivityAt: lastMessage ? lastMessage.createdAt.toISOString() : matchedAt,
 			};
 		}),
 	);
 
-	const resolved = matches.filter((match): match is NonNullable<typeof match> => match !== null);
+	const resolved = matches
+		.filter((match): match is NonNullable<typeof match> => match !== null)
+		.sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
 
 	return { matches: resolved, count: resolved.length };
 }

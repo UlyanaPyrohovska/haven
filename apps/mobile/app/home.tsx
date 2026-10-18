@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type Href, useRouter } from "expo-router";
+import { type Href, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,13 +18,13 @@ import { useProfileQuery } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
 import { todayDailyQuestionQueryKey } from "@/lib/api/daily-question";
 import { todayMoodQueryKey } from "@/lib/api/mood";
-import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
+import {
+	fetchMatches,
+	fetchRecommendations,
+	matchesQueryKey,
+	recommendationsQueryKey,
+} from "@/lib/api/recommendations";
 import { useSession } from "@/lib/auth/client";
-
-/** Placeholder content until profile and feed APIs are wired up. */
-const DUMMY = {
-	unreadMessages: 5,
-} as const;
 
 /** Semi-ellipse dome: flat bottom, curved top, full screen width — matches the wireframe. */
 const DOCK = {
@@ -102,11 +103,13 @@ function BottomDock({
 				]}
 			>
 				<Ionicons name="chatbubble-ellipses" size={28} color={fabForeground} />
-				<View style={[styles.fabBadge, { backgroundColor: badgeBackground, borderColor: border }]}>
-					<ThemedText type="caption" style={[styles.fabBadgeText, { color: badgeForeground }]}>
-						{unreadCount}
-					</ThemedText>
-				</View>
+				{unreadCount > 0 ? (
+					<View style={[styles.fabBadge, { backgroundColor: badgeBackground, borderColor: border }]}>
+						<ThemedText type="caption" style={[styles.fabBadgeText, { color: badgeForeground }]}>
+							{unreadCount > 99 ? "99+" : unreadCount}
+						</ThemedText>
+					</View>
+				) : null}
 			</Pressable>
 		</View>
 	);
@@ -128,12 +131,45 @@ export default function HomeScreen() {
 		queryKey: recommendationsQueryKey,
 		queryFn: fetchRecommendations,
 	});
+	const [isFocused, setIsFocused] = useState(true);
+	// Chat sockets are per-conversation, so home polls the inbox for the unread badge.
+	// shortcut: 30s polling, upgrade to a per-user socket if the badge must be instant.
+	const matches = useQuery({
+		queryKey: matchesQueryKey,
+		queryFn: fetchMatches,
+		refetchInterval: isFocused ? 30_000 : false,
+	});
+	const refetchMatches = matches.refetch;
+	useFocusEffect(
+		useCallback(() => {
+			setIsFocused(true);
+			void refetchMatches();
+			return () => setIsFocused(false);
+		}, [refetchMatches]),
+	);
+	const unreadMessages = matches.data?.matches.reduce((sum, m) => sum + m.unreadCount, 0) ?? 0;
 	const dock = dockColors(colorScheme);
 	const headerLocation = useHeaderLocation(hasSession);
 	const displayName = session?.user.name?.split(" ")[0] ?? "Uliana";
 	const photoUrl = session?.user.image?.trim() || null;
 	const newConnections = recommendations.data?.count ?? 0;
 	const dockClearance = DOCK.arcHeight + DOCK.fabSize / 2 + DOCK.fabLift + Spacing.lg;
+	const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+	// Only user pulls drive the spinner; background refetches flipping `refreshing` offscreen leave it stuck on iOS.
+	const [isRefreshing, setIsRefreshing] = useState(false);
+	const onRefresh = async () => {
+		setIsRefreshing(true);
+		try {
+			await Promise.all([
+				recommendations.refetch(),
+				queryClient.invalidateQueries({ queryKey: todayMoodQueryKey }),
+				queryClient.invalidateQueries({ queryKey: todayDailyQuestionQueryKey }),
+				queryClient.invalidateQueries({ queryKey: matchesQueryKey }),
+			]);
+		} finally {
+			setIsRefreshing(false);
+		}
+	};
 
 	return (
 		<View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -148,18 +184,8 @@ export default function HomeScreen() {
 				showsVerticalScrollIndicator={false}
 				refreshControl={
 					<RefreshControl
-						refreshing={
-							recommendations.isRefetching ||
-							queryClient.isFetching({ queryKey: todayMoodQueryKey }) > 0 ||
-							queryClient.isFetching({ queryKey: todayDailyQuestionQueryKey }) > 0
-						}
-						onRefresh={() => {
-							void Promise.all([
-								recommendations.refetch(),
-								queryClient.invalidateQueries({ queryKey: todayMoodQueryKey }),
-								queryClient.invalidateQueries({ queryKey: todayDailyQuestionQueryKey }),
-							]);
-						}}
+						refreshing={isRefreshing}
+						onRefresh={() => void onRefresh()}
 						tintColor={theme.tint}
 						colors={[theme.tint]}
 						progressViewOffset={insets.top}
@@ -210,28 +236,34 @@ export default function HomeScreen() {
 					</View>
 				</View>
 
-				<ThemedText type="title" style={styles.greeting}>
-					{t("home.greeting", { name: displayName })}
-				</ThemedText>
+				<View style={styles.greeting}>
+					<ThemedText type="caption" style={[styles.date, { color: theme.muted }]}>
+						{today}
+					</ThemedText>
+					<ThemedText type="title">{t("home.greeting", { name: displayName })}</ThemedText>
+				</View>
 
 				<Pressable
 					accessibilityRole="button"
+					accessibilityLabel={t("home.newConnections")}
 					onPress={() => router.push((newConnections > 0 ? "/connections" : "/matches") as Href)}
-					style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+					style={({ pressed }) => [
+						styles.connectionsCard,
+						{ backgroundColor: theme.surface, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+					]}
 				>
-					<View style={styles.connectionsBlock}>
-						<View
-							style={[
-								styles.connectionsCircle,
-								{ backgroundColor: theme.accentSoft, borderColor: theme.tint, borderWidth: 2 },
-							]}
-						>
-							<ThemedText style={[styles.connectionsCount, { color: theme.tint }]}>{newConnections}</ThemedText>
-						</View>
-						<ThemedText type="label" style={{ color: theme.muted }}>
-							{t("home.newConnections")}
+					<View style={[styles.connectionsCircle, { backgroundColor: theme.accentSoft, borderColor: theme.tint }]}>
+						<ThemedText style={[styles.connectionsCount, { color: theme.tint }]}>
+							{recommendations.isPending ? "–" : newConnections}
 						</ThemedText>
 					</View>
+					<View style={styles.connectionsText}>
+						<ThemedText type="subtitle">{t("home.newConnections")}</ThemedText>
+						<ThemedText type="caption" style={{ color: theme.muted }}>
+							{newConnections > 0 ? t("home.connectionsHint") : t("home.connectionsEmptyHint")}
+						</ThemedText>
+					</View>
+					<Ionicons name="chevron-forward" size={22} color={theme.muted} />
 				</Pressable>
 
 				<MoodCard />
@@ -245,7 +277,7 @@ export default function HomeScreen() {
 				fill={dock.fill}
 				border={dock.border}
 				shadow={dock.shadow}
-				unreadCount={DUMMY.unreadMessages}
+				unreadCount={unreadMessages}
 				fabColor={theme.tint}
 				fabForeground={theme.onTint}
 				badgeBackground={theme.background}
@@ -290,25 +322,38 @@ const styles = StyleSheet.create({
 	},
 	greeting: {
 		marginTop: Spacing.sm,
+		gap: Spacing.xs,
 	},
-	connectionsBlock: {
+	date: {
+		textTransform: "uppercase",
+		letterSpacing: 1,
+	},
+	connectionsCard: {
+		flexDirection: "row",
 		alignItems: "center",
-		gap: Spacing.md,
-		marginTop: Spacing.sm,
+		gap: Spacing.lg,
+		padding: Spacing.lg,
+		borderRadius: Radius.lg,
+		borderWidth: StyleSheet.hairlineWidth,
 	},
 	connectionsCircle: {
-		width: 148,
-		height: 148,
+		width: 76,
+		height: 76,
 		borderRadius: Radius.pill,
-		borderWidth: StyleSheet.hairlineWidth,
+		borderWidth: 2,
 		alignItems: "center",
 		justifyContent: "center",
 	},
 	connectionsCount: {
-		fontSize: 56,
-		lineHeight: 64,
+		fontSize: 32,
+		lineHeight: 38,
 		fontWeight: "600",
 		fontFamily: FontFamily.body,
+	},
+	connectionsText: {
+		flex: 1,
+		minWidth: 0,
+		gap: Spacing.xs,
 	},
 	bottomDock: {
 		position: "absolute",
