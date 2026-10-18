@@ -1,12 +1,17 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import * as WebBrowser from "expo-web-browser";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Dialog } from "@/components/ui/dialog";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { FormScreen } from "@/components/ui/form-screen";
 import { MenuCard, MenuDivider, MenuRow } from "@/components/ui/menu-row";
 import { useProfileQuery } from "@/hooks/use-profile";
+import { deleteAccount } from "@/lib/api/profile";
 import { signOut } from "@/lib/auth/client";
+import { API_URL } from "@/lib/config/env";
 import { locationSettingsSummary } from "@/lib/profile/location";
 import { readPrivacySettings } from "@/lib/profile/privacy";
 import { ThemePreference, useThemePreference } from "@/lib/theme/preference";
@@ -37,11 +42,24 @@ export default function ProfileSettingsScreen() {
 		}
 	}, [preference, t]);
 
+	const [confirmDelete, setConfirmDelete] = useState(false);
+
 	const onSignOut = async () => {
 		await signOut();
 		queryClient.clear();
 		router.replace("/login");
 	};
+
+	const removeAccount = useMutation({
+		mutationFn: deleteAccount,
+		onSuccess: async () => {
+			setConfirmDelete(false);
+			// The server already dropped the session; this clears the local cookie.
+			await signOut().catch(() => {});
+			queryClient.clear();
+			router.replace("/login");
+		},
+	});
 
 	return (
 		<FormScreen title={t("profile.settingsScreen.title")} subtitle={t("profile.settingsScreen.subtitle")} showBack>
@@ -66,8 +84,42 @@ export default function ProfileSettingsScreen() {
 			</MenuCard>
 
 			<MenuCard>
-				<MenuRow label={t("common.signOut")} onPress={onSignOut} destructive />
+				<MenuRow
+					label={t("profile.settingsScreen.privacyPolicy")}
+					onPress={() => WebBrowser.openBrowserAsync(`${API_URL}/privacy`)}
+				/>
+				<MenuDivider />
+				<MenuRow
+					label={t("profile.settingsScreen.support")}
+					onPress={() => WebBrowser.openBrowserAsync(`${API_URL}/support`)}
+				/>
 			</MenuCard>
+
+			<MenuCard>
+				<MenuRow label={t("common.signOut")} onPress={onSignOut} destructive />
+				<MenuDivider />
+				<MenuRow
+					label={t("profile.settingsScreen.deleteAccount.menuTitle")}
+					onPress={() => setConfirmDelete(true)}
+					destructive
+				/>
+			</MenuCard>
+
+			<Dialog
+				visible={confirmDelete}
+				icon="trash-outline"
+				tone="danger"
+				title={t("profile.settingsScreen.deleteAccount.title")}
+				message={t("profile.settingsScreen.deleteAccount.message")}
+				confirmLabel={t("profile.settingsScreen.deleteAccount.confirm")}
+				onConfirm={() => removeAccount.mutate()}
+				cancelLabel={t("common.cancel")}
+				onCancel={() => setConfirmDelete(false)}
+				loading={removeAccount.isPending}
+				dismissable={!removeAccount.isPending}
+			>
+				{removeAccount.isError ? <ErrorBanner message={t("profile.settingsScreen.deleteAccount.error")} /> : null}
+			</Dialog>
 		</FormScreen>
 	);
 }

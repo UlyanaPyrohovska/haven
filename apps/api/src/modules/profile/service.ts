@@ -77,6 +77,11 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 	return { profile };
 }
 
+export async function deleteAccount(c: Context<{ Bindings: CloudflareBindings }>) {
+	const userId = await requireUserId(c);
+	await repository.deleteAccount(getDb(c.env.DATABASE_URL), userId);
+}
+
 export async function searchCustomInterests(c: Context<{ Bindings: CloudflareBindings }>, query = "") {
 	await requireUserId(c);
 	const db = getDb(c.env.DATABASE_URL);

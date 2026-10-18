@@ -13,6 +13,12 @@ profile.openapi(routes.patchMeRoute, async (c) => {
 	return c.json(await service.patchProfile(c, updates), 200);
 });
 
+// DELETE /me
+profile.openapi(routes.deleteMeRoute, async (c) => {
+	await service.deleteAccount(c);
+	return c.body(null, 204);
+});
+
 // GET /interests/custom
 profile.openapi(routes.searchCustomInterestsRoute, async (c) => {
 	const { q } = c.req.valid("query");

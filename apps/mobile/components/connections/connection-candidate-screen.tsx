@@ -14,6 +14,7 @@ import { LocationPill } from "@/components/location/location-pill";
 import { ProfileHeaderButton } from "@/components/profile/profile-header-button";
 import { ThemedText } from "@/components/themed-text";
 import { BackHomeButton } from "@/components/ui/back-home-button";
+import { ChipGroup } from "@/components/ui/chip-group";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { FontSize, Radius, Spacing } from "@/constants/app-config";
@@ -22,10 +23,12 @@ import { useTheme } from "@/hooks/use-theme";
 import {
 	fetchRecommendation,
 	fetchRecommendations,
+	matchesQueryKey,
 	postRecommendationDecision,
 	recommendationQueryKey,
 	recommendationsQueryKey,
 } from "@/lib/api/recommendations";
+import { blockUser, type ReportReason, ReportReasons, reportUser } from "@/lib/api/safety";
 
 function InterestTag({ label, inverted = false }: { label: string; inverted?: boolean }) {
 	const theme = useTheme();
@@ -112,6 +115,8 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 	const [messageDialog, setMessageDialog] = useState(false);
 	const [matchedName, setMatchedName] = useState("");
 	const [pendingMatch, setPendingMatch] = useState(false);
+	const [safetyDialog, setSafetyDialog] = useState<"report" | "block" | null>(null);
+	const [reportReason, setReportReason] = useState<ReportReason | undefined>();
 
 	const cardStyle = useDecisionCardStyle(decisionKind);
 
@@ -146,6 +151,17 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 
 		return next ?? null;
 	}, [queryClient]);
+
+	const safety = useMutation({
+		mutationFn: (kind: "report" | "block") =>
+			kind === "report" && reportReason ? reportUser(candidateId, reportReason) : blockUser(candidateId),
+		onSuccess: async () => {
+			setSafetyDialog(null);
+			await queryClient.invalidateQueries({ queryKey: matchesQueryKey });
+			const next = await prefetchNextCandidate();
+			await onAdvance(next ? 1 : 0);
+		},
+	});
 
 	const finishAdvance = useCallback(async () => {
 		await onAdvance(decide.data?.remainingCount ?? 0);
@@ -280,6 +296,15 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 						</ThemedText>
 					) : null}
 				</Animated.View>
+
+				<View style={styles.safetyRow}>
+					<ThemedText type="link" style={{ color: theme.muted }} onPress={() => setSafetyDialog("report")}>
+						{t("connections.safety.report")}
+					</ThemedText>
+					<ThemedText type="link" style={{ color: theme.muted }} onPress={() => setSafetyDialog("block")}>
+						{t("connections.safety.block")}
+					</ThemedText>
+				</View>
 			</ScrollView>
 
 			<ConnectionDock
@@ -304,6 +329,43 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 					void finishAdvance();
 				}}
 			/>
+
+			<Dialog
+				visible={safetyDialog === "report"}
+				icon="flag-outline"
+				tone="danger"
+				title={t("connections.safety.reportTitle", { name: data.displayName })}
+				message={t("connections.safety.reportMessage")}
+				confirmLabel={t("connections.safety.reportConfirm")}
+				onConfirm={() => reportReason && safety.mutate("report")}
+				cancelLabel={t("common.cancel")}
+				onCancel={() => setSafetyDialog(null)}
+				loading={safety.isPending}
+			>
+				<ChipGroup
+					label={t("connections.safety.reasonLabel")}
+					hideLabel
+					options={ReportReasons.map((value) => ({ value, label: t(`connections.safety.reasons.${value}`) }))}
+					value={reportReason}
+					onChange={setReportReason}
+				/>
+				{safety.isError ? <ErrorBanner message={t("connections.safety.error")} /> : null}
+			</Dialog>
+
+			<Dialog
+				visible={safetyDialog === "block"}
+				icon="ban-outline"
+				tone="danger"
+				title={t("connections.safety.blockTitle", { name: data.displayName })}
+				message={t("connections.safety.blockMessage")}
+				confirmLabel={t("connections.safety.blockConfirm")}
+				onConfirm={() => safety.mutate("block")}
+				cancelLabel={t("common.cancel")}
+				onCancel={() => setSafetyDialog(null)}
+				loading={safety.isPending}
+			>
+				{safety.isError ? <ErrorBanner message={t("connections.safety.error")} /> : null}
+			</Dialog>
 
 			<Dialog
 				visible={messageDialog}
@@ -411,6 +473,12 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: Spacing.sm,
+	},
+	safetyRow: {
+		flexDirection: "row",
+		justifyContent: "center",
+		gap: Spacing.xl,
+		marginTop: Spacing.xl,
 	},
 	crossPaths: {
 		marginTop: Spacing.lg,

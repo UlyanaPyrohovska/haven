@@ -35,7 +35,7 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 ## Commands (run from root unless noted)
 - `pnpm dev` — API (wrangler, `localhost:8787`) + Metro via turbo.
 - `pnpm dev:backoffice`, `pnpm --filter haven-app dev:prod` (prod API).
-- `pnpm db:generate | db:migrate | db:studio | db:seed | db:seed-staff`
+- `pnpm db:generate | db:migrate | db:studio | db:seed`
 - Tests: `pnpm --filter api test` (Vitest). Single file: `pnpm --filter api exec vitest run src/lib/scoring.test.ts`.
 - Lint/format: `pnpm check` (Biome, writes fixes). Prefer running it on changed files only.
 - Mobile native rebuild: `cd apps/mobile && pnpm ios|android` (needed after native dep changes; `prebuild` regenerates native folders).
@@ -70,5 +70,5 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - Before editing a file, read only the relevant function or range (grep first).
 - Don't edit: generated `ios/`, `android/`, `dist/`, lockfile (unless adding deps), migration snapshots, `worker-configuration.d.ts`.
 - Don't run destructive git commands (reset --hard, force push, checkout of others' changes). The working tree may already have staged work in progress; don't stage, reset, or revert files you didn't touch.
-- Update `BACKLOG.md` status markers and `docs/path-a-implementation.md` when you finish a ticket, if the task is a ticket.
+- When you finish a task from `docs/path-a-implementation.md`, mark its heading there in the same change: `## [x] W1.2 — …` (done), `[~]` (in progress or partial, with a one-line note under the heading saying what is missing), `[ ]` (todo). Also update the matching `BACKLOG.md` marker if the task is a ticket.
 - Keep answers short. Don't summarize the codebase back unless asked.

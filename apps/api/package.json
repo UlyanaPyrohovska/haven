@@ -11,7 +11,7 @@
 		"db:studio": "drizzle-kit studio",
 		"db:visualizer": "drizzle-lab visualizer -c drizzle.config.ts -e .env --ts-config tsconfig.json",
 		"db:seed": "tsx scripts/seed.ts",
-		"db:seed-staff": "tsx scripts/seed-staff-admin.ts",
+		"db:seed-demo": "tsx scripts/seed-demo-account.ts",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},

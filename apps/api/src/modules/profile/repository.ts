@@ -53,6 +53,17 @@ export async function insertProfile(db: Db, userId: string, updates: ProfileUpda
 	return row ?? null;
 }
 
+/**
+ * Deletes the profile (cascading to embeddings, interactions, mood, answers, recommendations and reports
+ * against it) and the auth user (cascading to sessions and accounts; the photo lives on `user.image`).
+ */
+export async function deleteAccount(db: Db, userId: string) {
+	await db.batch([
+		db.delete(userProfiles).where(eq(userProfiles.userId, userId)),
+		db.delete(user).where(eq(user.id, userId)),
+	]);
+}
+
 /** Adds new labels to the shared catalog and returns the canonical spelling for each one, in order. */
 export async function upsertCustomInterests(db: Db, labels: readonly string[]) {
 	if (labels.length === 0) {

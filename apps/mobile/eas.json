@@ -6,7 +6,7 @@
 	"build": {
 		"development": {
 			"developmentClient": true,
-			"distribution": "internal",
+			"distribution": "store",
 			"env": {
 				"EXPO_PUBLIC_API_URL": "https://haven-api.haven-app.workers.dev"
 			}
@@ -18,8 +18,22 @@
 			}
 		},
 		"production": {
+			"autoIncrement": true,
+			"ios": {
+				"credentialsSource": "local"
+			},
 			"env": {
 				"EXPO_PUBLIC_API_URL": "https://haven-api.haven-app.workers.dev"
+			}
+		}
+	},
+	"submit": {
+		"production": {
+			"ios": {
+				"ascApiKeyPath": "./certs/AuthKey_KD575C2VC3.p8",
+				"ascApiKeyIssuerId": "c2a4b025-8734-4592-a0e3-78799851af45",
+				"ascApiKeyId": "KD575C2VC3",
+				"ascAppId": "6823734129"
 			}
 		}
 	}

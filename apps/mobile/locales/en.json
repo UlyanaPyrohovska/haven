@@ -78,7 +78,26 @@
 		"backHome": "Back to home",
 		"matchedTitle": "It's a match!",
 		"matchedMessage": "{{name}} accepted too. You can message each other soon.",
-		"continueBrowsing": "See next connection"
+		"continueBrowsing": "See next connection",
+		"safety": {
+			"report": "Report",
+			"block": "Block",
+			"reportTitle": "Report {{name}}?",
+			"reportMessage": "Tell us what’s wrong. Our team reviews every report within 24 hours. We’ll also block this person so you won’t see each other again.",
+			"reportConfirm": "Report and block",
+			"reasonLabel": "Reason",
+			"reasons": {
+				"inappropriate_photo": "Inappropriate photo",
+				"harassment": "Harassment or offensive content",
+				"spam_or_fake": "Spam or fake profile",
+				"underage": "Under 18",
+				"other": "Something else"
+			},
+			"blockTitle": "Block {{name}}?",
+			"blockMessage": "You won’t see each other in recommendations or matches again.",
+			"blockConfirm": "Block",
+			"error": "Something went wrong. Please try again."
+		}
 	},
 	"matches": {
 		"title": "Matches",
@@ -190,6 +209,15 @@
 			"appearanceScreen": {
 				"title": "App appearance",
 				"subtitle": "Choose how Haven looks on this device."
+			},
+			"privacyPolicy": "Privacy policy",
+			"support": "Help and support",
+			"deleteAccount": {
+				"menuTitle": "Delete account",
+				"title": "Delete your account?",
+				"message": "This permanently deletes your profile, photo, answers, mood check-ins and matches. You can’t undo this.",
+				"confirm": "Delete account",
+				"error": "We couldn’t delete your account. Please try again."
 			}
 		}
 	},
@@ -202,7 +230,8 @@
 		"close": "Close",
 		"retry": "Try again",
 		"signOut": "Sign out",
-		"skip": "Skip for now"
+		"skip": "Skip for now",
+		"cancel": "Cancel"
 	},
 	"auth": {
 		"login": {
