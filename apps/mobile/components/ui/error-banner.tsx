@@ -6,19 +6,22 @@ import { useTheme } from "@/hooks/use-theme";
 
 export type ErrorBannerProps = {
 	message: string | undefined;
+	/** "info" renders a neutral notice instead of an error. */
+	tone?: "danger" | "info";
 };
 
 /** Surfaces request-level failures above the primary action. Renders nothing when there is no error. */
-export function ErrorBanner({ message }: ErrorBannerProps) {
+export function ErrorBanner({ message, tone = "danger" }: ErrorBannerProps) {
 	const theme = useTheme();
+	const color = tone === "info" ? theme.link : theme.danger;
 
 	if (!message) {
 		return null;
 	}
 
 	return (
-		<View accessibilityRole="alert" style={[styles.root, { borderColor: theme.danger }]}>
-			<ThemedText type="caption" style={{ color: theme.danger }}>
+		<View accessibilityRole="alert" style={[styles.root, { borderColor: color }]}>
+			<ThemedText type="caption" style={{ color }}>
 				{message}
 			</ThemedText>
 		</View>

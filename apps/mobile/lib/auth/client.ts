@@ -15,4 +15,7 @@ export const authClient = createAuthClient({
 	],
 });
 
+/** The reset email's link redirects here with `?token=` (or `?error=` when the token is bad). */
+export const RESET_PASSWORD_REDIRECT_URL = "haven://reset-password";
+
 export const { signIn, signUp, signOut, useSession, updateUser } = authClient;

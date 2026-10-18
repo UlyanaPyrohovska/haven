@@ -12,7 +12,6 @@ import { Spacing, TextStyles } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
 import { signUp } from "@/lib/auth/client";
 import { describeAuthError } from "@/lib/auth/errors";
-import { isAuthenticatedResult, refreshAuthSession } from "@/lib/auth/navigation";
 import {
 	type ValidationError,
 	validateConfirmPassword,
@@ -56,7 +55,7 @@ export default function RegisterScreen() {
 		}
 
 		setSubmitting(true);
-		const { data, error } = await signUp.email({ name: name.trim(), email: email.trim(), password });
+		const { error } = await signUp.email({ name: name.trim(), email: email.trim(), password });
 
 		if (error) {
 			setSubmitting(false);
@@ -64,13 +63,8 @@ export default function RegisterScreen() {
 			return;
 		}
 
-		const hasSession = isAuthenticatedResult(data) || (await refreshAuthSession());
-		if (!hasSession) {
-			router.replace("/");
-			return;
-		}
-
-		router.replace("/basics");
+		// Sign-up never returns a session while email verification is required.
+		router.replace({ pathname: "/login", params: { notice: "checkEmail" } });
 	};
 
 	return (

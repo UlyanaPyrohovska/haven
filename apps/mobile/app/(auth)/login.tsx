@@ -1,9 +1,8 @@
-import { Link, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import { BrandHero } from "@/components/brand-hero";
-import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { FormScreen } from "@/components/ui/form-screen";
@@ -19,11 +18,16 @@ export default function LoginScreen() {
 	const { t } = useTranslation();
 	const theme = useTheme();
 	const router = useRouter();
+	// notice: checkEmail after sign-up, passwordReset after a reset. error: an emailed link was bad.
+	const params = useLocalSearchParams<{ notice?: "checkEmail" | "passwordReset"; error?: string }>();
+	const notice = params.notice ? t(`auth.notices.${params.notice}`) : undefined;
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [errors, setErrors] = useState<{ email?: ValidationError; password?: ValidationError }>({});
-	const [formError, setFormError] = useState<string | undefined>(undefined);
+	const [formError, setFormError] = useState<string | undefined>(
+		params.error ? t("auth.notices.verifyLinkInvalid") : undefined,
+	);
 	const [submitting, setSubmitting] = useState(false);
 
 	const onSubmit = async () => {
@@ -55,15 +59,13 @@ export default function LoginScreen() {
 			footer={
 				<>
 					<ErrorBanner message={formError} />
+					{!formError && <ErrorBanner message={notice} tone="info" />}
 					<Button label={t("auth.login.submit")} loading={submitting} onPress={onSubmit} />
-					<View style={styles.footerRow}>
-						<ThemedText type="caption" style={{ color: theme.muted }}>
-							{t("auth.login.footerPrompt")}
-						</ThemedText>
-						<Link href="/register" replace style={[TextStyles.caption, styles.footerLink, { color: theme.link }]}>
-							{t("auth.login.footerAction")}
-						</Link>
-					</View>
+					<Button
+						label={t("auth.login.createAccount")}
+						variant="secondary"
+						onPress={() => router.replace("/register")}
+					/>
 				</>
 			}
 		>
@@ -93,18 +95,18 @@ export default function LoginScreen() {
 				returnKeyType="go"
 				onSubmitEditing={onSubmit}
 			/>
+
+			<Link href="/forgot-password" style={[TextStyles.caption, styles.forgotLink, { color: theme.link }]}>
+				{t("auth.login.forgotPassword")}
+			</Link>
 		</FormScreen>
 	);
 }
 
 const styles = StyleSheet.create({
-	footerRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: Spacing.xs,
-	},
-	footerLink: {
+	forgotLink: {
+		alignSelf: "flex-end",
+		paddingVertical: Spacing.xs,
 		textDecorationLine: "underline",
 	},
 });

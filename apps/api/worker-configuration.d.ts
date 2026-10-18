@@ -9,6 +9,10 @@ interface __BaseEnv_CloudflareBindings {
 	REC_COOLDOWN_HOURS?: string;
 	/** "true" lets the cron trigger run the simulation tick (wrangler.jsonc vars). */
 	SIMULATION_ENABLED?: string;
+	/** Cloudflare Email Sending binding (wrangler.jsonc send_email). */
+	EMAIL: SendEmail;
+	/** Sender address on the onboarded email domain. */
+	EMAIL_FROM: string;
 	CHAT: DurableObjectNamespace<import("./src/index").ChatRoom>;
 }
 declare namespace Cloudflare {
