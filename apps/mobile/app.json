@@ -1,71 +1,79 @@
 {
-	"expo": {
-		"name": "Haven",
-		"slug": "haven",
-		"version": "1.0.0",
-		"orientation": "portrait",
-		"icon": "./assets/images/icon.png",
-		"scheme": "haven",
-		"userInterfaceStyle": "automatic",
-		"ios": {
-			"supportsTablet": true,
-			"bundleIdentifier": "com.haven.app"
-		},
-		"android": {
-			"adaptiveIcon": {
-				"backgroundColor": "#F5B942",
-				"foregroundImage": "./assets/images/android-icon-foreground.png"
-			},
-			"predictiveBackGestureEnabled": false,
-			"package": "com.haven.app",
-			"softwareKeyboardLayoutMode": "resize"
-		},
-		"web": {
-			"output": "static",
-			"favicon": "./assets/images/favicon.png"
-		},
-		"plugins": [
-			"expo-dev-client",
-			"expo-router",
-			[
-				"expo-splash-screen",
-				{
-					"image": "./assets/images/splash-blank.png",
-					"imageWidth": 200,
-					"resizeMode": "contain",
-					"backgroundColor": "#F5B942",
-					"dark": {
-						"backgroundColor": "#F5B942"
-					}
-				}
-			],
-			[
-				"expo-image-picker",
-				{
-					"photosPermission": "Haven uses your photo library so you can choose a profile photo."
-				}
-			],
-			"expo-secure-store",
-			"expo-font",
-			"expo-web-browser",
-			"expo-localization",
-			[
-				"expo-location",
-				{
-					"locationWhenInUsePermission": "Haven uses your location to improve nearby matching and cross-path features."
-				}
-			]
-		],
-		"experiments": {
-			"typedRoutes": true,
-			"reactCompiler": true
-		},
-		"extra": {
-			"router": {},
-			"eas": {
-				"projectId": "bfaa7443-054a-4d72-bf56-45f2f89f1596"
-			}
-		},
-		"owner": "pirogotters-team"
-	}
+  "expo": {
+    "name": "Haven",
+    "slug": "haven",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "haven",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ulianapyrohovska.haven",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F5B942",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.haven.app",
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-dev-client",
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-blank.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F5B942",
+          "dark": {
+            "backgroundColor": "#F5B942"
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Haven uses your photo library so you can choose a profile photo."
+        }
+      ],
+      "expo-secure-store",
+      "expo-font",
+      "expo-web-browser",
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Haven uses your location to improve nearby matching and cross-path features."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bfaa7443-054a-4d72-bf56-45f2f89f1596"
+      }
+    },
+    "owner": "pirogotters-team"
+  }
 }

@@ -28,6 +28,18 @@ export const patchMeRoute = createRoute({
 	},
 });
 
+export const deleteMeRoute = createRoute({
+	method: "delete",
+	path: "/me",
+	tags: ["Profile"],
+	summary: "Delete the current user's account",
+	description: "Permanently deletes the auth user, profile, photo, answers, mood check-ins and recommendations.",
+	responses: {
+		204: { description: "Account deleted" },
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+	},
+});
+
 export const searchCustomInterestsRoute = createRoute({
 	method: "get",
 	path: "/interests/custom",

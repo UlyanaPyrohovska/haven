@@ -122,3 +122,12 @@ export async function saveProfileSettings(
 
 	return body.profile;
 }
+
+/** Permanently deletes the signed-in user's account and all of its data. */
+export async function deleteAccount(): Promise<void> {
+	const response = await apiFetch("/me", { method: "DELETE" });
+
+	if (!response.ok) {
+		throw new Error(`Failed to delete account (${response.status})`);
+	}
+}

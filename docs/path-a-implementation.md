@@ -17,7 +17,7 @@ Conventions used below:
 
 ---
 
-## W1.1 — Location wording in consent + info sheet  ·  ethics · P0
+## [ ] W1.1 — Location wording in consent + info sheet  ·  ethics · P0
 
 Not code. Two Word files in `Thesis/Ethics_CE/`: `04_Informed_Consent_EN.docx` and
 `03_Participant_Information_Sheet_EN.docx`. Both currently omit location entirely while the
@@ -36,7 +36,7 @@ in the same plain-Portuguese/English register as the rest of the document.
 
 ---
 
-## W1.2 — Compatibility scoring module  ·  api · P0  ·  ↔ E2
+## [x] W1.2 — Compatibility scoring module  ·  api · P0  ·  ↔ E2
 
 **File:** `apps/api/src/lib/scoring.ts` (pure, no DB imports). Putting it in `lib/` lets both
 the Worker and the offline eval script (W3.2) import the *same* function, so thesis numbers
@@ -105,7 +105,7 @@ renormalizes and still returns [0,1]. Acceptance = ticket E2.
 
 ---
 
-## W1.3 — Recommendation generator  ·  api · P0  ·  ↔ C5
+## [x] W1.3 — Recommendation generator  ·  api · P0  ·  ↔ C5
 
 **File:** `apps/api/src/modules/recommendations/generator.ts`
 **Export:** `generateRecommendations(db, viewerId, opts?) → Promise<number>` (count written).
@@ -151,7 +151,7 @@ spreads candidate exposure across the pool, which helps the Gini fairness number
 
 ---
 
-## W1.4 — Generation triggers  ·  api · P0
+## [x] W1.4 — Generation triggers  ·  api · P0
 
 The cadence is a **daily drop**: a new batch is generated only when the current one is fully
 acted on **and** a cooldown has elapsed — never an endless feed. Config in one place next to
@@ -204,7 +204,7 @@ path works.
 
 ---
 
-## W1.5 — De-demo the presentation layer  ·  api · P1
+## [x] W1.5 — De-demo the presentation layer  ·  api · P1
 
 The feed currently leans on `lib/recommendation-demo-data.ts` (5 fixed candidate ids with
 names + answers). Three changes so **any** candidate renders:
@@ -231,7 +231,7 @@ that day. No per-candidate dependency.
 
 ---
 
-## W1.6 — "You've crossed paths" boost  ·  api/db · P2  ·  extends W1.2 + W1.3
+## [ ] W1.6 — "You've crossed paths" boost  ·  api/db · P2  ·  extends W1.2 + W1.3
 
 Serendipity re-ranking layer on top of the reciprocal score: candidates you keep crossing
 paths with get surfaced again. **Simulated (seeded), not tracked** — no encounter logging of
@@ -312,7 +312,7 @@ ranking exactly.
 
 ---
 
-## W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
+## [ ] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
 
 **File:** `research/embeddings/generate_embeddings.py` (new `research/` tree). Local only — do
 **not** call external embedding APIs (DPO: bios stay in the EU / on-device). `all-MiniLM-L6-v2`
@@ -331,7 +331,7 @@ or Cloudflare Workers AI `@cf/baai/bge-small-en-v1.5` (adds a subprocessor → D
 
 ---
 
-## W2.2 — Switch on the cosine term  ·  api · P1
+## [ ] W2.2 — Switch on the cosine term  ·  api · P1
 
 With embeddings present, `findScoringProfileById` / `listCandidatePool` already left-join
 `user_embeddings`, so `bioEmbedding` is populated. No scoring change needed beyond W1.2 — just
@@ -342,7 +342,7 @@ mixed (embedding / no-embedding) pairing.
 
 ---
 
-## W2.3 — Make the candidate pool realistic  ·  db · P1
+## [ ] W2.3 — Make the candidate pool realistic  ·  db · P1
 
 Each participant must see a varied, plausible top-10. Audit `scripts/seed.ts` for how synthetic
 rows get coords/photos, then ensure a believable nearby set (e.g. 150 profiles):
@@ -358,7 +358,7 @@ same pool.
 
 ---
 
-## W2.4 — Full end-to-end run on device  ·  mobile · P0  ·  ↔ D4
+## [ ] W2.4 — Full end-to-end run on device  ·  mobile · P0  ·  ↔ D4
 
 Build the dev client (`apps/mobile`: `pnpm ios` / `pnpm android`), run API + Metro
 (`pnpm dev`), set `EXPO_PUBLIC_API_URL` to the LAN URL of the Worker dev server. Walk the whole
@@ -373,7 +373,9 @@ path; defer the rest.
 
 ---
 
-## W2.5 — Polish the UX states  ·  mobile · P1  ·  ↔ D5
+## [~] W2.5 — Polish the UX states  ·  mobile · P1  ·  ↔ D5
+
+> Status: caught-up state and match dialog done; match is an inline dialog, not the `app/match/[candidateId].tsx` modal route.
 
 `connections/index.tsx` already branches on `isPending` / `isError` — fill in a proper loading
 skeleton, an error state with retry, and the **caught-up** state — when the batch is done for the day, show
@@ -385,7 +387,7 @@ list (`fetchMatches`). Queue multiple matches in one session.
 
 ---
 
-## W2.6 — Daily Question redesign (engagement)  ·  mobile (+ small api) · P1
+## [x] W2.6 — Daily Question redesign (engagement)  ·  mobile (+ small api) · P1
 
 **Problem.** Today the daily question is a lonely multiline `TextInput` embedded in the home feed
 (`apps/mobile/components/home/daily-question-card.tsx`) with 800ms debounced autosave. It has no
@@ -458,7 +460,7 @@ candidate answers are locked before answering and revealed after; no autosave ti
 
 ---
 
-## W2.7 — Keyboard-safe inputs, app-wide  ·  mobile · P0 (test-blocking)
+## [x] W2.7 — Keyboard-safe inputs, app-wide  ·  mobile · P0 (test-blocking)
 
 **Problem.** Inputs hide behind the keyboard. Root cause: text inputs render in plain scroll
 containers that don't lift the focused field. The home `DailyQuestionCard` input sits in the home
@@ -502,7 +504,7 @@ this earlier if W2.4's on-device onboarding run hits the bug first.
 
 ---
 
-## W3.1 — Participant logistics  ·  ops · P0
+## [ ] W3.1 — Participant logistics  ·  ops · P0
 
 **Accounts.** Better Auth needs a unique email + password ≥ 8. Pre-create participant accounts
 (`P01…P15`) with throwaway institutional-style emails and known passwords via the sign-up API
@@ -518,7 +520,7 @@ before each session; a documented deletion path for a participant's data on requ
 
 ---
 
-## W3.2 — Offline baseline evaluation  ·  research · P1  ·  ↔ E3
+## [ ] W3.2 — Offline baseline evaluation  ·  research · P1  ·  ↔ E3
 
 **File:** `research/eval/run.ts` (TypeScript, so it imports the *production*
 `apps/api/src/lib/scoring.ts` — the thesis then reports the deployed engine, not a re-implementation).
@@ -536,12 +538,12 @@ Run a small weight sweep over `DEFAULT_WEIGHTS` and record the best. These feed 
 
 ---
 
-## W3.3 — Pilot + freeze  ·  ops · P0
+## [ ] W3.3 — Pilot + freeze  ·  ops · P0
 
 Dry-run the complete session with 1–2 people on the real device, fix the friction they hit,
 then freeze — no new features after the pilot, only crash fixes.
 
-## W3.4 — Instruments + moderator script  ·  ops · P1
+## [ ] W3.4 — Instruments + moderator script  ·  ops · P1
 
 SUS (10 items), UEQ-S (8 items) and SEQ set up as forms; the participant task list written; a
 one-page moderator script so every session is run identically. (These were drafted earlier in

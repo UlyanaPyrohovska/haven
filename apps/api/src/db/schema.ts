@@ -375,3 +375,22 @@ export const recommendations = pgTable(
 		index("recommendations_candidate_id_idx").on(t.candidateId),
 	],
 );
+
+// ────────────────────────────────────────────────────────────────
+// reports — a user flagging another profile for staff review
+// ────────────────────────────────────────────────────────────────
+export const reports = pgTable(
+	"reports",
+	{
+		id: serial("id").primaryKey(),
+		/** Null once the reporter deletes their account; the report stays for moderation. */
+		reporterId: integer("reporter_id").references(() => userProfiles.id, { onDelete: "set null" }),
+		reportedId: integer("reported_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		reason: varchar("reason", { length: 30 }).notNull(),
+		details: varchar("details", { length: 500 }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => [index("reports_reported_id_idx").on(t.reportedId)],
+);

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import type { ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -22,6 +23,10 @@ export type DialogProps = {
 	 * for decisions the user has to acknowledge deliberately.
 	 */
 	dismissable?: boolean;
+	/** Extra content between the message and the actions, e.g. a choice the confirm acts on. */
+	children?: ReactNode;
+	/** Shows a spinner on the confirm action while it runs. */
+	loading?: boolean;
 };
 
 /**
@@ -39,6 +44,8 @@ export function Dialog({
 	icon,
 	tone = "default",
 	dismissable = true,
+	children,
+	loading = false,
 }: DialogProps) {
 	const theme = useTheme();
 	const accent = tone === "danger" ? theme.danger : theme.text;
@@ -80,8 +87,10 @@ export function Dialog({
 
 					<ThemedText style={[styles.centered, { color: theme.muted }]}>{message}</ThemedText>
 
+					{children}
+
 					<View style={styles.actions}>
-						<Button label={confirmLabel} onPress={onConfirm} />
+						<Button label={confirmLabel} onPress={onConfirm} loading={loading} />
 						{cancelLabel && onCancel ? <Button label={cancelLabel} variant="ghost" onPress={onCancel} /> : null}
 					</View>
 				</View>
