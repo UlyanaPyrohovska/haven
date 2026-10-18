@@ -6,5 +6,12 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"observability": {
 		"enabled": true
+	},
+	// Simulation tick (agents act, real users get due drops). Gated by SIMULATION_ENABLED="true".
+	"triggers": {
+		"crons": ["*/30 * * * *"]
+	},
+	"vars": {
+		"SIMULATION_ENABLED": "false"
 	}
 }

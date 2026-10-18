@@ -7,6 +7,8 @@ interface __BaseEnv_CloudflareBindings {
 	BETTER_AUTH_URL: string;
 	/** Override default 24h recommendation cooldown for study sessions (e.g. `0.05` ≈ 3 minutes). */
 	REC_COOLDOWN_HOURS?: string;
+	/** "true" lets the cron trigger run the simulation tick (wrangler.jsonc vars). */
+	SIMULATION_ENABLED?: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

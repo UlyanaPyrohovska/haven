@@ -96,3 +96,34 @@ export function deleteUser(profileId: number) {
 		method: "DELETE",
 	});
 }
+
+export type SimulationTickStats = {
+	tickId: string;
+	inboundAnswered: number;
+	agentsActed: number;
+	decisions: number;
+	accepts: number;
+	newMatches: number;
+	realBatches: number;
+};
+
+export function runSimulationTick(limit?: number) {
+	return request<SimulationTickStats>("/staff/simulation/tick", {
+		method: "POST",
+		body: JSON.stringify(limit ? { limit } : {}),
+	});
+}
+
+export type GraphEdgeFilter = "match" | "like" | "all";
+
+export type InteractionGraph = {
+	nodes: { id: number; name: string; isSynthetic: boolean; lookingFor: number; degree: number }[];
+	edges: { source: number; target: number; decA: number | null; decB: number | null; match: boolean }[];
+};
+
+export function getInteractionGraph(params: { lookingFor: number; edges: GraphEdgeFilter; since?: string }) {
+	const search = new URLSearchParams({ lookingFor: String(params.lookingFor), edges: params.edges });
+	if (params.since) search.set("since", params.since);
+
+	return request<InteractionGraph>(`/staff/graph?${search}`);
+}

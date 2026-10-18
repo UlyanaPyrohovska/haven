@@ -25,4 +25,14 @@ staff.openapi(routes.deleteUserRoute, async (c) => {
 	return c.json(await service.deleteUser(c, profileId), 200);
 });
 
+staff.openapi(routes.simulationTickRoute, async (c) => {
+	const body = c.req.valid("json") ?? {};
+	return c.json(await service.simulationTick(c, body.limit), 200);
+});
+
+staff.openapi(routes.interactionGraphRoute, async (c) => {
+	const query = c.req.valid("query");
+	return c.json(await service.interactionGraph(c, query), 200);
+});
+
 export default staff;

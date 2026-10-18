@@ -25,6 +25,8 @@ export type GenerateRecommendationsOptions = {
 	weights?: ScoringWeights;
 	/** Cross-paths boost strength; 0 reproduces the pure reciprocal ranking (thesis ablation). */
 	crossPathsLambda?: number;
+	/** Restrict the pool to synthetic profiles (simulation agents). */
+	syntheticOnly?: boolean;
 };
 
 export type RankedCandidate = { candidateId: number; score: number };
@@ -69,6 +71,7 @@ export async function generateRecommendations(
 		maxKm,
 		limit: POOL_LIMIT,
 		annShortlistLimit: ANN_SHORTLIST_LIMIT,
+		syntheticOnly: opts.syntheticOnly,
 	});
 
 	const crossings = await repository.listCrossings(

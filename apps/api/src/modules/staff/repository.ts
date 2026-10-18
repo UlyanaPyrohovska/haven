@@ -1,8 +1,8 @@
-import { count, desc, eq, getTableColumns, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, gte, ilike, inArray, or } from "drizzle-orm";
 import type { Db } from "@/db";
-import { user, userProfiles } from "@/db/schema";
+import { interactions, user, userProfiles } from "@/db/schema";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
-import type { StaffUserListQuery } from "./schemas";
+import type { InteractionGraphQuery, StaffUserListQuery } from "./schemas";
 
 const profileColumns = getTableColumns(userProfiles);
 
@@ -123,4 +123,51 @@ function buildSearchWhere(q?: string) {
 	}
 
 	return or(...clauses);
+}
+
+export function listGraphEdges(db: Db, query: InteractionGraphQuery) {
+	const conditions = [eq(userProfiles.lookingFor, query.lookingFor)];
+
+	if (query.edges === "match") {
+		conditions.push(eq(interactions.match, true));
+	} else if (query.edges === "like") {
+		const like = or(eq(interactions.decA, 1), eq(interactions.decB, 1));
+		if (like) conditions.push(like);
+	}
+
+	if (query.since) {
+		conditions.push(gte(interactions.createdAt, new Date(query.since)));
+	}
+
+	// Pools never cross, so filtering on user A's pool is enough.
+	return db
+		.select({
+			source: interactions.userA,
+			target: interactions.userB,
+			decA: interactions.decA,
+			decB: interactions.decB,
+			match: interactions.match,
+		})
+		.from(interactions)
+		.innerJoin(userProfiles, eq(userProfiles.id, interactions.userA))
+		.where(and(...conditions))
+		.orderBy(desc(interactions.createdAt))
+		.limit(query.limit);
+}
+
+export function listGraphNodes(db: Db, profileIds: number[]) {
+	if (profileIds.length === 0) {
+		return Promise.resolve([]);
+	}
+
+	return db
+		.select({
+			id: userProfiles.id,
+			displayName: userProfiles.displayName,
+			gender: userProfiles.gender,
+			isSynthetic: userProfiles.isSynthetic,
+			lookingFor: userProfiles.lookingFor,
+		})
+		.from(userProfiles)
+		.where(inArray(userProfiles.id, profileIds));
 }
