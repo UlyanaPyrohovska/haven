@@ -35,6 +35,10 @@ export function TextField({
 	value,
 	maxLength,
 	secureTextEntry = false,
+	keyboardType,
+	autoCorrect,
+	onFocus,
+	onBlur,
 	...rest
 }: TextFieldProps) {
 	const theme = useTheme();
@@ -44,6 +48,8 @@ export function TextField({
 
 	const borderColor = error ? theme.danger : focused ? theme.tint : "transparent";
 	const isPasswordField = secureTextEntry === true;
+	// Emails and passwords are not prose: no QuickType word suggestions or autocorrect on them.
+	const isCredential = isPasswordField || keyboardType === "email-address";
 
 	const toggleLabel = passwordVisible ? t("auth.fields.hidePassword") : t("auth.fields.showPassword");
 
@@ -60,8 +66,17 @@ export function TextField({
 					value={value}
 					maxLength={maxLength}
 					secureTextEntry={isPasswordField && !passwordVisible}
-					onFocus={() => setFocused(true)}
-					onBlur={() => setFocused(false)}
+					keyboardType={keyboardType}
+					autoCorrect={autoCorrect ?? !isCredential}
+					spellCheck={autoCorrect ?? !isCredential}
+					onFocus={(event) => {
+						setFocused(true);
+						onFocus?.(event);
+					}}
+					onBlur={(event) => {
+						setFocused(false);
+						onBlur?.(event);
+					}}
 					style={[
 						styles.input,
 						multiline && styles.inputMultiline,

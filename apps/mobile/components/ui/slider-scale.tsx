@@ -75,8 +75,8 @@ export function SliderScale({
 			onStartShouldSetPanResponder: () => true,
 			onMoveShouldSetPanResponder: () => true,
 			// Lets the surrounding ScrollView win once it recognises a vertical scroll, so a
-			// screen full of sliders is still scrollable.
-			onPanResponderTerminationRequest: () => true,
+			// screen full of sliders is still scrollable. A horizontal drag already under way keeps the touch.
+			onPanResponderTerminationRequest: () => !dragging.current,
 			onPanResponderGrant: ({ nativeEvent }) => {
 				// pageX minus locationX gives the track's left edge in page coordinates,
 				// which subsequent moves are measured against.

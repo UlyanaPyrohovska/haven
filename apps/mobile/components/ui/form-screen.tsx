@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
@@ -9,9 +9,6 @@ import { ThemedText } from "@/components/themed-text";
 import { StepProgress } from "@/components/ui/step-progress";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
-
-/** Primary button row + footer chrome (excluding safe-area inset). */
-const FOOTER_CONTENT_HEIGHT = Spacing.lg + 52 + Spacing.lg;
 
 export type FormScreenHeaderButtonProps = {
 	accessibilityLabel: string;
@@ -72,22 +69,23 @@ export function FormScreen({
 	const navigation = useNavigation();
 	const { t } = useTranslation();
 
-	const footerInset = footer ? FOOTER_CONTENT_HEIGHT + insets.bottom : 0;
-	const keyboardBottomOffset = footer ? footerInset + Spacing.xl : Spacing.xl;
+	// Measured, so a focused input always lands just above the sticky footer whatever it contains.
+	const [footerHeight, setFooterHeight] = useState(0);
 
 	return (
-		<View style={[styles.root, { backgroundColor: theme.background }]}>
+		// Top inset lives on the root so scrolled content never slides under the status bar.
+		<View style={[styles.root, { backgroundColor: theme.background, paddingTop: insets.top }]}>
 			<KeyboardAwareScrollView
 				style={styles.scroll}
 				contentContainerStyle={[
 					styles.content,
 					centered && styles.contentCentered,
 					{
-						paddingTop: insets.top + Spacing.md,
-						paddingBottom: Spacing.xxl + footerInset,
+						paddingTop: Spacing.md,
+						paddingBottom: Spacing.xxl + footerHeight,
 					},
 				]}
-				bottomOffset={keyboardBottomOffset}
+				bottomOffset={footerHeight + Spacing.xl}
 				keyboardShouldPersistTaps="handled"
 				keyboardDismissMode="interactive"
 			>
@@ -126,6 +124,7 @@ export function FormScreen({
 			{footer ? (
 				<KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
 					<View
+						onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
 						style={[
 							styles.footer,
 							{
