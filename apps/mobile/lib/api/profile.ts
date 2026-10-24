@@ -1,4 +1,8 @@
 import {
+	AGE_FILTER_MAX,
+	AGE_FILTER_MIN,
+	GenderOptions,
+	type GenderValue,
 	INTEREST_SELECTED,
 	INTEREST_UNSELECTED,
 	InterestFields,
@@ -12,7 +16,7 @@ import { buildHiddenLocationPayload } from "@/lib/profile/location";
 import { PRIVACY_KEYS } from "@/lib/profile/privacy";
 
 /** Request body for `PATCH /me`; keys match the `user_profiles` column names. */
-export type ProfilePayload = Record<string, number | string | boolean | string[] | null>;
+export type ProfilePayload = Record<string, number | string | boolean | string[] | number[] | null>;
 
 export type ProfileRecord = Record<string, unknown>;
 
@@ -32,6 +36,20 @@ function normalisePartnerImportance(importance: Partial<Record<PrefKey, number>>
 	});
 
 	return Object.fromEntries(shares) as Record<PrefKey, number>;
+}
+
+/** Picking every gender or the full age span is stored as "no filter" (null). */
+export function buildPartnerFiltersPayload(
+	interestedIn: readonly GenderValue[],
+	ageRange: { min: number; max: number } | undefined,
+) {
+	const allGenders = GenderOptions.every((option) => interestedIn.includes(option.value));
+
+	return {
+		interestedIn: interestedIn.length === 0 || allGenders ? null : [...interestedIn],
+		prefAgeMin: ageRange && ageRange.min > AGE_FILTER_MIN ? ageRange.min : null,
+		prefAgeMax: ageRange && ageRange.max < AGE_FILTER_MAX ? ageRange.max : null,
+	};
 }
 
 export function buildProfilePayload(draft: ProfileDraft): ProfilePayload {
@@ -59,6 +77,8 @@ export function buildProfilePayload(draft: ProfileDraft): ProfilePayload {
 		payload[dimension.prefKey] = partnerShares[dimension.prefKey];
 		payload[dimension.selfKey] = dimension.selfRated ? (draft.self[dimension.selfKey] ?? null) : null;
 	}
+
+	Object.assign(payload, buildPartnerFiltersPayload(draft.interestedIn, draft.ageRange));
 
 	for (const key of PRIVACY_KEYS) {
 		payload[key] = draft.privacy[key];
@@ -107,7 +127,7 @@ export async function saveProfile(draft: ProfileDraft): Promise<void> {
 }
 
 export async function saveProfileSettings(
-	updates: Partial<Record<string, boolean | string | number | null>>,
+	updates: Partial<Record<string, boolean | string | number | number[] | null>>,
 ): Promise<ProfileRecord | null> {
 	const response = await apiFetch("/me", {
 		method: "PATCH",

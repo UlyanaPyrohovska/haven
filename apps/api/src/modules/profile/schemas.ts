@@ -9,6 +9,7 @@ import {
 	type LookingForValue,
 	ProfileGoals,
 } from "@/lib/looking-for";
+import { GENDER_MAX, isValidAgeRange, PREF_AGE_MAX } from "@/lib/partner-filters";
 
 /** `interest_*` and `self_*` columns are 1–10 Likert values; null means "not answered". */
 const likert = z.number().int().min(1).max(10).nullable().optional();
@@ -72,11 +73,23 @@ const customInterestLabel = z.string().superRefine((value, ctx) => {
 
 const customInterests = z.array(customInterestLabel).max(MAX_CUSTOM_INTERESTS).optional();
 
+const genderCode = z.number().int().min(0).max(GENDER_MAX);
+
+/** Genders the user wants to meet; null or empty = open to all. */
+const interestedIn = z
+	.array(genderCode)
+	.max(GENDER_MAX + 1)
+	.refine((values) => new Set(values).size === values.length, "Duplicate gender.")
+	.nullable()
+	.optional();
+
+const prefAge = z.number().int().min(MIN_AGE).max(PREF_AGE_MAX).nullable().optional();
+
 export const ProfileUpdateSchema = z
 	.object({
 		displayName: nullableText(80),
 		birthDate,
-		gender: z.number().int().min(0).max(1).nullable().optional(),
+		gender: genderCode.nullable().optional(),
 		ethnicity: z.enum(ethnicityValues).nullable().optional(),
 		career: nullableText(100),
 		lookingFor,
@@ -116,6 +129,10 @@ export const ProfileUpdateSchema = z
 		selfAmb: likert,
 		selfShar: likert,
 
+		interestedIn,
+		prefAgeMin: prefAge,
+		prefAgeMax: prefAge,
+
 		discoverable: privacyToggle,
 		showAge: privacyToggle,
 		showCareer: privacyToggle,
@@ -129,6 +146,10 @@ export const ProfileUpdateSchema = z
 		longitude: z.number().min(-180).max(180).nullable().optional(),
 	})
 	.superRefine((value, ctx) => {
+		if (!isValidAgeRange(value.prefAgeMin, value.prefAgeMax)) {
+			ctx.addIssue({ code: "custom", path: ["prefAgeMin"], message: "prefAgeMin must not exceed prefAgeMax." });
+		}
+
 		if (value.lookingFor === undefined || value.goal == null) {
 			return;
 		}

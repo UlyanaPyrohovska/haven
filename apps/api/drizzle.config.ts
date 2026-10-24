@@ -1,4 +1,8 @@
+import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
+
+// ENV_FILE picks the target database (e.g. .env.prod); otherwise drizzle-kit's default .env applies.
+if (process.env.ENV_FILE) config({ path: process.env.ENV_FILE, override: true });
 
 const databaseUrl = process.env.DATABASE_URL;
 

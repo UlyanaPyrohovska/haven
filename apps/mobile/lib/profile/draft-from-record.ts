@@ -1,6 +1,9 @@
 import {
+	AGE_FILTER_MAX,
+	AGE_FILTER_MIN,
 	EthnicityOptions,
 	type EthnicityValue,
+	GenderOptions,
 	type GenderValue,
 	type GoalValue,
 	IMPORTANCE_MAX,
@@ -33,7 +36,21 @@ function readNumber(value: unknown): number | undefined {
 function readGender(value: unknown): GenderValue | undefined {
 	const gender = readNumber(value);
 
-	return gender === 0 || gender === 1 ? gender : undefined;
+	return GenderOptions.find((option) => option.value === gender)?.value;
+}
+
+/** Null or empty means open to everyone, shown as every option selected. */
+export function readInterestedIn(value: unknown): GenderValue[] {
+	const genders = Array.isArray(value) ? value.map(readGender).filter((gender) => gender !== undefined) : [];
+
+	return genders.length > 0 ? genders : GenderOptions.map((option) => option.value);
+}
+
+export function readAgeRange(record: ProfileRecord): { min: number; max: number } {
+	return {
+		min: readNumber(record.prefAgeMin) ?? AGE_FILTER_MIN,
+		max: readNumber(record.prefAgeMax) ?? AGE_FILTER_MAX,
+	};
 }
 
 function readEthnicity(value: unknown): EthnicityValue | undefined {
@@ -110,6 +127,8 @@ export function profileRecordToDraft(record: ProfileRecord): ProfileDraft {
 		interests: readInterests(record),
 		customInterests: Array.isArray(record.customInterests) ? (record.customInterests as string[]) : [],
 		partner: readPartnerImportance(record),
+		interestedIn: readInterestedIn(record.interestedIn),
+		ageRange: readAgeRange(record),
 		self: readSelfRatings(record),
 		privacy: readPrivacySettings(record),
 		// No preset: saving the edit flow leaves stored coordinates untouched.

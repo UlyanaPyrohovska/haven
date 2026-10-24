@@ -6,6 +6,9 @@ import { getDb } from "@/db";
 import { type EmailContent, resetPasswordTemplate, verifyEmailTemplate } from "@/lib/email-templates";
 import * as schema from "@/modules/auth/auth-schema";
 
+/** Deployed backoffice (apps/backoffice/wrangler.jsonc); cross-origin, so it needs CORS and a trusted origin. */
+export const BACKOFFICE_ORIGIN = "https://admin.pirogotter.dev";
+
 export const createAuth = (bindings: CloudflareBindings) => {
 	const db = getDb(bindings.DATABASE_URL);
 
@@ -45,7 +48,7 @@ export const createAuth = (bindings: CloudflareBindings) => {
 				return sendEmail(user.email, verifyEmailTemplate(user.name, link.toString()));
 			},
 		},
-		trustedOrigins: ["haven://", "http://localhost:5173"],
+		trustedOrigins: ["haven://", "http://localhost:5173", BACKOFFICE_ORIGIN],
 		plugins: [openAPI(), admin(), expo()],
 	});
 };

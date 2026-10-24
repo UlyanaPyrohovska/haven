@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import Papa from "papaparse";
 import pg from "pg";
 import { friendships, interactions, userProfiles } from "../src/db/schema";
+import { MIN_AGE } from "../src/lib/age";
 import { syntheticDisplayName } from "../src/lib/candidate-display";
 import { lookingForFromGoal } from "../src/lib/looking-for";
 
@@ -27,6 +28,9 @@ const EXPECTED_COUNTS = {
 const REFERENCE_DATE = new Date(Date.UTC(2026, 5, 14));
 
 const BATCH_SIZE = 500;
+
+/** Seeded profiles accept partners within this many years of their own age. */
+const SEED_AGE_SPREAD = 10;
 
 type CsvRow = Record<string, string>;
 
@@ -87,13 +91,18 @@ function birthDateFromAge(age: number): string {
 function mapUserRow(row: CsvRow) {
 	const id = parseIntField(row, "uid");
 	const gender = parseIntField(row, "gender");
+	const age = parseIntField(row, "age");
 
 	return {
 		id,
 		isSynthetic: true,
 		displayName: syntheticDisplayName({ id, gender }),
 		gender,
-		birthDate: birthDateFromAge(parseIntField(row, "age")),
+		birthDate: birthDateFromAge(age),
+		// The speed-dating source only paired opposite genders, so seeded filters mirror that.
+		interestedIn: [1 - gender],
+		prefAgeMin: Math.max(MIN_AGE, age - SEED_AGE_SPREAD),
+		prefAgeMax: age + SEED_AGE_SPREAD,
 		ethnicity: row.ethnicity,
 		career: row.career,
 		lookingFor: lookingForFromGoal(row.goal),

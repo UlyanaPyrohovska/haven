@@ -16,7 +16,8 @@ overview.
 
 ```
 apps/mobile (Expo 54, Expo Router, react-query)      apps/backoffice (Vite + React)
-        │  Better Auth session cookie via apiFetch            │  cookie (credentials: include), Vite proxy
+        │  Better Auth session cookie via apiFetch            │  cookie (credentials: include); Vite proxy in dev,
+        │                                                     │  CORS from admin.pirogotter.dev when deployed
         ▼                                                     ▼
 apps/api — Cloudflare Worker (Hono + @hono/zod-openapi)  ── cron trigger (simulation tick)
         │  modules/<feature>/{routes,schemas,service,repository}.ts
@@ -26,6 +27,12 @@ apps/api — Cloudflare Worker (Hono + @hono/zod-openapi)  ── cron trigger (
 Neon Postgres (aws-eu-central-1, pgvector) via drizzle-orm/neon-http
 ```
 
+- **Hosting.** The API Worker serves `haven.pirogotter.dev` (custom domain in `apps/api/wrangler.jsonc`;
+  the old `haven-api.haven-app.workers.dev` URL stays live for older builds). The backoffice is a
+  separate static-assets Worker (`apps/backoffice/wrangler.jsonc`, SPA fallback) on
+  `admin.pirogotter.dev`, built with `VITE_API_URL` pointing at the API. Both hosts share the site
+  `pirogotter.dev`, so the `SameSite=Lax` session cookie travels on credentialed requests; the API allows
+  that one origin through Hono `cors` and Better Auth `trustedOrigins` (`BACKOFFICE_ORIGIN` in `lib/auth.ts`).
 - **API layering.** Each module has four files:
   - `routes.ts`: OpenAPI route definitions.
   - `schemas.ts`: zod request and response shapes, which are validated at the edge.
@@ -113,7 +120,7 @@ A step-by-step profile setup:
 1. Basics.
 2. Bio.
 3. Interests (17 Likert interests plus custom ones).
-4. Partner preferences (6 dimensions).
+4. Partner step: "Show me" and age-range filters (see Partner filters), then the 6 preference dimensions.
 5. Self-ratings (6 dimensions).
 6. Location.
 7. Privacy.
@@ -339,6 +346,47 @@ Push notification on a new match (BACKLOG D5).
 
 ## Matching engine (`apps/api`)
 
+### Partner filters — live
+Users pick who they want to meet: a "Show me" multi-select (women, men, non-binary people) and an
+age range. These are hard filters, unlike the 6 preference sliders, which only rank people.
+
+**How it works:**
+- Columns on `user_profiles`: `interested_in smallint[]` (same codes as `gender`: 0 woman,
+  1 man, 2 non-binary), `pref_age_min`, `pref_age_max` (migration `0017`). Null means no filter.
+- Filters are mutual. `poolConditions` in `recommendations/repository.ts` adds SQL so a candidate
+  must fit the viewer's filters and the viewer must fit the candidate's. Age is checked against
+  `birth_date` through a date window from `birthDateWindow`, computed in TS so the SQL is
+  deterministic.
+- `src/lib/partner-filters.ts > mutualFilterMatch` is the pure version of the same rule, covered
+  by `partner-filters.test.ts`.
+- Missing data passes: a candidate with no gender or birth date is not hidden. This follows the
+  same "missing is neutral" rule as scoring.
+- The app stores "every gender" and the full 18–99+ span as null, so they mean the same as no
+  filter. The top of the age slider means "and older".
+- Onboarding starts the age range at the user's own age ±5. After that, users change filters
+  with the filter icon inside the New connections card on home (highlighted when a filter is
+  active). It opens the `filters` modal, which saves with `PATCH /me`.
+- The daily limit is kept. When a filter field (or gender or birth date) changes,
+  `patchProfile` calls `dismissPendingFilterMisfits`. This marks pending recommendations that
+  no longer pass the mutual filters as acted on, in both directions, without generating new
+  ones. The rows are kept, not deleted, so `shown_at` still drives the cooldown and the batch
+  is never refilled early. The new filters fully apply from the next daily batch.
+- Seeded synthetic profiles (seed script and the backfill in migration `0017`) are interested in
+  the opposite gender, at their own age ±10 (minimum 18). This matches the source speed-dating
+  dataset.
+- The scoring code (`scoring.ts`) is unchanged, so the offline evaluation is unaffected.
+- Other users never see `interested_in`. Candidate views go through `publicProfileFields`.
+
+**Where:**
+- Screens: `app/(onboarding)/partner.tsx`, `app/filters.tsx` (modal), filter icon in `app/home.tsx`
+- Components: `components/profile/partner-filters.tsx` (also `partnerFiltersSummary`),
+  `components/ui/range-slider.tsx`
+- App code: `lib/api/profile.ts > buildPartnerFiltersPayload`,
+  `lib/profile/draft-from-record.ts > readInterestedIn, readAgeRange`
+- API: `src/lib/partner-filters.ts`, `recommendations/repository.ts > partnerFilterConditions,
+  dismissPendingFilterMisfits`, `profile/service.ts > patchProfile`,
+  `profile/schemas.ts` (validation, min ≤ max)
+
 ### Compatibility scoring — live
 Scores how well two profiles fit each other.
 
@@ -369,6 +417,7 @@ Builds one batch of recommendations for a viewer.
      - be discoverable,
      - be in the same `looking_for` pool,
      - have no interaction with the viewer in either direction,
+     - pass the mutual partner filters (gender and age, see Partner filters),
      - be inside an optional bounding box.
   3. Scores and ranks the pool with `rankCandidates`.
   4. Writes the top k with `replaceRecommendations`. This deletes the pending rows and upserts on
@@ -426,7 +475,7 @@ Real users can therefore match synthetic profiles.
   inside the Worker's request budget.
 
 **Where:**
-- Triggers: Worker cron `*/30 * * * *` (runs only when `SIMULATION_ENABLED="true"` in
+- Triggers: Worker cron `0 8,20 * * *` (08:00 and 20:00 UTC) (runs only when `SIMULATION_ENABLED="true"` in
   `wrangler.jsonc`), and `POST /staff/simulation/tick`.
 
 **Missing:** a tick run against the dev DB, and an on-device check of an agent replying to a real

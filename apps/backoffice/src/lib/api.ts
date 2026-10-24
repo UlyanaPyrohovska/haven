@@ -1,3 +1,6 @@
+// Empty in dev (Vite proxy); set at build time for the deployed site.
+const API_URL = import.meta.env.VITE_API_URL ?? "";
+
 type ApiError = { code: string; message: string };
 
 async function parseError(response: Response): Promise<ApiError> {
@@ -9,7 +12,7 @@ async function parseError(response: Response): Promise<ApiError> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(path, {
+	const response = await fetch(`${API_URL}${path}`, {
 		...init,
 		credentials: "include",
 		headers: {

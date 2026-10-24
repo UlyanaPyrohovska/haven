@@ -1,3 +1,5 @@
+import { cors } from "hono/cors";
+import { BACKOFFICE_ORIGIN } from "./lib/auth";
 import { notFoundHandler } from "./lib/http/errors";
 import { createOpenAPIApp, withOpenApiDoc } from "./lib/openapi";
 import auth from "./modules/auth";
@@ -13,6 +15,9 @@ import staff from "./modules/staff";
 
 export const createApp = () => {
 	const app = withOpenApiDoc(createOpenAPIApp());
+
+	// The deployed backoffice is a separate origin; it sends the session cookie (same site, SameSite=Lax).
+	app.use("*", cors({ origin: BACKOFFICE_ORIGIN, credentials: true }));
 
 	app.route("/auth", auth);
 	app.route("/", staff);

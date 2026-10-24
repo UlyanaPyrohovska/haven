@@ -9,6 +9,7 @@ import Svg, { Path } from "react-native-svg";
 import { DailyQuestionCard } from "@/components/home/daily-question-card";
 import { MoodCard } from "@/components/home/mood-card";
 import { LocationPill } from "@/components/location/location-pill";
+import { partnerFiltersSummary } from "@/components/profile/partner-filters";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemedText } from "@/components/themed-text";
 import { Colors, FontFamily, Radius, Spacing } from "@/constants/app-config";
@@ -25,6 +26,7 @@ import {
 	recommendationsQueryKey,
 } from "@/lib/api/recommendations";
 import { useSession } from "@/lib/auth/client";
+import { readAgeRange, readInterestedIn } from "@/lib/profile/draft-from-record";
 
 /** Semi-ellipse dome: flat bottom, curved top, full screen width — matches the wireframe. */
 const DOCK = {
@@ -125,7 +127,7 @@ export default function HomeScreen() {
 	const queryClient = useQueryClient();
 	const { data: session } = useSession();
 	const hasSession = Boolean(session);
-	useProfileQuery(hasSession);
+	const profile = useProfileQuery(hasSession);
 
 	const recommendations = useQuery({
 		queryKey: recommendationsQueryKey,
@@ -153,6 +155,9 @@ export default function HomeScreen() {
 	const displayName = session?.user.name?.split(" ")[0] ?? "Uliana";
 	const photoUrl = session?.user.image?.trim() || null;
 	const newConnections = recommendations.data?.count ?? 0;
+	const filtersSummary = profile.data
+		? partnerFiltersSummary(readInterestedIn(profile.data.interestedIn), readAgeRange(profile.data))
+		: null;
 	const dockClearance = DOCK.arcHeight + DOCK.fabSize / 2 + DOCK.fabLift + Spacing.lg;
 	const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 	// Only user pulls drive the spinner; background refetches flipping `refreshing` offscreen leave it stuck on iOS.
@@ -263,7 +268,22 @@ export default function HomeScreen() {
 							{newConnections > 0 ? t("home.connectionsHint") : t("home.connectionsEmptyHint")}
 						</ThemedText>
 					</View>
-					<Ionicons name="chevron-forward" size={22} color={theme.muted} />
+					<View style={styles.connectionsActions}>
+						{/* Nested pressable: takes the touch, so the card's own navigation doesn't fire. */}
+						<Pressable
+							accessibilityRole="button"
+							accessibilityLabel={t("filters.buttonA11y", { summary: filtersSummary ?? t("filters.everyone") })}
+							hitSlop={Spacing.sm}
+							onPress={() => router.push("/filters" as Href)}
+							style={({ pressed }) => [
+								styles.filtersButton,
+								{ backgroundColor: filtersSummary ? theme.accentSoft : theme.field, opacity: pressed ? 0.6 : 1 },
+							]}
+						>
+							<Ionicons name="options-outline" size={18} color={filtersSummary ? theme.tint : theme.muted} />
+						</Pressable>
+						<Ionicons name="chevron-forward" size={22} color={theme.muted} />
+					</View>
 				</Pressable>
 
 				<MoodCard />
@@ -327,6 +347,18 @@ const styles = StyleSheet.create({
 	date: {
 		textTransform: "uppercase",
 		letterSpacing: 1,
+	},
+	connectionsActions: {
+		alignSelf: "stretch",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
+	filtersButton: {
+		width: 34,
+		height: 34,
+		borderRadius: Radius.pill,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	connectionsCard: {
 		flexDirection: "row",

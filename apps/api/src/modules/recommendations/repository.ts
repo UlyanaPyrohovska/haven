@@ -1,8 +1,26 @@
-import { and, asc, eq, exists, getTableColumns, inArray, ne, not, or, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	eq,
+	exists,
+	getTableColumns,
+	gt,
+	gte,
+	inArray,
+	isNull,
+	lte,
+	ne,
+	not,
+	or,
+	type SQL,
+	sql,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db";
 import { crossings, interactions, recommendations, userEmbeddings, userProfiles } from "@/db/schema";
+import { ageFromBirthDate, parseIsoDate } from "@/lib/age";
 import { customInterestKey } from "@/lib/custom-interests";
+import { birthDateWindow, mutualFilterMatch, type PartnerFilterProfile } from "@/lib/partner-filters";
 import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile-view";
 import { coerceLastShownAt } from "@/lib/recommendation-cadence";
 import type { ScoringProfile } from "@/lib/scoring";
@@ -13,9 +31,10 @@ export { publicProfileColumns };
 
 export type ViewerProfile = ProfileRow & { id: number };
 
-export type ScoringViewerProfile = ScoringProfile & {
-	lookingFor: number;
-};
+export type ScoringViewerProfile = ScoringProfile &
+	PartnerFilterProfile & {
+		lookingFor: number;
+	};
 
 const PREF_KEYS = ["prefAttr", "prefSinc", "prefIntel", "prefFun", "prefAmb", "prefShar"] as const;
 const SELF_KEYS = ["selfAttr", "selfSinc", "selfIntel", "selfFun", "selfAmb", "selfShar"] as const;
@@ -23,6 +42,11 @@ const SELF_KEYS = ["selfAttr", "selfSinc", "selfIntel", "selfFun", "selfAmb", "s
 const scoringProfileSelect = {
 	id: userProfiles.id,
 	lookingFor: userProfiles.lookingFor,
+	gender: userProfiles.gender,
+	birthDate: userProfiles.birthDate,
+	interestedIn: userProfiles.interestedIn,
+	prefAgeMin: userProfiles.prefAgeMin,
+	prefAgeMax: userProfiles.prefAgeMax,
 	latitude: userProfiles.latitude,
 	longitude: userProfiles.longitude,
 	interestSports: userProfiles.interestSports,
@@ -61,6 +85,11 @@ const scoringProfileSelect = {
 type ScoringProfileRow = {
 	id: number;
 	lookingFor: number;
+	gender: number | null;
+	birthDate: string | null;
+	interestedIn: number[] | null;
+	prefAgeMin: number | null;
+	prefAgeMax: number | null;
 	latitude: number | null;
 	longitude: number | null;
 	customInterests: string[];
@@ -109,6 +138,11 @@ function mapScoringProfileRow(row: ScoringProfileRow): ScoringViewerProfile {
 	return {
 		id: row.id,
 		lookingFor: row.lookingFor,
+		gender: row.gender,
+		birthDate: row.birthDate ? parseIsoDate(row.birthDate) : null,
+		interestedIn: row.interestedIn,
+		prefAgeMin: row.prefAgeMin,
+		prefAgeMax: row.prefAgeMax,
 		latitude: row.latitude,
 		longitude: row.longitude,
 		interests: INTEREST_KEYS.map((key) => row[key]),
@@ -165,12 +199,51 @@ function noInteractionWith(viewerId: number) {
 	);
 }
 
+/**
+ * Mutual gender and age filters (mirrors `mutualFilterMatch`). Null filters and unknown
+ * candidate data pass, so nobody disappears just because a field is empty.
+ */
+function partnerFilterConditions(viewer: ScoringViewerProfile): SQL[] {
+	const conditions: SQL[] = [];
+
+	// Viewer -> candidate
+	if (viewer.interestedIn && viewer.interestedIn.length > 0) {
+		conditions.push(or(isNull(userProfiles.gender), inArray(userProfiles.gender, viewer.interestedIn)) as SQL);
+	}
+
+	const { latest, earliestExclusive } = birthDateWindow(viewer.prefAgeMin, viewer.prefAgeMax);
+
+	if (latest) {
+		conditions.push(or(isNull(userProfiles.birthDate), lte(userProfiles.birthDate, latest)) as SQL);
+	}
+
+	if (earliestExclusive) {
+		conditions.push(or(isNull(userProfiles.birthDate), gt(userProfiles.birthDate, earliestExclusive)) as SQL);
+	}
+
+	// Candidate -> viewer
+	if (viewer.gender != null) {
+		conditions.push(
+			sql`(${userProfiles.interestedIn} IS NULL OR cardinality(${userProfiles.interestedIn}) = 0 OR ${viewer.gender} = ANY(${userProfiles.interestedIn}))`,
+		);
+	}
+
+	if (viewer.birthDate) {
+		const viewerAge = ageFromBirthDate(viewer.birthDate);
+		conditions.push(or(isNull(userProfiles.prefAgeMin), lte(userProfiles.prefAgeMin, viewerAge)) as SQL);
+		conditions.push(or(isNull(userProfiles.prefAgeMax), gte(userProfiles.prefAgeMax, viewerAge)) as SQL);
+	}
+
+	return conditions;
+}
+
 function poolConditions(viewer: ScoringViewerProfile, maxKm: number | null | undefined, syntheticOnly = false) {
 	const conditions = [
 		ne(userProfiles.id, viewer.id),
 		eq(userProfiles.discoverable, true),
 		eq(userProfiles.lookingFor, viewer.lookingFor),
 		noInteractionWith(viewer.id),
+		...partnerFilterConditions(viewer),
 	];
 
 	if (syntheticOnly) {
@@ -460,4 +533,67 @@ export async function getLastBatchShownAt(db: Db, viewerId: number): Promise<Dat
 		.where(eq(recommendations.userId, viewerId));
 
 	return coerceLastShownAt(row?.lastShown ?? null);
+}
+
+const filterProfileSelect = {
+	id: userProfiles.id,
+	gender: userProfiles.gender,
+	birthDate: userProfiles.birthDate,
+	interestedIn: userProfiles.interestedIn,
+	prefAgeMin: userProfiles.prefAgeMin,
+	prefAgeMax: userProfiles.prefAgeMax,
+} as const;
+
+type FilterProfileRow = {
+	gender: number | null;
+	birthDate: string | null;
+	interestedIn: number[] | null;
+	prefAgeMin: number | null;
+	prefAgeMax: number | null;
+};
+
+function toFilterProfile(row: FilterProfileRow): PartnerFilterProfile {
+	return { ...row, birthDate: row.birthDate ? parseIsoDate(row.birthDate) : null };
+}
+
+/**
+ * After a filter change, retires pending recommendations (in both directions) that no longer
+ * pass the mutual filters. Rows are marked acted-on instead of deleted so `shown_at` still
+ * drives the cooldown: the batch shrinks but is never refilled early.
+ */
+export async function dismissPendingFilterMisfits(db: Db, profileId: number): Promise<number> {
+	const [self] = await db.select(filterProfileSelect).from(userProfiles).where(eq(userProfiles.id, profileId));
+
+	if (!self) {
+		return 0;
+	}
+
+	const other = alias(userProfiles, "other");
+	const pending = await db
+		.select({
+			id: recommendations.id,
+			gender: other.gender,
+			birthDate: other.birthDate,
+			interestedIn: other.interestedIn,
+			prefAgeMin: other.prefAgeMin,
+			prefAgeMax: other.prefAgeMax,
+		})
+		.from(recommendations)
+		.innerJoin(
+			other,
+			or(
+				and(eq(recommendations.userId, profileId), eq(other.id, recommendations.candidateId)),
+				and(eq(recommendations.candidateId, profileId), eq(other.id, recommendations.userId)),
+			),
+		)
+		.where(eq(recommendations.actedOn, false));
+
+	const viewer = toFilterProfile(self);
+	const misfitIds = pending.filter((row) => !mutualFilterMatch(viewer, toFilterProfile(row))).map((row) => row.id);
+
+	if (misfitIds.length > 0) {
+		await db.update(recommendations).set({ actedOn: true }).where(inArray(recommendations.id, misfitIds));
+	}
+
+	return misfitIds.length;
 }

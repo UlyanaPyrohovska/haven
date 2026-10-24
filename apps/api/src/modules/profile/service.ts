@@ -9,6 +9,9 @@ import * as recommendationService from "@/modules/recommendations/service";
 import * as repository from "./repository";
 import type { ProfileUpdate } from "./schemas";
 
+/** Fields that change who passes the mutual partner filters. */
+const FILTER_FIELDS = ["interestedIn", "prefAgeMin", "prefAgeMax", "gender", "birthDate"] as const;
+
 export async function requireUserId(c: Context<{ Bindings: CloudflareBindings }>) {
 	const userId = await getSessionUserId(c);
 
@@ -72,6 +75,10 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 
 	if (profile) {
 		await recommendationService.maybeGenerateOnProfileComplete(db, profile as ProfileRow & { id: number }, wasComplete);
+
+		if (FILTER_FIELDS.some((field) => payload[field] !== undefined)) {
+			await recommendationService.dismissPendingFilterMisfits(db, (profile as { id: number }).id);
+		}
 	}
 
 	return { profile };

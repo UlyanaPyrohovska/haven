@@ -4,7 +4,7 @@ import { createAuth } from "@/lib/auth";
 import { errorHandler } from "@/lib/http/errors";
 import { validationErrorHook } from "./validation";
 
-const PRODUCTION_URL = "https://haven-api.haven-app.workers.dev";
+const PRODUCTION_URL = "https://haven.pirogotter.dev";
 
 const OPEN_API_INFO = {
 	openapi: "3.0.4" as const,

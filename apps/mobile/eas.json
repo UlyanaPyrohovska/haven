@@ -8,13 +8,13 @@
 			"developmentClient": true,
 			"distribution": "store",
 			"env": {
-				"EXPO_PUBLIC_API_URL": "https://haven-api.haven-app.workers.dev"
+				"EXPO_PUBLIC_API_URL": "https://haven.pirogotter.dev"
 			}
 		},
 		"preview": {
 			"distribution": "internal",
 			"env": {
-				"EXPO_PUBLIC_API_URL": "https://haven-api.haven-app.workers.dev"
+				"EXPO_PUBLIC_API_URL": "https://haven.pirogotter.dev"
 			}
 		},
 		"production": {
@@ -23,7 +23,7 @@
 				"credentialsSource": "local"
 			},
 			"env": {
-				"EXPO_PUBLIC_API_URL": "https://haven-api.haven-app.workers.dev"
+				"EXPO_PUBLIC_API_URL": "https://haven.pirogotter.dev"
 			}
 		}
 	},

@@ -28,6 +28,10 @@ export type ProfileDraft = {
 	customInterests: string[];
 	/** Importance on a 1–10 scale, normalised into the 100-point `pref_*` split on submit. */
 	partner: Partial<Record<PrefKey, number>>;
+	/** "Show me" filter; every option selected means open to everyone. */
+	interestedIn: GenderValue[];
+	/** Undefined until the user sees the partner step; `max` at `AGE_FILTER_MAX` means no upper limit. */
+	ageRange: { min: number; max: number } | undefined;
 	self: Partial<Record<SelfKey, number>>;
 	privacy: typeof DEFAULT_PRIVACY_SETTINGS;
 	/** Unset preset leaves location columns untouched; coordinates are only filled for "device". */
@@ -52,6 +56,8 @@ const emptyDraft: ProfileDraft = {
 	interests: [],
 	customInterests: [],
 	partner: {},
+	interestedIn: [],
+	ageRange: undefined,
 	self: {},
 	privacy: { ...DEFAULT_PRIVACY_SETTINGS },
 	location: {

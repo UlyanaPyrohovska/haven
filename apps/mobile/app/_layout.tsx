@@ -108,6 +108,7 @@ function RootLayoutContent({
 						}}
 					>
 						<Stack.Screen name="daily-question" options={{ presentation: "modal" }} />
+						<Stack.Screen name="filters" options={{ presentation: "modal" }} />
 					</Stack>
 					<StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 				</ThemeProvider>

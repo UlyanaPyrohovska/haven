@@ -248,7 +248,10 @@ export default function ProfileEditScreen() {
 				onChange={(customInterests) => updateDraft({ customInterests })}
 			/>
 
-			<ThemedText type="label">{t("onboarding.partner.title")}</ThemedText>
+			<ThemedText type="label">{t("onboarding.partner.rankingTitle")}</ThemedText>
+			<ThemedText type="caption" style={{ color: theme.muted }}>
+				{t("onboarding.partner.rankingHint")}
+			</ThemedText>
 			<ScaleLegend low={t("onboarding.partner.low")} high={t("onboarding.partner.high")} />
 			{TraitDimensions.map((dimension) => (
 				<SliderScale

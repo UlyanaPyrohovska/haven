@@ -137,7 +137,7 @@ export const userProfiles = pgTable(
 		passwordHash: varchar("password_hash", { length: 255 }),
 
 		// Demographic
-		gender: smallint("gender"), // 0 = female, 1 = male (per CSV)
+		gender: smallint("gender"), // 0 = female, 1 = male (per CSV), 2 = non-binary
 		// Stored instead of age so it never goes stale. The synthetic CSV only carries an
 		// age, so seeding derives a birth date from it.
 		birthDate: date("birth_date"),
@@ -196,6 +196,12 @@ export const userProfiles = pgTable(
 		selfFun: smallint("self_fun"),
 		selfAmb: smallint("self_amb"),
 		selfShar: smallint("self_shar"),
+
+		// Partner filters — hard, mutual pool filters (null = open to everyone)
+		/** Genders (same codes as `gender`) the user wants to meet. */
+		interestedIn: smallint("interested_in").array(),
+		prefAgeMin: smallint("pref_age_min"),
+		prefAgeMax: smallint("pref_age_max"),
 
 		/** When false, the profile is hidden from new recommendations. */
 		discoverable: boolean("discoverable").notNull().default(true),
