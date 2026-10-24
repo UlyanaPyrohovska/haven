@@ -52,6 +52,7 @@ Neon Postgres (aws-eu-central-1, pgvector) via drizzle-orm/neon-http
   text lives in `locales/en.json`.
 - **Realtime.** Chat sockets go to the `ChatRoom` Durable Object (`CHAT` binding), always created
   with `jurisdiction("eu")`. It holds no data: Neon stays the only store.
+- **Push.** The Worker sends straight to FCM/APNs (`src/lib/push.ts`), with generic copy only.
 - **Synthetic vs real.** The `is_synthetic` flag marks the 2000 dataset profiles. They get a
   deterministic mood, daily answer, name and avatar so that every card looks complete.
 
@@ -227,6 +228,11 @@ Opening a match from the chat header shows their profile in **match mode**:
 The chat header also has report and block buttons. They work for every peer, including synthetic
 (demo) profiles. Either one ends the match and returns to the inbox.
 
+**New-match popup.** Agents answer likes on the simulation tick, so most matches appear while the
+user is away. When Home or Matches loads a match the user hasn't seen yet, a "You have a new match!"
+dialog opens for the newest one, with **Send a message** (opens the chat) and **Later**. Closing it
+marks every current match as seen.
+
 **How it works:**
 - `GET /matches` reads `interactions` rows with `match = true` on either side. Interactions are
   undirected pairs, so a match exists exactly once. Each row also gets `lastMessage`,
@@ -245,11 +251,15 @@ The chat header also has report and block buttons. They work for every peer, inc
   - `compatible`: the fallback, so the list is never empty.
 - `matchedAt` is the interaction's `created_at` (the first like). There is no separate matched-at
   column.
+- The popup (`NewMatchDialog`) compares `GET /matches` with the match ids already seen, which are
+  stored in SecureStore (`haven.seenMatchIds`). The seen list is per device, not per account, and
+  SecureStore can't reliably hold more than about 2 KB (about 350 ids).
 
 **Where:**
 - Screens: `app/matches/index.tsx`, `app/connections/[candidateId].tsx` (match mode in
   `components/connections/connection-candidate-screen.tsx`, `why-matched-card.tsx`)
-- Code: `components/chat/conversation-row.tsx`, `lib/api/recommendations.ts`
+- Code: `components/chat/conversation-row.tsx`, `components/connections/new-match-dialog.tsx`,
+  `lib/api/recommendations.ts`
 - API: `GET /matches`, `GET /recommendations/{candidateId}`
 
 ### Chat — live
@@ -290,7 +300,7 @@ one opener and then shows a "demo profile, can't reply" notice.
 - Code: `components/chat/`, `lib/api/chat.ts`, `lib/chat/`
 - API: `modules/chat/`, `src/chat-room.ts`, `src/lib/chat.ts`
 
-**Missing:** push notifications for new messages (D5), attachments, edit/delete, read receipts shown
+**Missing:** attachments, edit/delete, read receipts shown
 to the sender, unmatch without blocking.
 
 ### Daily question — live
@@ -339,8 +349,49 @@ One mood per day, shown as context on candidate cards.
 `components/connections/safety-dialogs.tsx`, used by the candidate/match profile screen and the chat
 thread `app/matches/[candidateId].tsx`.
 
-### Match notifications — planned
-Push notification on a new match (BACKLOG D5).
+### Notifications — partial
+Remote push for a new chat message, a new match and a fresh recommendations batch, plus one local
+reminder for the daily question and mood check-in.
+
+**How it works:**
+- **Delivery.** The Worker calls Google FCM (Android) and Apple APNs (iOS) directly; no relay such as
+  Expo Push sits in between. `src/lib/push.ts` signs the provider tokens with WebCrypto (RS256
+  service-account JWT exchanged for a Google OAuth token; ES256 APNs provider JWT) and caches them
+  per isolate. With the secrets unset, `sendPush` returns `skipped`, so local dev runs without push.
+- **Privacy.** Copy is generic ("One of your matches wrote to you"): no names, message text or
+  location, because the payload passes through Google/Apple. The data only carries `type` and the
+  sender's profile id `candidateId`, for routing the tap.
+- **Tokens.** `push_tokens` (unique `token`, `user_profile_id` cascade) stores the native device
+  token. `PUT /push-token` upserts, so a device that signs into another account moves to it.
+  `DELETE /push-token` runs on sign-out. Tokens that FCM/APNs report dead (404/410, invalid
+  token) are pruned after a send.
+- **Triggers.** `notify(env, db, profileId, notice)` (`modules/notifications/service.ts`) is best
+  effort and never throws. Request paths run it in `waitUntil`:
+  - `postMessage` notifies the other side of the conversation.
+  - `postDecision` notifies the candidate when the viewer's accept creates a match.
+  - `runTick` (cron and staff tick) notifies a real liker when an agent accepts them back, and a
+    real user when their daily batch was generated.
+- **Mobile.** `useNotifications()` (`lib/notifications/index.ts`) is mounted on home. It asks for
+  permission once, registers `getDevicePushTokenAsync()`, follows token refreshes, and routes taps:
+  message to `/matches/{id}`, match to `/connections/{id}`, recommendations to `/connections`,
+  reminder to `/daily-question`. The reminder is a single local notification at 19:00, today if the
+  question or mood is still open, else tomorrow. It is re-planned on each home visit, so someone who
+  stays away gets one nudge, not a daily stream.
+
+**Where:**
+- API: `src/lib/push.ts`, `modules/notifications/`, hooks in `modules/chat/service.ts`,
+  `modules/recommendations/service.ts`, `modules/simulation/engine.ts`
+- Mobile: `lib/notifications/index.ts`, `lib/api/notifications.ts`, `app.json` (`expo-notifications`
+  plugin, `googleServicesFile`)
+
+**Setup:** Worker secrets `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY` (Firebase service
+account), `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (.p8), `APNS_BUNDLE_ID`, and
+`APNS_SANDBOX=true` for development builds. Mobile needs `apps/mobile/google-services.json` from the
+Firebase project, then a native rebuild.
+
+**Missing:** an in-app on/off switch per kind (the OS setting is the only control), no push while
+the recipient is already in that chat, the in-app match modal (BACKLOG D5), and no APNs check
+under local `wrangler dev` (APNs needs HTTP/2, which deployed Workers use).
 
 ---
 
@@ -446,10 +497,26 @@ tracked.
 
 **Missing:** `pnpm db:migrate`, `pnpm db:seed-crossings`, and an on-device check.
 
-### Bio embeddings — planned
-Bio embeddings will be computed locally with `all-MiniLM-L6-v2` (the data stays in the EU) and
-stored in `user_embeddings.bio`, a pgvector column with an HNSW index. Once they exist, the bio
-term turns on automatically (W2.1, W2.2).
+### Bio embeddings — partial
+Bios are embedded so that similar bios raise the compatibility score (the `bio` term, weight 0.35).
+
+**How it works.** `research/embeddings/generate_embeddings.py` runs locally with `all-MiniLM-L6-v2`.
+Bios never go to an external API (DPO: the data stays in the EU). The script writes unit-normalized
+384-d vectors to `user_embeddings.bio`, a pgvector column with an HNSW cosine index. It is idempotent:
+it embeds profiles that have a bio and either no vector or a profile edited since the vector
+(`user_profiles.updated_at > user_embeddings.updated_at`), and it deletes vectors whose bio was
+cleared. The recommendation repository left-joins `user_embeddings`, so `bioEmbedding` is populated
+with no API change. `unilateral` uses the bio term only when both sides have a vector; otherwise it
+drops the term and renormalizes the other weights (tested in `scoring.test.ts`). When the viewer has a
+vector, the candidate pool is an HNSW `bio <=> viewer` shortlist (200).
+
+Run: `cd research/embeddings && ENV_FILE=.env.dev .venv/bin/python generate_embeddings.py`
+(`.env.prod` for prod). Dev: 2002 bios embedded in 21 s encode+write (32 s total, Apple Silicon CPU).
+
+**Missing:** not run on prod. New or edited bios of real users get no vector until the script is
+re-run, so their bio term stays off until then (they are scored on interest, geo and preference).
+Embedding at onboarding would need an in-Worker model such as Workers AI, which adds a subprocessor
+and needs DPO sign-off.
 
 ### Simulation engine and synthetic agents — partial
 The 2000 synthetic profiles act as agents. On each tick they:
@@ -560,4 +627,5 @@ window. A "Run tick" button runs the simulation and shows the tick's stats.
 - **Schema changes.** Edit `src/db/schema.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
   Never hand-edit an applied migration.
 - **Data residency.** The Neon database is in `aws-eu-central-1`. Embeddings are computed locally.
-  No personal data leaves the EU.
+  The only exception is push: device tokens and generic notification text go to Google FCM and Apple
+  APNs, which is unavoidable for remote push. No profile data, names or message text are sent.

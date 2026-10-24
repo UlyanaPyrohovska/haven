@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.haven.app",
+      "package": "com.ulianapyrohovska.haven",
+      "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.RECORD_AUDIO",
@@ -54,6 +55,14 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#F5B942",
+          "defaultChannel": "default"
+        }
+      ],
       "expo-font",
       "expo-web-browser",
       "expo-localization",

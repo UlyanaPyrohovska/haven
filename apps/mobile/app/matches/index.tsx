@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { ConversationRow } from "@/components/chat/conversation-row";
+import { NewMatchDialog } from "@/components/connections/new-match-dialog";
 import { ProfileHeaderButton } from "@/components/profile/profile-header-button";
 import { ThemedText } from "@/components/themed-text";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -56,6 +57,7 @@ export default function MatchesScreen() {
 					))}
 				</MenuCard>
 			)}
+			<NewMatchDialog matches={matches.data?.matches} />
 		</FormScreen>
 	);
 }

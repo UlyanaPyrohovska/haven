@@ -4,6 +4,7 @@ import { displayNameForCandidate } from "@/lib/candidate-display";
 import { errors } from "@/lib/errors";
 import { resolveRecCooldownHours } from "@/lib/recommendation-cadence";
 import { requireStaffAdmin } from "@/lib/session";
+import { notify } from "@/modules/notifications/service";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
 import { runTick } from "@/modules/simulation/engine";
 import * as repository from "./repository";
@@ -140,9 +141,12 @@ export async function deleteUser(c: Context<{ Bindings: CloudflareBindings }>, p
 export async function simulationTick(c: Context<{ Bindings: CloudflareBindings }>, limit?: number) {
 	await requireStaffAdmin(c);
 
-	return runTick(getDb(c.env.DATABASE_URL), {
+	const db = getDb(c.env.DATABASE_URL);
+
+	return runTick(db, {
 		limit,
 		cooldownHours: resolveRecCooldownHours(c.env.REC_COOLDOWN_HOURS),
+		notify: (profileId, notice) => notify(c.env, db, profileId, notice),
 	});
 }
 

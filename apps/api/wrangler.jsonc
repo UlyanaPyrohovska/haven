@@ -6,6 +6,7 @@
 	"compatibility_flags": ["nodejs_compat"],
 	// Custom domain; the workers.dev URL stays live so older app builds keep working.
 	"routes": [{ "pattern": "haven.pirogotter.dev", "custom_domain": true }],
+	"workers_dev": true,
 	"observability": {
 		"enabled": true
 	},

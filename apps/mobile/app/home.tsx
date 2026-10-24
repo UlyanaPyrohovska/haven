@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
+import { NewMatchDialog } from "@/components/connections/new-match-dialog";
 import { DailyQuestionCard } from "@/components/home/daily-question-card";
 import { MoodCard } from "@/components/home/mood-card";
 import { LocationPill } from "@/components/location/location-pill";
@@ -26,6 +27,7 @@ import {
 	recommendationsQueryKey,
 } from "@/lib/api/recommendations";
 import { useSession } from "@/lib/auth/client";
+import { useNotifications } from "@/lib/notifications";
 import { readAgeRange, readInterestedIn } from "@/lib/profile/draft-from-record";
 
 /** Semi-ellipse dome: flat bottom, curved top, full screen width — matches the wireframe. */
@@ -126,6 +128,7 @@ export default function HomeScreen() {
 	const { width } = useWindowDimensions();
 	const queryClient = useQueryClient();
 	const { data: session } = useSession();
+	useNotifications();
 	const hasSession = Boolean(session);
 	const profile = useProfileQuery(hasSession);
 
@@ -304,6 +307,7 @@ export default function HomeScreen() {
 				badgeForeground={theme.tint}
 				onMessagesPress={() => router.push("/matches" as Href)}
 			/>
+			<NewMatchDialog matches={matches.data?.matches} />
 		</View>
 	);
 }

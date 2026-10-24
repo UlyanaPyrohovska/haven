@@ -1,6 +1,7 @@
 import { createApp } from "@/app";
 import { getDb } from "@/db";
 import { resolveRecCooldownHours } from "@/lib/recommendation-cadence";
+import { notify } from "@/modules/notifications/service";
 import { runTick } from "@/modules/simulation/engine";
 
 export { ChatRoom } from "@/chat-room";
@@ -14,10 +15,13 @@ export default {
 			return;
 		}
 
+		const db = getDb(env.DATABASE_URL);
+
 		ctx.waitUntil(
-			runTick(getDb(env.DATABASE_URL), { cooldownHours: resolveRecCooldownHours(env.REC_COOLDOWN_HOURS) }).then(
-				(stats) => console.log("simulation tick", stats),
-			),
+			runTick(db, {
+				cooldownHours: resolveRecCooldownHours(env.REC_COOLDOWN_HOURS),
+				notify: (profileId, notice) => notify(env, db, profileId, notice),
+			}).then((stats) => console.log("simulation tick", stats)),
 		);
 	},
 } satisfies ExportedHandler<CloudflareBindings>;
