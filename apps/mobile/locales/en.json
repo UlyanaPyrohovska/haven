@@ -3,6 +3,13 @@
 		"name": "Haven",
 		"tagline": "Connect without limits"
 	},
+	"filters": {
+		"buttonA11y": "Filters. Showing {{summary}}. Tap to change.",
+		"everyone": "Everyone",
+		"appliesNote": "Your next daily connections follow these. Anyone in today's who no longer fits is removed.",
+		"save": "Save",
+		"saveError": "We couldn't save your filters. Please try again."
+	},
 	"home": {
 		"title": "Haven",
 		"greeting": "Hello {{name}}",
@@ -83,7 +90,6 @@
 		"accept": "Accept connection",
 		"decline": "Decline connection",
 		"message": "Send message",
-		"messageSoon": "Messaging is coming soon.",
 		"emptyTitle": "No new connections",
 		"emptySubtitle": "Check back later — we'll surface people nearby when there's a good fit.",
 		"caughtUpTitle": "You're all caught up",
@@ -371,8 +377,17 @@
 			}
 		},
 		"partner": {
-			"title": "What matters in others",
-			"subtitle": "Drag each slider to show how much it matters to you. We balance the weightings for you.",
+			"title": "Who you want to meet",
+			"subtitle": "Set who you're open to, then tell us what you value most.",
+			"filtersTitle": "Who you see",
+			"filtersHint": "You'll only see people who fit this and who are open to meeting someone like you.",
+			"showMeLabel": "Show me",
+			"showMeInvalid": "Pick at least one option under \"Show me\".",
+			"ageLabel": "Age range",
+			"ageMinA11y": "Youngest age",
+			"ageMaxA11y": "Oldest age",
+			"rankingTitle": "What matters most",
+			"rankingHint": "These don't hide anyone. They decide who we show you first. Drag each slider to set how much it matters.",
 			"low": "Doesn't matter",
 			"high": "Matters most",
 			"levels": ["Doesn't matter", "A little", "Somewhat", "A lot", "Essential"],

@@ -4,9 +4,13 @@
 	"scripts": {
 		"dev": "wrangler dev --ip 0.0.0.0 --env-file .env.dev",
 		"deploy": "wrangler deploy --minify",
+		"deploy:dev": "pnpm db:migrate:dev && sh scripts/deploy.sh .env.dev",
+		"deploy:prod": "pnpm db:migrate:prod && sh scripts/deploy.sh .env.prod",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
+		"db:migrate:dev": "ENV_FILE=.env.dev drizzle-kit migrate",
+		"db:migrate:prod": "ENV_FILE=.env.prod drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"db:visualizer": "drizzle-lab visualizer -c drizzle.config.ts -e .env --ts-config tsconfig.json",

@@ -37,6 +37,8 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - `pnpm dev` — API (wrangler, `localhost:8787`) + Metro via turbo.
 - `pnpm dev:backoffice`, `pnpm --filter haven-app dev:prod` (prod API).
 - `pnpm db:generate | db:migrate | db:studio | db:seed`
+- Deploy API: `pnpm --filter api deploy:dev | deploy:prod` — migrates that env file's DB, then deploys the Worker with only its `DATABASE_URL` (`db:migrate:dev|prod` to migrate alone).
+- Deploy backoffice: `pnpm deploy:backoffice` — builds with `VITE_API_URL=https://haven.pirogotter.dev`, deploys static assets to `admin.pirogotter.dev`.
 - Tests: `pnpm --filter api test` (Vitest). Single file: `pnpm --filter api exec vitest run src/lib/scoring.test.ts`.
 - Lint/format: `pnpm check` (Biome, writes fixes). Prefer running it on changed files only.
 - Mobile native rebuild: `cd apps/mobile && pnpm ios|android` (needed after native dep changes; `prebuild` regenerates native folders).

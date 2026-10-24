@@ -12,7 +12,7 @@ function resolveAuthBaseUrl() {
 		return fromEnv.replace(/\/$/, "");
 	}
 
-	return `${window.location.origin}/auth`;
+	return `${import.meta.env.VITE_API_URL || window.location.origin}/auth`;
 }
 
 export const authClient = createAuthClient({

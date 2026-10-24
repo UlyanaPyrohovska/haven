@@ -354,13 +354,14 @@ their threshold and temperature with the results. Since the dataset interactions
 
 ---
 
-## [ ] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
+## [~] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
+Script + `requirements.txt` written; not yet run against the DB, runtime not recorded.
 
 **File:** `research/embeddings/generate_embeddings.py` (new `research/` tree). Local only — do
 **not** call external embedding APIs (DPO: bios stay in the EU / on-device). `all-MiniLM-L6-v2`
 is 384-d and matches `user_embeddings.bio vector(384)`.
 
-Steps: load `DATABASE_URL` from root `.env`; `psycopg` + `pgvector.psycopg.register_vector`;
+Steps: load `DATABASE_URL` from `apps/api/.env` (or `ENV_FILE=.env.dev|.env.prod`, as drizzle does); `psycopg` + `pgvector.psycopg.register_vector`;
 `SELECT id, bio FROM user_profiles WHERE bio IS NOT NULL AND id NOT IN (SELECT user_profile_id
 FROM user_embeddings)` (idempotent); encode in batches with `sentence-transformers`; upsert
 `(user_profile_id, bio, updated_at)` into `user_embeddings`. Record runtime. Acceptance = all

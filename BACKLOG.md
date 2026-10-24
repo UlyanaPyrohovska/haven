@@ -469,7 +469,7 @@ Sequential path from empty project to a seeded database with tables.
 
 Runs in `research/` folder, uses the same Neon DB.
 
-### `[ ]` E1 — research(embeddings): generate sentence-transformer embeddings for bios
+### `[~]` E1 — research(embeddings): generate sentence-transformer embeddings for bios
 
 - **Labels**: `type:research` `area:research` `prio:P1`
 - **Description**: Notebook that loads all synthetic users, runs `all-MiniLM-L6-v2` over each bio, and writes the resulting 384-d vector to the `user_embeddings` table.

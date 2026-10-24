@@ -30,13 +30,27 @@ export const INTEREST_UNSELECTED = LIKERT_MIN;
 /** Interests a user must pick before continuing, so the ranker has some signal. */
 export const MIN_SELECTED_INTERESTS = 5;
 
-/** `gender` is a smallint in the schema: 0 = female, 1 = male. */
+/** `gender` is a smallint in the schema: 0 = female, 1 = male, 2 = non-binary. */
 export const GenderOptions = [
 	{ value: 0, label: "Woman" },
 	{ value: 1, label: "Man" },
+	{ value: 2, label: "Non-binary" },
 ] as const;
 
 export type GenderValue = (typeof GenderOptions)[number]["value"];
+
+/** Plural labels for the "Show me" partner filter, same codes as `GenderOptions`. */
+export const InterestedInOptions = [
+	{ value: 0, label: "Women" },
+	{ value: 1, label: "Men" },
+	{ value: 2, label: "Non-binary people" },
+] as const satisfies readonly { value: GenderValue; label: string }[];
+
+/** Age-range filter bounds. The top value means "and older", stored as no upper limit. */
+export const AGE_FILTER_MIN = 18;
+export const AGE_FILTER_MAX = 99;
+/** Onboarding starts the range this many years either side of the user's own age. */
+export const AGE_FILTER_DEFAULT_SPREAD = 5;
 
 /** Primary matching mode — friends and dating never cross in recommendations. */
 export const LookingFor = {

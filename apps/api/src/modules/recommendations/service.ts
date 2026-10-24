@@ -341,6 +341,11 @@ export async function regenerate({ db, viewer }: ViewerContext) {
 	return { count };
 }
 
+/** Filters changed: drop pending people who no longer fit, without refilling the batch. */
+export function dismissPendingFilterMisfits(db: Db, profileId: number) {
+	return repository.dismissPendingFilterMisfits(db, profileId);
+}
+
 export async function getMatches({ db, viewer }: ViewerContext) {
 	const interactionRows = await repository.listMatchInteractions(db, viewer.id);
 	const stats = await chatRepository.listInboxStats(

@@ -1,0 +1,11 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "haven-backoffice",
+	"compatibility_date": "2026-06-28",
+	// Static SPA only; API calls go to VITE_API_URL (set in the deploy script).
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "single-page-application"
+	},
+	"routes": [{ "pattern": "admin.pirogotter.dev", "custom_domain": true }]
+}

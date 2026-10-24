@@ -97,7 +97,6 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 	const queryClient = useQueryClient();
 	const [decisionKind, setDecisionKind] = useState<DecisionKind | null>(null);
 	const [matchedDialog, setMatchedDialog] = useState(false);
-	const [messageDialog, setMessageDialog] = useState(false);
 	const [matchedName, setMatchedName] = useState("");
 	const [pendingMatch, setPendingMatch] = useState(false);
 	const [safetyDialog, setSafetyDialog] = useState<SafetyKind | null>(null);
@@ -351,7 +350,7 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 					disabled={data.actedOn || decisionKind !== null || decide.isPending}
 					onAccept={() => onDecision("accept")}
 					onDecline={() => onDecision("decline")}
-					onMessage={() => setMessageDialog(true)}
+					onMessage={() => router.push("/matches" as Href)}
 				/>
 			)}
 
@@ -376,15 +375,6 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 				kind={safetyDialog}
 				onClose={() => setSafetyDialog(null)}
 				onDone={onSafetyDone}
-			/>
-
-			<Dialog
-				visible={messageDialog}
-				icon="chatbubble-ellipses-outline"
-				title={t("connections.message")}
-				message={t("connections.messageSoon")}
-				confirmLabel={t("common.continue")}
-				onConfirm={() => setMessageDialog(false)}
 			/>
 		</View>
 	);

@@ -4,12 +4,14 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2026-06-28",
 	"compatibility_flags": ["nodejs_compat"],
+	// Custom domain; the workers.dev URL stays live so older app builds keep working.
+	"routes": [{ "pattern": "haven.pirogotter.dev", "custom_domain": true }],
 	"observability": {
 		"enabled": true
 	},
-	// Simulation tick (agents act, real users get due drops). Gated by SIMULATION_ENABLED="true".
+	// Simulation tick at 08:00 and 20:00 UTC (agents act, real users get due drops). Gated by SIMULATION_ENABLED.
 	"triggers": {
-		"crons": ["*/30 * * * *"]
+		"crons": ["0 8,20 * * *"]
 	},
 	// Chat sockets: one ChatRoom per conversation, always created in the EU jurisdiction.
 	"durable_objects": {
@@ -20,7 +22,7 @@
 	// `npx wrangler email sending enable <domain>`. remote: true makes `wrangler dev` send real mail.
 	"send_email": [{ "name": "EMAIL", "remote": true }],
 	"vars": {
-		"SIMULATION_ENABLED": "false",
+		"SIMULATION_ENABLED": "true",
 		// Must be an address on the onboarded domain.
 		"EMAIL_FROM": "no-reply@pirogotter.dev"
 	}
