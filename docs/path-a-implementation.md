@@ -17,7 +17,7 @@ Conventions used below:
 
 ---
 
-## [ ] W1.1 — Location wording in consent + info sheet  ·  ethics · P0
+## [x] W1.1 — Location wording in consent + info sheet  ·  ethics · P0
 
 Not code. Two Word files in `Thesis/Ethics_CE/`: `04_Informed_Consent_EN.docx` and
 `03_Participant_Information_Sheet_EN.docx`. Both currently omit location entirely while the
@@ -354,8 +354,8 @@ their threshold and temperature with the results. Since the dataset interactions
 
 ---
 
-## [~] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
-Script + `requirements.txt` written; not yet run against the DB, runtime not recorded.
+## [x] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
+> Status: run on dev on 2026-10-24: 2002 bios, 21 s encode+write (32 s total). Re-run on prod and after participants onboard.
 
 **File:** `research/embeddings/generate_embeddings.py` (new `research/` tree). Local only — do
 **not** call external embedding APIs (DPO: bios stay in the EU / on-device). `all-MiniLM-L6-v2`
@@ -374,7 +374,9 @@ or Cloudflare Workers AI `@cf/baai/bge-small-en-v1.5` (adds a subprocessor → D
 
 ---
 
-## [ ] W2.2 — Switch on the cosine term  ·  api · P1
+## [x] W2.2 — Switch on the cosine term  ·  api · P1
+
+> Status: `bio` weight was already on (0.35). The mixed-pairing test is in `scoring.test.ts`. The HNSW shortlist order (c) was checked in code, not measured.
 
 With embeddings present, `findScoringProfileById` / `listCandidatePool` already left-join
 `user_embeddings`, so `bioEmbedding` is populated. No scoring change needed beyond W1.2 — just

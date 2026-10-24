@@ -18,12 +18,14 @@ import {
 	sharedInterestLabels,
 	shouldShowCrossPaths,
 } from "@/lib/profile-view";
+import type { PushEnv } from "@/lib/push";
 import { CADENCE, isCooldownElapsed, nextRefreshAtIso, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
 import { scoreBreakdown } from "@/lib/scoring";
 import { getSessionUserId } from "@/lib/session";
 import * as chatRepository from "@/modules/chat/repository";
 import { ensureSyntheticOpener, toMessagePayload } from "@/modules/chat/service";
 import * as dailyQuestionRepository from "@/modules/daily-question/repository";
+import { notify } from "@/modules/notifications/service";
 import { generateRecommendations } from "./generator";
 import * as repository from "./repository";
 import type { DecisionBody } from "./schemas";
@@ -242,7 +244,13 @@ async function describeMatch(
 	};
 }
 
-export async function postDecision({ db, viewer }: ViewerContext, candidateId: number, body: DecisionBody) {
+export async function postDecision(
+	{ db, viewer }: ViewerContext,
+	candidateId: number,
+	body: DecisionBody,
+	env: PushEnv,
+	waitUntil: (task: Promise<unknown>) => void,
+) {
 	const pendingId = await repository.findPendingRecommendationId(db, viewer.id, candidateId);
 
 	if (!pendingId) {
@@ -257,6 +265,11 @@ export async function postDecision({ db, viewer }: ViewerContext, candidateId: n
 	);
 
 	await repository.markRecommendationActedOn(db, pendingId);
+
+	// The viewer sees the match on screen; the other side learns about it by push.
+	if (matched) {
+		waitUntil(notify(env, db, candidateId, { kind: "match", candidateId: viewer.id }));
+	}
 
 	const remainingCount = await repository.countPendingRecommendations(db, viewer.id);
 

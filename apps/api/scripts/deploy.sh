@@ -7,4 +7,4 @@ env_file="$1"
 secrets=.env.deploy
 trap 'rm -f "$secrets"' EXIT
 grep '^DATABASE_URL=' "$env_file" > "$secrets" || { echo "No DATABASE_URL in $env_file" >&2; exit 1; }
-wrangler deploy --minify --secrets-file "$secrets"
+pnpm exec wrangler deploy --minify --secrets-file "$secrets"

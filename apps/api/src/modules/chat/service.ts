@@ -10,6 +10,8 @@ import {
 } from "@/lib/chat";
 import { errors } from "@/lib/errors";
 import { type ProfileRow, sharedInterestLabels } from "@/lib/profile-view";
+import type { PushEnv } from "@/lib/push";
+import { notify } from "@/modules/notifications/service";
 import * as recommendationRepository from "@/modules/recommendations/repository";
 import type { ViewerContext } from "@/modules/recommendations/service";
 import * as repository from "./repository";
@@ -96,7 +98,13 @@ export async function getMessages(ctx: ViewerContext, candidateId: number, befor
 	};
 }
 
-export async function postMessage(ctx: ViewerContext, env: ChatEnv, candidateId: number, rawBody: string) {
+export async function postMessage(
+	ctx: ViewerContext,
+	env: ChatEnv & PushEnv,
+	candidateId: number,
+	rawBody: string,
+	waitUntil: (task: Promise<unknown>) => void,
+) {
 	const body = normalizeMessageBody(rawBody);
 
 	if (!body) {
@@ -114,6 +122,9 @@ export async function postMessage(ctx: ViewerContext, env: ChatEnv, candidateId:
 		// The message is saved; clients still get it on their next fetch.
 		console.error("chat broadcast failed", err);
 	}
+
+	const recipientId = interaction.userA === ctx.viewer.id ? interaction.userB : interaction.userA;
+	waitUntil(notify(env, ctx.db, recipientId, { kind: "message", candidateId: ctx.viewer.id }));
 
 	return { message };
 }

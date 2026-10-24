@@ -34,7 +34,10 @@ recommendationsModule.openapi(routes.postDecisionRoute, async (c) => {
 	const ctx = await service.requireViewer(c);
 	const { candidateId } = c.req.valid("param");
 	const body = c.req.valid("json");
-	return c.json(await service.postDecision(ctx, candidateId, body), 200);
+	return c.json(
+		await service.postDecision(ctx, candidateId, body, c.env, (task) => c.executionCtx.waitUntil(task)),
+		200,
+	);
 });
 
 export default recommendationsModule;

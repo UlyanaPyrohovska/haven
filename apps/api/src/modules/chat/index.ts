@@ -17,7 +17,12 @@ chat.openapi(routes.listMessagesRoute, async (c) => {
 chat.openapi(routes.postMessageRoute, async (c) => {
 	const ctx = await requireViewer(c);
 	const { candidateId } = c.req.valid("param");
-	return c.json(await service.postMessage(ctx, c.env, candidateId, c.req.valid("json").body), 200);
+	return c.json(
+		await service.postMessage(ctx, c.env, candidateId, c.req.valid("json").body, (task) =>
+			c.executionCtx.waitUntil(task),
+		),
+		200,
+	);
 });
 
 // POST /matches/{candidateId}/read

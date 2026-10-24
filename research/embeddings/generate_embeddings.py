@@ -1,7 +1,8 @@
 """W2.1 / E1 — embed user bios locally with all-MiniLM-L6-v2 and store them in user_embeddings.
 
 Runs on this machine only: bios are never sent to an external API (DPO, data stays in the EU).
-Idempotent: only profiles with a bio and no embedding row are encoded.
+Idempotent: only profiles with a bio and no embedding, or a profile edited since its embedding, are
+encoded; embeddings whose bio was cleared are deleted. Re-run after participants onboard or edit a bio.
 
     python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
     .venv/bin/python generate_embeddings.py                         # apps/api/.env
@@ -20,11 +21,18 @@ from sentence_transformers import SentenceTransformer
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"  # 384-d, matches user_embeddings.bio vector(384)
 BATCH_SIZE = 64
 
-SELECT_MISSING = """
-	SELECT id, bio FROM user_profiles
-	WHERE bio IS NOT NULL AND btrim(bio) <> ''
-	  AND id NOT IN (SELECT user_profile_id FROM user_embeddings)
-	ORDER BY id
+# profile.updated_at bumps on any profile edit, so this over-selects a little; re-encoding is cheap.
+SELECT_STALE = """
+	SELECT p.id, p.bio FROM user_profiles p
+	LEFT JOIN user_embeddings e ON e.user_profile_id = p.id
+	WHERE p.bio IS NOT NULL AND btrim(p.bio) <> ''
+	  AND (e.user_profile_id IS NULL OR p.updated_at > e.updated_at)
+	ORDER BY p.id
+"""
+
+DELETE_CLEARED = """
+	DELETE FROM user_embeddings e USING user_profiles p
+	WHERE e.user_profile_id = p.id AND (p.bio IS NULL OR btrim(p.bio) = '')
 """
 
 UPSERT = """
@@ -45,7 +53,10 @@ def main() -> None:
 	started = time.perf_counter()
 	with psycopg.connect(database_url) as conn:
 		register_vector(conn)
-		rows = conn.execute(SELECT_MISSING).fetchall()
+		cleared = conn.execute(DELETE_CLEARED).rowcount
+		conn.commit()
+		print(f"{cleared} embeddings removed (bio cleared)")
+		rows = conn.execute(SELECT_STALE).fetchall()
 		print(f"{len(rows)} profiles need an embedding")
 		if not rows:
 			return

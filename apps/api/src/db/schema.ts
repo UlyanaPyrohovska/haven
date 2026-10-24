@@ -441,3 +441,21 @@ export const messages = pgTable(
 	},
 	(t) => [index("messages_interaction_created_idx").on(t.interactionId, t.createdAt)],
 );
+
+// ────────────────────────────────────────────────────────────────
+// push_tokens — native device tokens (FCM on Android, APNs on iOS); one device belongs to one profile
+// ────────────────────────────────────────────────────────────────
+export const pushTokens = pgTable(
+	"push_tokens",
+	{
+		id: serial("id").primaryKey(),
+		userProfileId: integer("user_profile_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		token: text("token").notNull(),
+		platform: varchar("platform", { length: 10 }).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => [uniqueIndex("push_tokens_token_uniq").on(t.token), index("push_tokens_profile_idx").on(t.userProfileId)],
+);

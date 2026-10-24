@@ -8,6 +8,7 @@ import dailyQuestion from "./modules/daily-question";
 import legal from "./modules/legal";
 import links from "./modules/links";
 import mood from "./modules/mood";
+import notifications from "./modules/notifications";
 import profile from "./modules/profile";
 import recommendations from "./modules/recommendations";
 import safety from "./modules/safety";
@@ -27,6 +28,7 @@ export const createApp = () => {
 	app.route("/", recommendations);
 	app.route("/", safety);
 	app.route("/", chat);
+	app.route("/", notifications);
 	app.route("/", legal);
 	app.route("/", links);
 

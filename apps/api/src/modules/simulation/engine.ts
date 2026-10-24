@@ -1,5 +1,6 @@
 import type { Db } from "@/db";
 import { AGENT, agentAccepts } from "@/lib/agent-decision";
+import type { PushNotice } from "@/lib/push";
 import { unilateral } from "@/lib/scoring";
 import { generateRecommendations } from "@/modules/recommendations/generator";
 import * as recommendationsRepository from "@/modules/recommendations/repository";
@@ -12,6 +13,8 @@ export type TickOptions = {
 	cooldownHours: number;
 	/** Seeds every agent decision; defaults to the current time. */
 	tickId?: string;
+	/** Pushes to real users; agents have no devices. */
+	notify?: (profileId: number, notice: PushNotice) => Promise<void>;
 };
 
 export type TickStats = {
@@ -47,13 +50,14 @@ export async function runTick(db: Db, opts: TickOptions): Promise<TickStats> {
 		realBatches: 0,
 	};
 
-	const decide = async (agent: Agent, other: Agent) => {
+	const decide = async (agent: Agent, other: Agent, notifyOnMatch = false) => {
 		const accept = agentAccepts(unilateral(agent, other), `${tickId}:${agent.id}:${other.id}`);
 		const { matched } = await recordDecision(db, agent, other.id, accept ? 1 : 0);
 
 		stats.decisions++;
 		if (accept) stats.accepts++;
 		if (matched) stats.newMatches++;
+		if (matched && notifyOnMatch) await opts.notify?.(other.id, { kind: "match", candidateId: agent.id });
 	};
 
 	const inbound = await repository.listPendingInboundForSynthetic(db, AGENT.inboundLimit);
@@ -67,7 +71,8 @@ export async function runTick(db: Db, opts: TickOptions): Promise<TickStats> {
 		const liker = inboundProfiles.get(likerId);
 
 		if (agent && liker) {
-			await decide(agent, liker);
+			// The liker may be a real user waiting on this answer.
+			await decide(agent, liker, true);
 			stats.inboundAnswered++;
 		}
 	}
@@ -100,7 +105,10 @@ export async function runTick(db: Db, opts: TickOptions): Promise<TickStats> {
 
 	for (const viewer of await repository.listRealProfiles(db)) {
 		const batch = await ensureBatch(db, viewer, opts.cooldownHours);
-		if (batch.status === "generated" && batch.count > 0) stats.realBatches++;
+		if (batch.status === "generated" && batch.count > 0) {
+			stats.realBatches++;
+			await opts.notify?.(viewer.id, { kind: "recommendations" });
+		}
 	}
 
 	return stats;

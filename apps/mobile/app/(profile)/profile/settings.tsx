@@ -13,6 +13,7 @@ import { deleteAccount } from "@/lib/api/profile";
 import { signOut } from "@/lib/auth/client";
 import { resetToLogin } from "@/lib/auth/navigation";
 import { API_URL } from "@/lib/config/env";
+import { stopNotifications } from "@/lib/notifications";
 import { locationSettingsSummary } from "@/lib/profile/location";
 import { readPrivacySettings } from "@/lib/profile/privacy";
 import { ThemePreference, useThemePreference } from "@/lib/theme/preference";
@@ -46,6 +47,7 @@ export default function ProfileSettingsScreen() {
 	const [confirmDelete, setConfirmDelete] = useState(false);
 
 	const onSignOut = async () => {
+		await stopNotifications();
 		await signOut();
 		queryClient.clear();
 		resetToLogin(router);
@@ -55,6 +57,8 @@ export default function ProfileSettingsScreen() {
 		mutationFn: deleteAccount,
 		onSuccess: async () => {
 			setConfirmDelete(false);
+			// Server tokens went with the profile; this clears the scheduled reminder.
+			await stopNotifications();
 			// The server already dropped the session; this clears the local cookie.
 			await signOut().catch(() => {});
 			queryClient.clear();

@@ -127,6 +127,13 @@
       "when": 1792447293175,
       "tag": "0017_small_ben_urich",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792845388664,
+      "tag": "0018_worthless_white_tiger",
+      "breakpoints": true
     }
   ]
 }

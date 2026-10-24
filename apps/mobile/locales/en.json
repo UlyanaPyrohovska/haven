@@ -131,7 +131,11 @@
 	"matches": {
 		"title": "Matches",
 		"subtitle": "Your matches and conversations",
-		"empty": "No mutual matches yet. Keep exploring connections!"
+		"empty": "No mutual matches yet. Keep exploring connections!",
+		"newMatchTitle": "You have a new match!",
+		"newMatchMessage": "{{name}} liked you back. Say hi while it's fresh.",
+		"sendMessage": "Send a message",
+		"later": "Later"
 	},
 	"profile": {
 		"title": "Profile",
@@ -248,6 +252,13 @@
 				"confirm": "Delete account",
 				"error": "We couldn’t delete your account. Please try again."
 			}
+		}
+	},
+	"notifications": {
+		"channelName": "Haven",
+		"reminder": {
+			"title": "A quiet moment for you",
+			"body": "Today's question and mood check-in are waiting whenever you're ready."
 		}
 	},
 	"common": {

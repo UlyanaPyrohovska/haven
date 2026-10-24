@@ -153,6 +153,31 @@ describe("unilateral and reciprocalScore", () => {
 
 		expect(withBio).not.toBe(score);
 	});
+
+	it("uses α only when both sides have an embedding (mixed pairing)", () => {
+		const embedding = Array.from({ length: 384 }, (_, i) => Math.cos(i * 0.05));
+		const withEmb = makeProfile({ id: 1, bioEmbedding: embedding, interests: Array.from({ length: 17 }, () => 9) });
+		const withoutEmb = makeProfile({ id: 2, bioEmbedding: null });
+		const otherWithEmb = { ...withoutEmb, bioEmbedding: embedding };
+		const breakdown = scoreBreakdown(withEmb, otherWithEmb);
+		const w = DEFAULT_WEIGHTS;
+		const backbone =
+			(w.interest * breakdown.interest + w.geo * breakdown.geo + w.pref * breakdown.prefUToV) /
+			(w.interest + w.geo + w.pref);
+
+		// Either side missing → same renormalized backbone, in both directions.
+		expect(unilateral(withEmb, withoutEmb)).toBeCloseTo(backbone, 10);
+		expect(unilateral({ ...withEmb, bioEmbedding: null }, otherWithEmb)).toBeCloseTo(backbone, 10);
+
+		// Both present → plain weighted sum including the bio term.
+		const expected =
+			w.bio * (breakdown.bio ?? 0) +
+			w.interest * breakdown.interest +
+			w.geo * breakdown.geo +
+			w.pref * breakdown.prefUToV;
+		expect(breakdown.bio).toBeCloseTo(1, 10);
+		expect(unilateral(withEmb, otherWithEmb)).toBeCloseTo(expected, 10);
+	});
 });
 
 describe("crossPathsNorm", () => {
