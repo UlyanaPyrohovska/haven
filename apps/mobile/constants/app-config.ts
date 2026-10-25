@@ -58,6 +58,65 @@ export const Colors = {
 	},
 } as const;
 
+export type AppMode = "friends" | "dating";
+
+type ModeAccent = Pick<
+	typeof Colors.light,
+	"background" | "surface" | "tint" | "tabIconSelected" | "link" | "border" | "field" | "track" | "accentSoft"
+>;
+
+/** Accent overrides per matching mode so friends (teal) and dating (rose) feel like separate apps. Tints keep ≥ 4.5:1 against `onTint`. */
+export const ModeAccents: Record<AppMode, Record<"light" | "dark", { [K in keyof ModeAccent]: string }>> = {
+	friends: {
+		light: {
+			background: "#F8FDFC",
+			surface: "#EEF8F6",
+			tint: "#13806F",
+			tabIconSelected: "#13806F",
+			link: "#0F6B5D",
+			border: "#D3EAE5",
+			field: "#E3F4F0",
+			track: "#D3EAE5",
+			accentSoft: "#E6F6F3",
+		},
+		dark: {
+			background: "#141817",
+			surface: "#18211F",
+			tint: "#4CC9B0",
+			tabIconSelected: "#4CC9B0",
+			link: "#4CC9B0",
+			border: "#2A3A36",
+			field: "#1B2724",
+			track: "#2A3A36",
+			accentSoft: "#1E302C",
+		},
+	},
+	dating: {
+		light: {
+			background: "#FFFAFB",
+			surface: "#FFF3F5",
+			tint: "#C93A5E",
+			tabIconSelected: "#C93A5E",
+			link: "#A82E4E",
+			border: "#F5D9E0",
+			field: "#FFE9EE",
+			track: "#F5D9E0",
+			accentSoft: "#FFEEF2",
+		},
+		dark: {
+			background: "#171416",
+			surface: "#241A1D",
+			tint: "#F27A96",
+			tabIconSelected: "#F27A96",
+			link: "#F27A96",
+			border: "#40292F",
+			field: "#2A1C21",
+			track: "#40292F",
+			accentSoft: "#33202A",
+		},
+	},
+};
+
 export type ColorScheme = "light" | "dark";
 
 export type ThemeColorName = keyof typeof Colors.light & keyof typeof Colors.dark;

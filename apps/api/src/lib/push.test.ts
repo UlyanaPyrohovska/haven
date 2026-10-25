@@ -14,10 +14,10 @@ describe("push payloads", () => {
 		expect(body.message.android.notification.channel_id).toBe("default");
 	});
 
-	it("puts routing data next to aps for APNs", () => {
+	it("puts routing data under body for APNs, where expo-notifications reads it", () => {
 		const body = apnsBody({ kind: "message", candidateId: 3 });
 		expect(body.aps.alert.title).toBeTruthy();
-		expect(body).toMatchObject({ type: "message", candidateId: "3" });
+		expect(body.body).toEqual({ type: "message", candidateId: "3" });
 	});
 });
 

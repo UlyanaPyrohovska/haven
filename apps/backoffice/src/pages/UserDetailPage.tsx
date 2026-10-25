@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { ModeBadge } from "@/components/ModeBadge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -175,7 +176,9 @@ export function UserDetailPage() {
 
 			<Card>
 				<CardHeader>
-					<CardTitle>Profile #{id}</CardTitle>
+					<CardTitle className="flex items-center gap-2">
+						Profile #{id} <ModeBadge lookingFor={profile.lookingFor} />
+					</CardTitle>
 					<CardDescription>Edit profile fields and linked auth account.</CardDescription>
 					<CardAction>
 						<Button type="button" variant="destructive" onClick={onDelete} disabled={deleting}>
@@ -228,8 +231,9 @@ export function UserDetailPage() {
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="lookingFor">Looking for</Label>
-									<Input id="lookingFor" value={String(profile.lookingFor ?? "")} readOnly disabled />
-									<p className="text-xs text-muted-foreground">0 = friends, 1 = dating</p>
+									<div id="lookingFor">
+										<ModeBadge lookingFor={profile.lookingFor} />
+									</div>
 								</div>
 								<div className="space-y-2">
 									<Label>Discoverable</Label>

@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { Radius, Spacing } from "@/constants/app-config";
+import { useMode } from "@/hooks/use-mode";
 import { useTheme } from "@/hooks/use-theme";
 
 const DOCK = {
@@ -21,7 +23,9 @@ export type ConnectionDockProps = {
 };
 
 export function ConnectionDock({ bottomInset, onAccept, onDecline, onMessage, disabled = false }: ConnectionDockProps) {
+	const { t } = useTranslation();
 	const theme = useTheme();
+	const mode = useMode();
 	const { width } = useWindowDimensions();
 	const totalHeight = DOCK.arcHeight + bottomInset;
 
@@ -38,7 +42,7 @@ export function ConnectionDock({ bottomInset, onAccept, onDecline, onMessage, di
 			<View style={[styles.actions, { bottom: bottomInset + Spacing.lg }]}>
 				<Pressable
 					accessibilityRole="button"
-					accessibilityLabel="Accept"
+					accessibilityLabel={t("connections.accept", { context: mode ?? undefined })}
 					disabled={disabled}
 					onPress={onAccept}
 					style={({ pressed }) => [
@@ -46,7 +50,11 @@ export function ConnectionDock({ bottomInset, onAccept, onDecline, onMessage, di
 						{ backgroundColor: theme.tint, opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
 					]}
 				>
-					<Ionicons name="checkmark" size={26} color={theme.onTint} />
+					<Ionicons
+						name={mode === "friends" ? "hand-left" : mode === "dating" ? "heart" : "checkmark"}
+						size={26}
+						color={theme.onTint}
+					/>
 				</Pressable>
 
 				<Pressable

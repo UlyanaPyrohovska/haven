@@ -118,6 +118,29 @@ export const InteractionGraphResponseSchema = z
 	})
 	.openapi("InteractionGraphResponse");
 
+const DailyCountSchema = z.object({ day: z.string(), count: z.number().int() });
+
+export const StaffStatsResponseSchema = z
+	.object({
+		days: z.number().int(),
+		profiles: z.object({
+			total: z.number().int(),
+			synthetic: z.number().int(),
+			dating: z.number().int(),
+		}),
+		activity: z.object({
+			matches: z.number().int(),
+			messages: z.number().int(),
+			reports: z.number().int(),
+			dailyAnswersToday: z.number().int(),
+			moodCheckinsToday: z.number().int(),
+		}),
+		signupsByDay: z.array(DailyCountSchema),
+		matchesByDay: z.array(DailyCountSchema),
+		moods: z.array(z.object({ mood: z.string(), count: z.number().int() })),
+	})
+	.openapi("StaffStatsResponse");
+
 export type StaffUserListQuery = z.infer<typeof StaffUserListQuerySchema>;
 export type StaffUserUpdate = z.infer<typeof StaffUserUpdateSchema>;
 export type InteractionGraphQuery = z.infer<typeof InteractionGraphQuerySchema>;

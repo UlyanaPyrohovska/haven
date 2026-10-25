@@ -52,8 +52,9 @@ export function fcmBody(token: string, notice: PushNotice) {
 	};
 }
 
+/** expo-notifications reads a remote iOS notification's data from the `body` key only. */
 export function apnsBody(notice: PushNotice) {
-	return { aps: { alert: COPY[notice.kind], sound: "default" }, ...noticeData(notice) };
+	return { aps: { alert: COPY[notice.kind], sound: "default" }, body: noticeData(notice) };
 }
 
 /** Only answers that mean "this token is dead" drop the token; anything else is a transient failure. */

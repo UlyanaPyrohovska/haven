@@ -6,3 +6,7 @@ dist
 *.log
 .venv
 __pycache__
+
+# Apple push keys and certificates
+*.p8
+*.cer

@@ -116,3 +116,18 @@ export const interactionGraphRoute = createRoute({
 		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
 	},
 });
+
+export const statsRoute = createRoute({
+	method: "get",
+	path: "/staff/stats",
+	tags: ["Staff"],
+	summary: "Dashboard stats (staff)",
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.StaffStatsResponseSchema } },
+			description: "Totals and daily series",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+	},
+});

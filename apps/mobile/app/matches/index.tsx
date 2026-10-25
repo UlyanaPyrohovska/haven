@@ -10,6 +10,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { FormScreen } from "@/components/ui/form-screen";
 import { MenuCard, MenuDivider } from "@/components/ui/menu-row";
+import { useMode } from "@/hooks/use-mode";
 import { useTheme } from "@/hooks/use-theme";
 import { fetchMatches, matchesQueryKey } from "@/lib/api/recommendations";
 
@@ -18,6 +19,7 @@ export default function MatchesScreen() {
 	const { t } = useTranslation();
 	const router = useRouter();
 	const theme = useTheme();
+	const mode = useMode();
 	const matches = useQuery({
 		queryKey: matchesQueryKey,
 		queryFn: fetchMatches,
@@ -34,8 +36,8 @@ export default function MatchesScreen() {
 
 	return (
 		<FormScreen
-			title={t("matches.title")}
-			subtitle={t("matches.subtitle")}
+			title={t("matches.title", { context: mode ?? undefined })}
+			subtitle={t("matches.subtitle", { context: mode ?? undefined })}
 			showBack
 			headerRight={<ProfileHeaderButton />}
 		>

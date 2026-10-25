@@ -1,7 +1,9 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
 import { displayNameForCandidate } from "@/lib/candidate-display";
+import { fillDailySeries, lastUtcDays } from "@/lib/daily-series";
 import { errors } from "@/lib/errors";
+import { MoodSlugs, moodSlug, utcToday } from "@/lib/mood";
 import { resolveRecCooldownHours } from "@/lib/recommendation-cadence";
 import { requireStaffAdmin } from "@/lib/session";
 import { notify } from "@/modules/notifications/service";
@@ -174,5 +176,35 @@ export async function interactionGraph(c: Context<{ Bindings: CloudflareBindings
 			degree: degree.get(profile.id) ?? 0,
 		})),
 		edges,
+	};
+}
+
+const STATS_DAYS = 30;
+
+/** Aggregates only — no per-user rows. */
+export async function stats(c: Context<{ Bindings: CloudflareBindings }>) {
+	await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+
+	const today = utcToday();
+	const sinceDay = lastUtcDays(today, STATS_DAYS)[0];
+	const since = new Date(`${sinceDay}T00:00:00Z`);
+
+	const [profiles, activity, signups, matches, moods] = await Promise.all([
+		repository.profileTotals(db),
+		repository.activityTotals(db, today),
+		repository.realSignupsByDay(db, since),
+		repository.matchesByDay(db, since),
+		repository.moodCounts(db, sinceDay),
+	]);
+	const moodCount = new Map(moods.map((row) => [moodSlug(row.mood), row.count]));
+
+	return {
+		days: STATS_DAYS,
+		profiles: profiles ?? { total: 0, synthetic: 0, dating: 0 },
+		activity,
+		signupsByDay: fillDailySeries(signups, today, STATS_DAYS),
+		matchesByDay: fillDailySeries(matches, today, STATS_DAYS),
+		moods: MoodSlugs.map((mood) => ({ mood, count: moodCount.get(mood) ?? 0 })),
 	};
 }

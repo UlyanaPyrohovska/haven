@@ -130,3 +130,24 @@ export function getInteractionGraph(params: { lookingFor: number; edges: GraphEd
 
 	return request<InteractionGraph>(`/staff/graph?${search}`);
 }
+
+export type DailyCount = { day: string; count: number };
+
+export type StaffStats = {
+	days: number;
+	profiles: { total: number; synthetic: number; dating: number };
+	activity: {
+		matches: number;
+		messages: number;
+		reports: number;
+		dailyAnswersToday: number;
+		moodCheckinsToday: number;
+	};
+	signupsByDay: DailyCount[];
+	matchesByDay: DailyCount[];
+	moods: { mood: string; count: number }[];
+};
+
+export function getStats() {
+	return request<StaffStats>("/staff/stats");
+}

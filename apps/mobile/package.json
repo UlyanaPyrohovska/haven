@@ -16,7 +16,10 @@
 		"build:preview:ios": "eas build --profile preview --platform ios",
 		"build:preview:android": "eas build --profile preview --platform android",
 		"build:prod:ios": "eas build --profile production --platform ios",
-		"build:prod:android": "eas build --profile production --platform android"
+		"build:local:ios": "EXPO_NO_CAPABILITY_SYNC=1 EXPO_ASC_API_KEY_PATH=./certs/AuthKey_KD575C2VC3.p8 EXPO_ASC_KEY_ID=KD575C2VC3 EXPO_ASC_ISSUER_ID=c2a4b025-8734-4592-a0e3-78799851af45 eas build --profile production --platform ios --local --output build/haven.ipa",
+		"build:local:android": "eas build --profile preview --platform android --local --output build/haven.apk",
+		"submit:ios": "eas submit --profile production --platform ios --path build/haven.ipa",
+		"release:ios": "pnpm build:local:ios && pnpm submit:ios"
 	},
 	"dependencies": {
 		"@better-auth/expo": "^1.6.23",

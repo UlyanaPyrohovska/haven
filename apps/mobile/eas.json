@@ -13,15 +13,13 @@
 		},
 		"preview": {
 			"distribution": "internal",
+			"android": { "buildType": "apk" },
 			"env": {
 				"EXPO_PUBLIC_API_URL": "https://haven.pirogotter.dev"
 			}
 		},
 		"production": {
 			"autoIncrement": true,
-			"ios": {
-				"credentialsSource": "local"
-			},
 			"env": {
 				"EXPO_PUBLIC_API_URL": "https://haven.pirogotter.dev"
 			}

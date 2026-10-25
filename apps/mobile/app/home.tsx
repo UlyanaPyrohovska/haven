@@ -8,16 +8,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { NewMatchDialog } from "@/components/connections/new-match-dialog";
 import { DailyQuestionCard } from "@/components/home/daily-question-card";
+import { ModeSwitch } from "@/components/home/mode-switch";
 import { MoodCard } from "@/components/home/mood-card";
 import { LocationPill } from "@/components/location/location-pill";
 import { partnerFiltersSummary } from "@/components/profile/partner-filters";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemedText } from "@/components/themed-text";
-import { Colors, FontFamily, Radius, Spacing } from "@/constants/app-config";
+import { FontFamily, Radius, Spacing } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useHeaderLocation } from "@/hooks/use-header-location";
 import { useProfileQuery } from "@/hooks/use-profile";
-import { useTheme } from "@/hooks/use-theme";
+import { type Theme, useTheme } from "@/hooks/use-theme";
 import { todayDailyQuestionQueryKey } from "@/lib/api/daily-question";
 import { todayMoodQueryKey } from "@/lib/api/mood";
 import {
@@ -37,19 +38,11 @@ const DOCK = {
 	fabLift: 28,
 } as const;
 
-function dockColors(scheme: "light" | "dark" | null | undefined) {
-	if (scheme === "dark") {
-		return {
-			fill: Colors.dark.surface,
-			border: Colors.dark.border,
-			shadow: "rgba(0, 0, 0, 0.35)",
-		};
-	}
-
+function dockColors(scheme: "light" | "dark" | null | undefined, theme: Theme) {
 	return {
-		fill: Colors.light.surface,
-		border: Colors.light.border,
-		shadow: "rgba(232, 146, 23, 0.12)",
+		fill: theme.surface,
+		border: theme.border,
+		shadow: scheme === "dark" ? "rgba(0, 0, 0, 0.35)" : "rgba(0, 0, 0, 0.08)",
 	};
 }
 
@@ -153,7 +146,7 @@ export default function HomeScreen() {
 		}, [refetchMatches]),
 	);
 	const unreadMessages = matches.data?.matches.reduce((sum, m) => sum + m.unreadCount, 0) ?? 0;
-	const dock = dockColors(colorScheme);
+	const dock = dockColors(colorScheme, theme);
 	const headerLocation = useHeaderLocation(hasSession);
 	const displayName = session?.user.name?.split(" ")[0] ?? "Uliana";
 	const photoUrl = session?.user.image?.trim() || null;
@@ -243,6 +236,8 @@ export default function HomeScreen() {
 						</Pressable>
 					</View>
 				</View>
+
+				<ModeSwitch />
 
 				<View style={styles.greeting}>
 					<ThemedText type="caption" style={[styles.date, { color: theme.muted }]}>

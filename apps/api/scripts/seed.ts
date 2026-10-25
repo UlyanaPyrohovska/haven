@@ -9,7 +9,7 @@ import pg from "pg";
 import { friendships, interactions, userProfiles } from "../src/db/schema";
 import { MIN_AGE } from "../src/lib/age";
 import { syntheticDisplayName } from "../src/lib/candidate-display";
-import { lookingForFromGoal } from "../src/lib/looking-for";
+import { LookingFor, lookingForFromGoal } from "../src/lib/looking-for";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const apiRoot = resolve(scriptDir, "..");
@@ -92,6 +92,7 @@ function mapUserRow(row: CsvRow) {
 	const id = parseIntField(row, "uid");
 	const gender = parseIntField(row, "gender");
 	const age = parseIntField(row, "age");
+	const lookingFor = lookingForFromGoal(row.goal);
 
 	return {
 		id,
@@ -99,13 +100,14 @@ function mapUserRow(row: CsvRow) {
 		displayName: syntheticDisplayName({ id, gender }),
 		gender,
 		birthDate: birthDateFromAge(age),
-		// The speed-dating source only paired opposite genders, so seeded filters mirror that.
-		interestedIn: [1 - gender],
+		// The speed-dating source only paired opposite genders, so seeded dating filters mirror that.
+		// Friendship is open to every gender (null = no filter).
+		interestedIn: lookingFor === LookingFor.dating ? [1 - gender] : null,
 		prefAgeMin: Math.max(MIN_AGE, age - SEED_AGE_SPREAD),
 		prefAgeMax: age + SEED_AGE_SPREAD,
 		ethnicity: row.ethnicity,
 		career: row.career,
-		lookingFor: lookingForFromGoal(row.goal),
+		lookingFor,
 		goal: row.goal,
 		latitude: parseFloatField(row, "latitude"),
 		longitude: parseFloatField(row, "longitude"),

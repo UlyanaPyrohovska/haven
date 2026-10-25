@@ -1,5 +1,6 @@
-import { NetworkIcon, ShieldIcon, UsersIcon } from "lucide-react";
+import { LayoutDashboardIcon, NetworkIcon, ShieldIcon, UsersIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { HavenLogo } from "@/components/HavenLogo";
 import {
 	Sidebar,
 	SidebarContent,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
+	{ title: "Dashboard", href: "/dashboard", icon: LayoutDashboardIcon, description: "App stats" },
 	{ title: "Users", href: "/users", icon: UsersIcon, description: "Platform profiles" },
 	{ title: "Graph", href: "/graph", icon: NetworkIcon, description: "Interactions and simulation" },
 	{ title: "Staff", href: "/staff", icon: ShieldIcon, description: "Backoffice accounts" },
@@ -24,10 +26,13 @@ export function AppSidebar() {
 	return (
 		<Sidebar collapsible="icon">
 			<SidebarHeader className="border-b border-sidebar-border">
-				<div className="px-2 py-1">
-					<p className="text-sm font-semibold tracking-tight">Haven</p>
-					<p className="text-xs text-muted-foreground">Backoffice</p>
-				</div>
+				<Link to="/dashboard" className="flex items-center gap-2 px-1 py-1">
+					<HavenLogo />
+					<div className="group-data-[collapsible=icon]:hidden">
+						<p className="text-sm font-semibold tracking-tight">Haven</p>
+						<p className="text-xs text-muted-foreground">Backoffice</p>
+					</div>
+				</Link>
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
