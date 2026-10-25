@@ -1,7 +1,6 @@
 import type { Db } from "@/db";
 import {
 	applyCrossPathsBoost,
-	CADENCE,
 	CROSS_PATHS,
 	DEFAULT_WEIGHTS,
 	reciprocalScore,
@@ -55,15 +54,17 @@ export function rankCandidates(
 		.slice(0, k);
 }
 
-/** One exposure-limited batch (default {@link CADENCE.batchSize}) for the daily drop. */
+/** One exposure-limited batch for the daily drop; unset options come from the saved matching config. */
 export async function generateRecommendations(
 	db: Db,
 	viewerId: number,
 	opts: GenerateRecommendationsOptions = {},
 ): Promise<number> {
-	const k = opts.k ?? CADENCE.batchSize;
+	const config = await repository.loadMatchingConfig(db);
+	const k = opts.k ?? config.batchSize;
 	const maxKm = opts.maxKm ?? null;
-	const weights = opts.weights ?? DEFAULT_WEIGHTS;
+	const weights = opts.weights ?? config.weights;
+	const crossPathsLambda = opts.crossPathsLambda ?? config.crossPathsLambda;
 
 	const viewer = await repository.findScoringProfileById(db, viewerId);
 
@@ -86,7 +87,7 @@ export async function generateRecommendations(
 		),
 		repository.listPendingLikerIds(db, viewerId),
 	]);
-	const ranked = rankCandidates(viewer, pool, crossings, k, weights, opts.crossPathsLambda, likerIds);
+	const ranked = rankCandidates(viewer, pool, crossings, k, weights, crossPathsLambda, likerIds);
 
 	await repository.replaceRecommendations(
 		db,

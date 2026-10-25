@@ -5,7 +5,7 @@ Read this first. Keep context small: read docs before code, and read code only f
 ## Read order (before any code)
 1. This file.
 2. `docs/path-a-implementation.md` — implementation spec per task, with conventions and file paths.
-3. The `README.md` of the app you're touching (`apps/api`, `apps/mobile`, `apps/backoffice`).
+3. `apps/mobile/README.md` when touching the mobile app.
 4. `docs/FEATURES.md` for what already exists (one section per feature, with status and paths).
 5. `BACKLOG.md` only when you need ticket context. Status markers: `[ ]` todo, `[~]` in progress, `[x]` done.
 

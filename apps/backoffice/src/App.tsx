@@ -4,6 +4,7 @@ import { RequireStaff } from "@/components/RequireStaff";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { GraphPage } from "@/pages/GraphPage";
 import { LoginPage } from "@/pages/LoginPage";
+import { MatchingRulesPage } from "@/pages/MatchingRulesPage";
 import { StaffPage } from "@/pages/StaffPage";
 import { UserDetailPage } from "@/pages/UserDetailPage";
 import { UsersPage } from "@/pages/UsersPage";
@@ -19,6 +20,7 @@ export default function App() {
 						<Route path="/users" element={<UsersPage />} />
 						<Route path="/users/:profileId" element={<UserDetailPage />} />
 						<Route path="/graph" element={<GraphPage />} />
+						<Route path="/matching" element={<MatchingRulesPage />} />
 						<Route path="/staff" element={<StaffPage />} />
 					</Route>
 				</Route>

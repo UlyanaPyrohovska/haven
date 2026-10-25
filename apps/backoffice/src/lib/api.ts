@@ -184,3 +184,28 @@ export function getUserRecommendations(profileId: number) {
 export function regenerateUserRecommendations(profileId: number) {
 	return request<StaffRecommendations>(`/staff/users/${profileId}/recommendations/regenerate`, { method: "POST" });
 }
+
+export type MatchingConfig = {
+	batchSize: number;
+	cooldownHours: number;
+	weights: { bio: number; interest: number; geo: number; pref: number };
+	crossPathsLambda: number;
+};
+
+export type MatchingConfigResponse = {
+	config: MatchingConfig;
+	defaults: MatchingConfig;
+	updatedAt: string | null;
+	updatedBy: string | null;
+};
+
+export function getMatchingConfig() {
+	return request<MatchingConfigResponse>("/staff/matching-config");
+}
+
+export function updateMatchingConfig(config: MatchingConfig) {
+	return request<MatchingConfigResponse>("/staff/matching-config", {
+		method: "PUT",
+		body: JSON.stringify(config),
+	});
+}

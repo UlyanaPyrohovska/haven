@@ -19,7 +19,7 @@ import {
 	shouldShowCrossPaths,
 } from "@/lib/profile-view";
 import type { PushEnv } from "@/lib/push";
-import { CADENCE, isCooldownElapsed, nextRefreshAtIso, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
+import { isCooldownElapsed, nextRefreshAtIso } from "@/lib/recommendation-cadence";
 import { scoreBreakdown } from "@/lib/scoring";
 import { getSessionUserId } from "@/lib/session";
 import * as chatRepository from "@/modules/chat/repository";
@@ -53,7 +53,7 @@ export async function requireViewer(c: Context<{ Bindings: CloudflareBindings }>
 	return {
 		db,
 		viewer,
-		recCooldownHours: resolveRecCooldownHours(c.env.REC_COOLDOWN_HOURS),
+		recCooldownHours: (await repository.loadMatchingConfig(db, c.env.REC_COOLDOWN_HOURS)).cooldownHours,
 	};
 }
 
@@ -106,7 +106,7 @@ export async function ensureBatch(
 		return { status: "cooldown", nextRefreshAt: lastShown ? nextRefreshAtIso(lastShown, recCooldownHours) : undefined };
 	}
 
-	return { status: "generated", count: await generateRecommendations(db, viewer.id, { k: CADENCE.batchSize }) };
+	return { status: "generated", count: await generateRecommendations(db, viewer.id) };
 }
 
 export async function getRecommendations({ db, viewer, recCooldownHours }: ViewerContext) {
@@ -337,7 +337,7 @@ export async function maybeGenerateOnProfileComplete(
 	}
 
 	try {
-		await generateRecommendations(db, profile.id, { k: CADENCE.batchSize });
+		await generateRecommendations(db, profile.id);
 	} catch (err) {
 		console.error("maybeGenerateOnProfileComplete failed", err);
 	}
@@ -349,7 +349,7 @@ export async function regenerate({ db, viewer }: ViewerContext) {
 		return { count: 0 };
 	}
 
-	const count = await generateRecommendations(db, viewer.id, { k: CADENCE.batchSize });
+	const count = await generateRecommendations(db, viewer.id);
 
 	return { count };
 }
