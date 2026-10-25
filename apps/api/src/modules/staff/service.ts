@@ -4,10 +4,13 @@ import { displayNameForCandidate } from "@/lib/candidate-display";
 import { fillDailySeries, lastUtcDays } from "@/lib/daily-series";
 import { errors } from "@/lib/errors";
 import { MoodSlugs, moodSlug, utcToday } from "@/lib/mood";
-import { resolveRecCooldownHours } from "@/lib/recommendation-cadence";
+import { CADENCE, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
+import { applyCrossPathsBoost, DEFAULT_WEIGHTS, reciprocalScore, scoreBreakdown } from "@/lib/scoring";
 import { requireStaffAdmin } from "@/lib/session";
 import { notify } from "@/modules/notifications/service";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
+import { generateRecommendations } from "@/modules/recommendations/generator";
+import * as recommendationsRepository from "@/modules/recommendations/repository";
 import { runTick } from "@/modules/simulation/engine";
 import * as repository from "./repository";
 import type { InteractionGraphQuery, StaffUserListQuery, StaffUserUpdate } from "./schemas";
@@ -207,4 +210,67 @@ export async function stats(c: Context<{ Bindings: CloudflareBindings }>) {
 		matchesByDay: fillDailySeries(matches, today, STATS_DAYS),
 		moods: MoodSlugs.map((mood) => ({ mood, count: moodCount.get(mood) ?? 0 })),
 	};
+}
+
+/**
+ * Components are recomputed from current profile data with the default weights, so they can drift
+ * from `storedScore` (written at generation time) after either profile changes.
+ */
+export async function userRecommendations(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
+	await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+
+	const viewer = await recommendationsRepository.findScoringProfileById(db, profileId);
+
+	if (!viewer) {
+		throw errors.not_found;
+	}
+
+	const rows = await repository.listRecommendationsForUser(db, profileId);
+	const candidateIds = rows.map((row) => row.candidateId);
+	const [candidates, crossings] = await Promise.all([
+		recommendationsRepository.listScoringProfilesByIds(db, candidateIds),
+		recommendationsRepository.listCrossings(db, profileId, candidateIds),
+	]);
+	const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+
+	return {
+		weights: DEFAULT_WEIGHTS,
+		recommendations: rows.flatMap((row) => {
+			const candidate = candidateById.get(row.candidateId);
+
+			if (!candidate) {
+				return [];
+			}
+
+			const breakdown = scoreBreakdown(viewer, candidate);
+			const { pUToV, qVToU } = reciprocalScore(viewer, candidate);
+			const crossingCount = crossings.get(row.candidateId)?.count ?? 0;
+
+			return [
+				{
+					candidateId: row.candidateId,
+					name: displayNameForCandidate({ ...row, id: row.candidateId }, `#${row.candidateId}`),
+					isSynthetic: row.isSynthetic,
+					rank: row.rank,
+					storedScore: row.score,
+					shownAt: row.shownAt.toISOString(),
+					actedOn: row.actedOn,
+					...breakdown,
+					pUToV,
+					qVToU,
+					crossings: crossingCount,
+					score: applyCrossPathsBoost(breakdown.reciprocal, crossingCount),
+				},
+			];
+		}),
+	};
+}
+
+/** Same batch the feed would build; acted-on rows stay. Resets the user's feed cooldown (new `shown_at`). */
+export async function regenerateUserRecommendations(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
+	await requireStaffAdmin(c);
+	await generateRecommendations(getDb(c.env.DATABASE_URL), profileId, { k: CADENCE.batchSize });
+
+	return userRecommendations(c, profileId);
 }

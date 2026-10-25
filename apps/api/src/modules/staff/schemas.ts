@@ -141,6 +141,33 @@ export const StaffStatsResponseSchema = z
 	})
 	.openapi("StaffStatsResponse");
 
+export const StaffRecommendationsResponseSchema = z
+	.object({
+		weights: z.object({ bio: z.number(), interest: z.number(), geo: z.number(), pref: z.number() }),
+		recommendations: z.array(
+			z.object({
+				candidateId: z.number().int(),
+				name: z.string(),
+				isSynthetic: z.boolean(),
+				rank: z.number().int().nullable(),
+				storedScore: z.number().nullable(),
+				shownAt: z.string(),
+				actedOn: z.boolean(),
+				bio: z.number().nullable(),
+				interest: z.number(),
+				geo: z.number(),
+				prefUToV: z.number(),
+				prefVToU: z.number(),
+				pUToV: z.number(),
+				qVToU: z.number(),
+				reciprocal: z.number(),
+				crossings: z.number().int(),
+				score: z.number(),
+			}),
+		),
+	})
+	.openapi("StaffRecommendationsResponse");
+
 export type StaffUserListQuery = z.infer<typeof StaffUserListQuerySchema>;
 export type StaffUserUpdate = z.infer<typeof StaffUserUpdateSchema>;
 export type InteractionGraphQuery = z.infer<typeof InteractionGraphQuerySchema>;

@@ -39,4 +39,14 @@ staff.openapi(routes.statsRoute, async (c) => {
 	return c.json(await service.stats(c), 200);
 });
 
+staff.openapi(routes.userRecommendationsRoute, async (c) => {
+	const { profileId } = c.req.valid("param");
+	return c.json(await service.userRecommendations(c, profileId), 200);
+});
+
+staff.openapi(routes.regenerateUserRecommendationsRoute, async (c) => {
+	const { profileId } = c.req.valid("param");
+	return c.json(await service.regenerateUserRecommendations(c, profileId), 200);
+});
+
 export default staff;

@@ -31,7 +31,10 @@ export type GenerateRecommendationsOptions = {
 
 export type RankedCandidate = { candidateId: number; score: number };
 
-/** Reciprocal score with the cross-paths boost, best first. Missing counts (no row / opted out) mean 0. */
+/**
+ * Reciprocal score with the cross-paths boost, best first. Missing counts (no row / opted out) mean 0.
+ * Candidates in `likerIds` (pending likes on the viewer) go first so a one-sided like can become a match.
+ */
 export function rankCandidates(
 	viewer: ScoringProfile,
 	pool: ScoringProfile[],
@@ -39,6 +42,7 @@ export function rankCandidates(
 	k: number,
 	weights: ScoringWeights = DEFAULT_WEIGHTS,
 	crossPathsLambda: number = CROSS_PATHS.lambda,
+	likerIds: ReadonlySet<number> = new Set(),
 ): RankedCandidate[] {
 	return pool
 		.map((candidate) => {
@@ -47,7 +51,7 @@ export function rankCandidates(
 
 			return { candidateId: candidate.id, score: applyCrossPathsBoost(reciprocal, count, crossPathsLambda) };
 		})
-		.sort((a, b) => b.score - a.score)
+		.sort((a, b) => Number(likerIds.has(b.candidateId)) - Number(likerIds.has(a.candidateId)) || b.score - a.score)
 		.slice(0, k);
 }
 
@@ -74,12 +78,15 @@ export async function generateRecommendations(
 		syntheticOnly: opts.syntheticOnly,
 	});
 
-	const crossings = await repository.listCrossings(
-		db,
-		viewerId,
-		pool.map((candidate) => candidate.id),
-	);
-	const ranked = rankCandidates(viewer, pool, crossings, k, weights, opts.crossPathsLambda);
+	const [crossings, likerIds] = await Promise.all([
+		repository.listCrossings(
+			db,
+			viewerId,
+			pool.map((candidate) => candidate.id),
+		),
+		repository.listPendingLikerIds(db, viewerId),
+	]);
+	const ranked = rankCandidates(viewer, pool, crossings, k, weights, opts.crossPathsLambda, likerIds);
 
 	await repository.replaceRecommendations(
 		db,

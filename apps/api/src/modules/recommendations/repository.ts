@@ -182,6 +182,10 @@ function locationBoundingBox(latitude: number, longitude: number, maxKm: number)
 	)`;
 }
 
+/**
+ * Drops candidates the viewer already decided on, or who passed on (or blocked) the viewer.
+ * A candidate's pending like stays in the pool so the viewer can answer it.
+ */
 function noInteractionWith(viewerId: number) {
 	return not(
 		exists(
@@ -193,10 +197,22 @@ function noInteractionWith(viewerId: number) {
 				) OR (
 					${interactions.userA} = ${userProfiles.id}
 					AND ${interactions.userB} = ${viewerId}
+					AND (${interactions.decB} IS NOT NULL OR ${interactions.decA} IS DISTINCT FROM 1)
 				)
 			)`,
 		),
 	);
+}
+
+/** Candidate liked the viewer and the viewer has not answered yet. */
+function likesViewer(viewerId: number) {
+	return sql`EXISTS (
+		SELECT 1 FROM ${interactions}
+		WHERE ${interactions.userA} = ${userProfiles.id}
+			AND ${interactions.userB} = ${viewerId}
+			AND ${interactions.decA} = 1
+			AND ${interactions.decB} IS NULL
+	)`;
 }
 
 /**
@@ -298,11 +314,13 @@ export async function listCandidatePool(
 		.where(whereClause);
 
 	const useAnn = viewer.bioEmbedding != null && viewer.bioEmbedding.length > 0;
+	// Pending likes first, so the cap or the ANN shortlist never hides them.
+	const likedFirst = sql`${likesViewer(viewer.id)} DESC`;
 	const rows = useAnn
 		? await baseQuery
-				.orderBy(sql`${userEmbeddings.bio} <=> ${JSON.stringify(viewer.bioEmbedding)}::vector`)
+				.orderBy(likedFirst, sql`${userEmbeddings.bio} <=> ${JSON.stringify(viewer.bioEmbedding)}::vector`)
 				.limit(Math.min(limit, annShortlistLimit))
-		: await baseQuery.limit(limit);
+		: await baseQuery.orderBy(likedFirst).limit(limit);
 
 	return rows.map((row) => mapCandidateScoringProfile(row as ScoringProfileRow));
 }
@@ -382,6 +400,16 @@ export async function listCrossings(db: Db, viewerId: number, candidateIds: numb
 	}
 
 	return counts;
+}
+
+/** Profile ids whose like on the viewer is still unanswered. */
+export async function listPendingLikerIds(db: Db, viewerId: number): Promise<Set<number>> {
+	const rows = await db
+		.select({ id: interactions.userA })
+		.from(interactions)
+		.where(and(eq(interactions.userB, viewerId), eq(interactions.decA, 1), isNull(interactions.decB)));
+
+	return new Set(rows.map((row) => row.id));
 }
 
 export async function findViewerByUserId(db: Db, userId: string): Promise<ViewerProfile | null> {
