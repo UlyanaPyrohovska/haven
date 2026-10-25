@@ -151,3 +151,36 @@ export type StaffStats = {
 export function getStats() {
 	return request<StaffStats>("/staff/stats");
 }
+
+export type StaffRecommendation = {
+	candidateId: number;
+	name: string;
+	isSynthetic: boolean;
+	rank: number | null;
+	storedScore: number | null;
+	shownAt: string;
+	actedOn: boolean;
+	bio: number | null;
+	interest: number;
+	geo: number;
+	prefUToV: number;
+	prefVToU: number;
+	pUToV: number;
+	qVToU: number;
+	reciprocal: number;
+	crossings: number;
+	score: number;
+};
+
+export type StaffRecommendations = {
+	weights: { bio: number; interest: number; geo: number; pref: number };
+	recommendations: StaffRecommendation[];
+};
+
+export function getUserRecommendations(profileId: number) {
+	return request<StaffRecommendations>(`/staff/users/${profileId}/recommendations`);
+}
+
+export function regenerateUserRecommendations(profileId: number) {
+	return request<StaffRecommendations>(`/staff/users/${profileId}/recommendations/regenerate`, { method: "POST" });
+}

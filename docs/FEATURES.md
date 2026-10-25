@@ -509,14 +509,17 @@ Builds one batch of recommendations for a viewer.
      - not be the viewer,
      - be discoverable,
      - be in the same `looking_for` pool,
-     - have no interaction with the viewer in either direction,
+     - not have been decided on by the viewer, and not have passed on or blocked the viewer.
+       A candidate's unanswered like on the viewer stays in the pool,
      - pass the mutual partner filters (gender and age, see Partner filters),
      - be inside an optional bounding box.
-  3. Scores and ranks the pool with `rankCandidates`.
+  3. Scores and ranks the pool with `rankCandidates`. Pending likers (`listPendingLikerIds`) go
+     first, so a one-sided like always reaches the other user and can become a match.
   4. Writes the top k with `replaceRecommendations`. This deletes the pending rows and upserts on
      `(user_id, candidate_id)` in one batch.
 - The pool is capped at 500. When the viewer has a bio embedding, an HNSW `bio <=> viewer`
-  shortlist of 200 runs before exact rescoring.
+  shortlist of 200 runs before exact rescoring. Pending likers are ordered first in both cases, so
+  the cap never drops them.
 - Options: `k`, `maxKm`, `weights`, `crossPathsLambda`, `syntheticOnly`.
 
 **Where:** `src/modules/recommendations/generator.ts`, `repository.ts`,
@@ -643,7 +646,8 @@ Staff can:
 - search and list profiles,
 - view the full record,
 - edit profile and account fields,
-- delete a user.
+- delete a user,
+- see every recommendation shown to the user, with all score components.
 
 **How it works:**
 - Search, edit and delete go through `modules/staff`. Search runs `ilike` on display name, email
@@ -652,8 +656,21 @@ Staff can:
 
 - A teal "Friends" / rose "Dating" badge (`components/ModeBadge.tsx`) shows each profile's mode in
   the list and on the detail page.
+- Recommendation scores: `GET /staff/users/{profileId}/recommendations` lists every
+  `recommendations` row for the user (pending and acted on, newest batch first) with the stored
+  `score` and `rank`. For each candidate it reruns `scoreBreakdown` and `reciprocalScore` from
+  `scoring.ts` with `DEFAULT_WEIGHTS` and applies `applyCrossPathsBoost` with the crossing count
+  from `listCrossings`. The row shows bio, interest, geo, pref u→v, pref v→u, p u→v, q v→u,
+  reciprocal, crossings and the final score. These components use current profile data, so they can
+  differ from the stored score if either profile changed after the batch was generated. Only ids,
+  names and scores are returned; no coordinates.
+- A "Regenerate" button (with a confirm) calls `POST /staff/users/{profileId}/recommendations/regenerate`,
+  which runs `generateRecommendations` with `CADENCE.batchSize`, the same batch the feed builds. It
+  replaces pending rows and keeps acted-on ones. The new rows get a fresh `shown_at`, so the user's
+  feed cooldown restarts. The response is the updated list.
 
-**Where:** pages `UsersPage`, `UserDetailPage`; API `/staff/users`, `/staff/users/{profileId}`
+**Where:** pages `UsersPage`, `UserDetailPage` (`components/RecommendationScores.tsx`); API
+`/staff/users`, `/staff/users/{profileId}`, `/staff/users/{profileId}/recommendations` (+ `/regenerate`)
 
 ### Staff accounts — live
 List and create staff admins.

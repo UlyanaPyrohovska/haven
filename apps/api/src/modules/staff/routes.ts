@@ -131,3 +131,41 @@ export const statsRoute = createRoute({
 		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
 	},
 });
+
+export const userRecommendationsRoute = createRoute({
+	method: "get",
+	path: "/staff/users/{profileId}/recommendations",
+	tags: ["Staff"],
+	summary: "Recommendations shown to a user, with score breakdown (staff)",
+	request: {
+		params: schemas.StaffUserIdParamSchema,
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.StaffRecommendationsResponseSchema } },
+			description: "Recommendations with recomputed score components",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+		404: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Not found" },
+	},
+});
+
+export const regenerateUserRecommendationsRoute = createRoute({
+	method: "post",
+	path: "/staff/users/{profileId}/recommendations/regenerate",
+	tags: ["Staff"],
+	summary: "Replace a user's pending recommendations with a fresh batch (staff)",
+	request: {
+		params: schemas.StaffUserIdParamSchema,
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.StaffRecommendationsResponseSchema } },
+			description: "Recommendations after regeneration",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+		404: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Not found" },
+	},
+});

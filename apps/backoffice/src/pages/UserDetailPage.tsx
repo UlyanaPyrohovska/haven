@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ModeBadge } from "@/components/ModeBadge";
+import { RecommendationScores } from "@/components/RecommendationScores";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -304,6 +305,8 @@ export function UserDetailPage() {
 					</Button>
 				</CardFooter>
 			</Card>
+
+			<RecommendationScores profileId={id} />
 
 			<Card>
 				<CardHeader>

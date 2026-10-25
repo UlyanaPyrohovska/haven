@@ -1,6 +1,15 @@
 import { and, count, desc, eq, getTableColumns, gte, ilike, inArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { dailyQuestionAnswers, interactions, messages, moodCheckins, reports, user, userProfiles } from "@/db/schema";
+import {
+	dailyQuestionAnswers,
+	interactions,
+	messages,
+	moodCheckins,
+	recommendations,
+	reports,
+	user,
+	userProfiles,
+} from "@/db/schema";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
 import type { InteractionGraphQuery, StaffUserListQuery } from "./schemas";
 
@@ -229,4 +238,23 @@ export function moodCounts(db: Db, sinceDate: string) {
 		.from(moodCheckins)
 		.where(gte(moodCheckins.checkinDate, sinceDate))
 		.groupBy(moodCheckins.mood);
+}
+
+/** Every recommendation shown to the profile, pending or acted on, newest batch first. */
+export function listRecommendationsForUser(db: Db, profileId: number) {
+	return db
+		.select({
+			candidateId: recommendations.candidateId,
+			score: recommendations.score,
+			rank: recommendations.rank,
+			shownAt: recommendations.shownAt,
+			actedOn: recommendations.actedOn,
+			displayName: userProfiles.displayName,
+			gender: userProfiles.gender,
+			isSynthetic: userProfiles.isSynthetic,
+		})
+		.from(recommendations)
+		.innerJoin(userProfiles, eq(userProfiles.id, recommendations.candidateId))
+		.where(eq(recommendations.userId, profileId))
+		.orderBy(desc(recommendations.shownAt), recommendations.rank);
 }

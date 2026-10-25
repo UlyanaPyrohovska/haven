@@ -50,6 +50,13 @@ describe("rankCandidates", () => {
 		expect(rankCandidates(viewer, pool, counts, 3, undefined, 0)).toEqual(baseline);
 	});
 
+	it("puts a pending liker first even when it scores lower", () => {
+		const pool = [makeProfile(2), makeProfile(3, { latitude: 40.0, longitude: -3.7 })];
+		const ranked = rankCandidates(viewer, pool, new Map(), 1, undefined, undefined, new Set([3]));
+
+		expect(ranked.map((row) => row.candidateId)).toEqual([3]);
+	});
+
 	it("keeps only the top k", () => {
 		const pool = [makeProfile(2), makeProfile(3), makeProfile(4)];
 
