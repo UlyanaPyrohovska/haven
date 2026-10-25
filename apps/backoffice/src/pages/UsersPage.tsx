@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ModeBadge } from "@/components/ModeBadge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,7 @@ export function UsersPage() {
 									<TableHead>Profile</TableHead>
 									<TableHead>Display name</TableHead>
 									<TableHead>Email</TableHead>
+									<TableHead>Mode</TableHead>
 									<TableHead>Type</TableHead>
 									<TableHead>Created</TableHead>
 									<TableHead className="text-right">Actions</TableHead>
@@ -134,6 +136,9 @@ export function UsersPage() {
 										</TableCell>
 										<TableCell>{user.displayName ?? "—"}</TableCell>
 										<TableCell className="max-w-[200px] truncate">{user.email ?? user.userId ?? "—"}</TableCell>
+										<TableCell>
+											<ModeBadge lookingFor={user.lookingFor} />
+										</TableCell>
 										<TableCell>
 											<Badge variant={user.isSynthetic ? "secondary" : "outline"}>
 												{user.isSynthetic ? "Synthetic" : "Real"}

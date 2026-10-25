@@ -47,7 +47,8 @@ Neon Postgres (aws-eu-central-1, pgvector) via drizzle-orm/neon-http
   The auth id (Better Auth `user.id`, text) is used only for sessions.
   `findViewerByUserId` converts the auth id into a profile.
 - **Pools.** `looking_for` is 0 for friends and 1 for dating. Every candidate query filters by it,
-  so the two pools never mix.
+  so the two pools never mix. The mobile app turns the same flag into two visual modes (teal friends,
+  rose dating) by merging a per-mode accent palette in `useTheme`; see "App modes".
 - **Mobile.** Server state goes through react-query and the typed clients in `lib/api/*`. All
   text lives in `locales/en.json`.
 - **Realtime.** Chat sockets go to the `ChatRoom` Durable Object (`CHAT` binding), always created
@@ -163,12 +164,51 @@ Users can view and edit their profile, including a preview of how others see it.
   Better Auth `user.image`. When there is no photo, the API serves a deterministic portrait from a
   hash of the profile id (`src/lib/avatar-url.ts`).
 - **Theme:** a device-only preference (`lib/theme/preference.tsx`).
+- **Public preview:** `components/profile/profile-public-preview.tsx` mirrors the candidate screen
+  layout (4:5 photo with name and "age · career", mood badge, today's question and answer, about,
+  interests). Fields come from `lib/profile/privacy.ts > publicProfilePreview`, so hidden fields
+  are left out; mood and answer come from the `GET /mood/today` and `GET /daily-question/today`
+  queries.
 - **Delete account:** `DELETE /me` removes the profile and the auth user. Sessions and accounts are
   removed with it.
 
 **Where:**
 - Screens: `app/(profile)/profile/*`
 - Code: `components/profile/`, `lib/profile/` (privacy, location, photo, display)
+
+### App modes: friends and dating — live
+Friends and dating feel like two separate apps. Each mode has its own colors, icons and wording, and
+users switch between them from Home.
+- **Friends:** teal accent, people icon, "Say hi" (hand icon) to accept, "New friend!" on a match,
+  inbox titled "Friends".
+- **Dating:** rose accent, heart icon, "Like" (heart icon) to accept, "It's a match!" on a match,
+  inbox titled "Matches".
+- Candidate photos and the own profile preview carry a "Here for friends / dating" ribbon.
+
+**How it works:**
+- **Mode source:** `hooks/use-mode.ts > useMode()` reads `lookingFor` from the cached profile query
+  (cache-only observer, it never fetches). It is null before onboarding and after sign-out, which
+  clears the query cache, so auth and onboarding keep the honey brand palette.
+- **Palette:** `constants/app-config.ts > ModeAccents` overrides only the accent keys (`tint`,
+  `surface`, `field`, `border`, `accentSoft`, …) per mode and scheme. `useTheme()` and
+  `useThemeColor()` merge them over `Colors[scheme]`, so every screen recolors without changes.
+  Tints keep ≥ 4.5:1 contrast against `onTint`.
+- **Switching:** `components/home/mode-switch.tsx` (segmented Friends | Dating control under the
+  Home header) asks for confirmation, then sends `PATCH /me` with the new `lookingFor`. If the
+  stored `goal` belongs to the other mode it also sends `goal: null`, because the API rejects a
+  mismatched pair. On success it writes the returned profile into the cache and invalidates
+  recommendations and matches, so the new pool loads.
+- **Copy:** per-mode strings use i18next context (`t(key, { context: mode })` →
+  `key_friends`/`key_dating`, falling back to the plain key). `components/ui/mode-badge.tsx` holds
+  the ribbon and the per-mode icon map.
+
+**Where:**
+- Code: `hooks/use-mode.ts`, `hooks/use-theme.ts`, `components/home/mode-switch.tsx`,
+  `components/ui/mode-badge.tsx`, `components/connections/{connection-dock,connection-candidate-screen,new-match-dialog}.tsx`
+- Backoffice: `components/ModeBadge.tsx` on `UsersPage` and `UserDetailPage`
+
+**Missing:** matches made in the other mode stay in the inbox (not filtered by mode); one profile
+per user, so bio and interests are shared across modes.
 
 ### Recommendations feed ("connections") — live
 An exposure-limited **daily drop**: a small batch of 4 candidates. A new batch comes only after
@@ -360,7 +400,8 @@ reminder for the daily question and mood check-in.
   per isolate. With the secrets unset, `sendPush` returns `skipped`, so local dev runs without push.
 - **Privacy.** Copy is generic ("One of your matches wrote to you"): no names, message text or
   location, because the payload passes through Google/Apple. The data only carries `type` and the
-  sender's profile id `candidateId`, for routing the tap.
+  sender's profile id `candidateId`, for routing the tap. On APNs the data sits under `body`,
+  the only key expo-notifications reads on iOS.
 - **Tokens.** `push_tokens` (unique `token`, `user_profile_id` cascade) stores the native device
   token. `PUT /push-token` upserts, so a device that signs into another account moves to it.
   `DELETE /push-token` runs on sign-out. Tokens that FCM/APNs report dead (404/410, invalid
@@ -389,7 +430,7 @@ account), `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (.p8), `APNS_BUNDLE_
 `APNS_SANDBOX=true` for development builds. Mobile needs `apps/mobile/google-services.json` from the
 Firebase project, then a native rebuild.
 
-**Missing:** an in-app on/off switch per kind (the OS setting is the only control), no push while
+**Missing:** an iOS device test (secrets are set; remaining steps in `docs/path-a-implementation.md` W2.8), an in-app on/off switch per kind (the OS setting is the only control), no push while
 the recipient is already in that chat, the in-app match modal (BACKLOG D5), and no APNs check
 under local `wrangler dev` (APNs needs HTTP/2, which deployed Workers use).
 
@@ -422,9 +463,10 @@ age range. These are hard filters, unlike the 6 preference sliders, which only r
   no longer pass the mutual filters as acted on, in both directions, without generating new
   ones. The rows are kept, not deleted, so `shown_at` still drives the cooldown and the batch
   is never refilled early. The new filters fully apply from the next daily batch.
-- Seeded synthetic profiles (seed script and the backfill in migration `0017`) are interested in
-  the opposite gender, at their own age ±10 (minimum 18). This matches the source speed-dating
-  dataset.
+- Seeded synthetic profiles (seed script and the backfill in migration `0017`) get their own
+  age ±10 (minimum 18). Dating-pool ones are interested in the opposite gender, matching the
+  source speed-dating dataset. Friends-pool ones are open to every gender (`interested_in` null,
+  migration `0019`).
 - The scoring code (`scoring.ts`) is unchanged, so the offline evaluation is unaffected.
 - Other users never see `interested_in`. Candidate views go through `publicProfileFields`.
 
@@ -563,6 +605,39 @@ Only staff accounts with the admin role can open the backoffice.
 
 **Where:** page `LoginPage`
 
+### Branding — live
+The Haven app icon (amber `#F5B942` with the white roof mark) is the favicon and appears in the sidebar
+header and on the login card.
+
+**How it works:** `components/HavenLogo.tsx` is an inline SVG redrawn from the mobile
+`assets/images/icon.png`; `public/favicon.svg` is the same drawing. Update both if the icon changes.
+
+**Where:** `HavenLogo`, `app-sidebar.tsx`, `LoginPage`, `public/favicon.svg`
+
+### Dashboard — live
+The landing page after sign-in (`/` and unknown routes redirect here). Shows:
+- tiles: profiles (and how many are real), matches (and messages), today's mood check-ins (and
+  daily answers), reports,
+- bar charts of new real sign-ups and new matches per UTC day over the last 30 days; hovering a bar
+  shows that day's count,
+- pool split (friends / dating) and real vs agent split,
+- mood distribution over the last 30 days.
+
+**How it works:**
+- `GET /staff/stats` (`modules/staff`, `requireStaffAdmin`) returns aggregates only, never per-user
+  rows. The repository runs the counts in parallel (`profileTotals`, `activityTotals`,
+  `realSignupsByDay`, `matchesByDay`, `moodCounts`), grouping by `to_char(created_at, 'YYYY-MM-DD')`.
+- `lib/daily-series.ts` (`fillDailySeries`, tested) fills days with no rows as 0 so the charts have
+  one bar per day. "Today" is `utcToday()` from `lib/mood.ts`.
+- Sign-ups count only real profiles, because synthetic agents are created in bulk by the seed.
+  Matches count all pools and both real and synthetic participants.
+- Charts are plain divs styled with the theme tokens (no chart library). Friends/dating use the same
+  teal/rose as `ModeBadge`.
+
+**Where:** page `DashboardPage` (`/dashboard`); API `/staff/stats`
+
+**Missing:** a date-range selector, and a table view of the chart data.
+
 ### User management — live
 Staff can:
 - search and list profiles,
@@ -574,6 +649,9 @@ Staff can:
 - Search, edit and delete go through `modules/staff`. Search runs `ilike` on display name, email
   and auth id, and also matches a profile id typed as a number.
 - An edit can change profile columns and the Better Auth name and email.
+
+- A teal "Friends" / rose "Dating" badge (`components/ModeBadge.tsx`) shows each profile's mode in
+  the list and on the detail page.
 
 **Where:** pages `UsersPage`, `UserDetailPage`; API `/staff/users`, `/staff/users/{profileId}`
 

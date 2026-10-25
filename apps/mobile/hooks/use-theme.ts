@@ -1,9 +1,15 @@
-import { Colors } from "@/constants/app-config";
+import { useMemo } from "react";
+
+import { Colors, ModeAccents } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useMode } from "@/hooks/use-mode";
 
-export type Theme = typeof Colors.light | typeof Colors.dark;
+export type Theme = { [K in keyof typeof Colors.light]: string };
 
-/** Whole palette for the active scheme, for components that need several colours at once. */
+/** Whole palette for the active scheme, recoloured by the user's friends/dating mode once known. */
 export function useTheme(): Theme {
-	return Colors[useColorScheme() ?? "light"];
+	const scheme = useColorScheme() ?? "light";
+	const mode = useMode();
+
+	return useMemo(() => (mode ? { ...Colors[scheme], ...ModeAccents[mode][scheme] } : Colors[scheme]), [scheme, mode]);
 }

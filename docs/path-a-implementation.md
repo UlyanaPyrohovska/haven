@@ -547,6 +547,55 @@ above the keyboard with a small gap; the sticky button stays reachable; tap-outs
 the keyboard; no layout jump on open/close; verified with the multiline bio (tallest) field. Pull
 this earlier if W2.4's on-device onboarding run hits the bug first.
 
+## [~] W2.8 — Push notifications  ·  api/mobile · P2
+
+Code, Android setup and APNs secrets are done. iOS still needs a rebuild and a device test.
+
+Remote push for a new message, a new match and a fresh recommendations batch, plus one local daily
+reminder. The Worker sends straight to FCM/APNs (`src/lib/push.ts`), with no relay service; details
+are in `docs/FEATURES.md` → Notifications. iOS needs no Firebase SDK or `GoogleService-Info.plist`.
+
+### iOS setup (todo)
+
+Bundle id: `com.ulianapyrohovska.haven`.
+
+**Account Holder / Admin** (needs access to Certificates, Identifiers & Profiles):
+- [x] Enable push on the app id: https://developer.apple.com/account/resources/identifiers/list →
+  `com.ulianapyrohovska.haven` → tick **Push Notifications** → **Save**. No certificates needed.
+- [x] Create an APNs key: **Keys** → **+** → "Haven APNs" → tick **Apple Push Notifications service
+  (APNs)** (**Sandbox & Production** if asked) → **Register** → download `AuthKey_XXXXXXXXXX.p8`.
+  It can be downloaded only once.
+- [x] Send privately: the `.p8` file, its **Key ID** (10 chars) and the **Team ID** (Membership
+  details). Never through the repo.
+
+**Then us:**
+- [x] Store the key outside the repo, e.g. `~/haven-secrets/`.
+- [x] Set the Worker secrets from `apps/api`:
+
+  ```
+  npx wrangler secret put APNS_PRIVATE_KEY < ~/haven-secrets/AuthKey_XXXXXXXXXX.p8
+  npx wrangler secret put APNS_KEY_ID      # the Key ID
+  npx wrangler secret put APNS_TEAM_ID     # the Team ID
+  npx wrangler secret put APNS_BUNDLE_ID   # com.ulianapyrohovska.haven
+  npx wrangler secret put APNS_SANDBOX     # true
+  ```
+
+  `APNS_SANDBOX=true` matches development builds (`pnpm ios`, EAS `development`). For TestFlight or
+  ad hoc builds, delete it (`npx wrangler secret delete APNS_SANDBOX`). If it doesn't match the
+  build type, APNs answers `BadDeviceToken` and the API deletes that token.
+- [ ] Rebuild so prebuild adds the `aps-environment` entitlement:
+  `cd apps/mobile && pnpm prebuild && pnpm ios --device`, or `pnpm build:dev:ios` (let EAS update
+  the provisioning profile).
+- [ ] Test on a real iPhone against the deployed API. APNs needs HTTP/2, which may fail under local
+  `wrangler dev`. Run `pnpm --filter api deploy:prod`, then `pnpm --filter haven-app dev:prod`.
+  Allow notifications, keep `npx wrangler tail` open, close the app, and message it from a matched
+  second account.
+
+If nothing arrives: `BadDeviceToken` means `APNS_SANDBOX` doesn't match the build;
+`InvalidProviderToken` means a wrong Key ID, Team ID or `.p8`; `TopicDisallowed` means a wrong
+`APNS_BUNDLE_ID`. Rejected sends are not logged yet. Only network errors show up, as `push send
+failed`.
+
 ---
 
 ## [ ] W3.1 — Participant logistics  ·  ops · P0
@@ -600,6 +649,7 @@ one-page moderator script so every session is run identically. (These were draft
 
 - **W1.5:** `display_name varchar(80)` on `user_profiles`.
 - **W1.6:** new `crossings` table.
+- **W2.8:** new `push_tokens` table (`0018`).
 - Everything else uses existing tables (`user_embeddings` already defined with the HNSW index).
 
 Run `pnpm db:generate && pnpm db:migrate` after the W1.5 / W1.6 schema edits.

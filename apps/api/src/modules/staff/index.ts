@@ -35,4 +35,8 @@ staff.openapi(routes.interactionGraphRoute, async (c) => {
 	return c.json(await service.interactionGraph(c, query), 200);
 });
 
+staff.openapi(routes.statsRoute, async (c) => {
+	return c.json(await service.stats(c), 200);
+});
+
 export default staff;

@@ -126,7 +126,11 @@
 			"nearby": "You live close to each other",
 			"crossedPaths": "You've crossed paths before",
 			"compatible": "Your profiles line up well overall"
-		}
+		},
+		"accept_friends": "Say hi",
+		"accept_dating": "Like",
+		"matchedTitle_friends": "New friend!",
+		"matchedMessage_friends": "{{name}} wants to be friends too. Say hi from your inbox."
 	},
 	"matches": {
 		"title": "Matches",
@@ -135,7 +139,11 @@
 		"newMatchTitle": "You have a new match!",
 		"newMatchMessage": "{{name}} liked you back. Say hi while it's fresh.",
 		"sendMessage": "Send a message",
-		"later": "Later"
+		"later": "Later",
+		"title_friends": "Friends",
+		"subtitle_friends": "Your new friends and conversations",
+		"newMatchTitle_friends": "You made a new friend!",
+		"newMatchMessage_friends": "{{name}} said hi back. Start the conversation while it's fresh."
 	},
 	"profile": {
 		"title": "Profile",
@@ -441,5 +449,17 @@
 		"empty": "You matched with {{name}}. Start the conversation!",
 		"demoNotice": "This is a demo profile. It sent an opener but can't reply.",
 		"sendError": "Message not sent. Check your connection and try again."
+	},
+	"mode": {
+		"friends": "Friends",
+		"dating": "Dating",
+		"badge_friends": "Here for friends",
+		"badge_dating": "Here for dating",
+		"switchA11y": "Switch to {{mode}} mode",
+		"switchTitle": "Switch to {{mode}}?",
+		"switchMessage_friends": "You'll meet people looking for friends. Your current matches stay in your inbox.",
+		"switchMessage_dating": "You'll meet people looking to date. Your current matches stay in your inbox.",
+		"switchConfirm": "Switch",
+		"switchError": "Couldn't switch modes. Try again."
 	}
 }

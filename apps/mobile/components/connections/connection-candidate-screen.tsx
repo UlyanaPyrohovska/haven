@@ -21,8 +21,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { InterestChip, InterestChipRow } from "@/components/ui/interest-chip";
+import { ModeBadge, ModeIcon } from "@/components/ui/mode-badge";
 import { FontSize, Radius, Spacing } from "@/constants/app-config";
 import { useHeaderLocation } from "@/hooks/use-header-location";
+import { useMode } from "@/hooks/use-mode";
 import { useTheme } from "@/hooks/use-theme";
 import {
 	fetchRecommendation,
@@ -100,6 +102,8 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 	const [matchedName, setMatchedName] = useState("");
 	const [pendingMatch, setPendingMatch] = useState(false);
 	const [safetyDialog, setSafetyDialog] = useState<SafetyKind | null>(null);
+	// Pools never cross, so the candidate is in the viewer's mode.
+	const mode = useMode();
 
 	const connection = useQuery({
 		queryKey: recommendationQueryKey(candidateId),
@@ -239,6 +243,11 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 					<View style={[styles.photoCard, { backgroundColor: theme.field, borderColor: theme.border }]}>
 						<Image source={{ uri: data.photoUrl }} style={styles.photoImage} contentFit="cover" contentPosition="top" />
 						<View style={styles.photoScrim} />
+						{mode ? (
+							<View style={styles.modeRibbon}>
+								<ModeBadge mode={mode} />
+							</View>
+						) : null}
 
 						<View style={styles.photoOverlay}>
 							<ThemedText type="title" style={styles.photoOverlayText}>
@@ -358,10 +367,10 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 
 			<Dialog
 				visible={matchedDialog}
-				icon="heart-outline"
+				icon={mode ? ModeIcon[mode] : "heart-outline"}
 				tone="default"
-				title={t("connections.matchedTitle")}
-				message={t("connections.matchedMessage", { name: matchedName })}
+				title={t("connections.matchedTitle", { context: mode ?? undefined })}
+				message={t("connections.matchedMessage", { name: matchedName, context: mode ?? undefined })}
 				confirmLabel={t("connections.continueBrowsing")}
 				onConfirm={() => {
 					setMatchedDialog(false);
@@ -426,6 +435,11 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		height: 96,
 		backgroundColor: "rgba(0, 0, 0, 0.35)",
+	},
+	modeRibbon: {
+		position: "absolute",
+		top: Spacing.md,
+		left: Spacing.md,
 	},
 	badgesRow: {
 		marginTop: Spacing.md,

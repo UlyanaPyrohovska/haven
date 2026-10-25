@@ -1,12 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ProfileBadges } from "@/components/connections/profile-badges";
 import { ThemedText } from "@/components/themed-text";
 import { InterestChip, InterestChipRow } from "@/components/ui/interest-chip";
-import { Radius, Spacing } from "@/constants/app-config";
+import { ModeBadge } from "@/components/ui/mode-badge";
+import { FontSize, Radius, Spacing } from "@/constants/app-config";
+import { useMode } from "@/hooks/use-mode";
 import { useTheme } from "@/hooks/use-theme";
+import { fetchTodayDailyQuestion, todayDailyQuestionQueryKey } from "@/lib/api/daily-question";
+import { fetchTodayMood, todayMoodQueryKey } from "@/lib/api/mood";
 import { profileInitials } from "@/lib/profile/display";
 
 type ProfilePublicPreviewProps = {
@@ -33,8 +39,16 @@ export function ProfilePublicPreview({
 	const theme = useTheme();
 	const insets = useSafeAreaInsets();
 	const { t } = useTranslation();
-	const photoInterests = interests.slice(0, 3);
+	const mode = useMode();
 	const initials = profileInitials(displayName);
+	const overlaySubtext = [ageLabel, career].filter(Boolean).join(" · ");
+	// Same sources the candidate view reads for other users: today's mood and daily answer.
+	const mood = useQuery({ queryKey: todayMoodQueryKey, queryFn: fetchTodayMood, enabled: visible });
+	const dailyQuestion = useQuery({
+		queryKey: todayDailyQuestionQueryKey,
+		queryFn: fetchTodayDailyQuestion,
+		enabled: visible,
+	});
 
 	return (
 		<Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
@@ -65,33 +79,44 @@ export function ProfilePublicPreview({
 
 					<View style={[styles.photoCard, { backgroundColor: theme.field, borderColor: theme.border }]}>
 						{photoUrl ? (
-							<Image source={{ uri: photoUrl }} style={styles.photoImage} contentFit="cover" />
+							<Image source={{ uri: photoUrl }} style={styles.photoImage} contentFit="cover" contentPosition="top" />
 						) : (
-							<View style={[styles.photoPlaceholder, { backgroundColor: theme.accentSoft }]}>
+							<View style={[styles.photoImage, styles.photoPlaceholder, { backgroundColor: theme.accentSoft }]}>
 								<ThemedText type="title" style={{ color: theme.tint, fontSize: 56 }}>
 									{initials}
 								</ThemedText>
 							</View>
 						)}
 						<View style={styles.photoScrim} />
+						{mode ? (
+							<View style={styles.modeRibbon}>
+								<ModeBadge mode={mode} />
+							</View>
+						) : null}
 
 						<View style={styles.photoOverlay}>
 							<ThemedText type="title" style={styles.photoOverlayText}>
 								{displayName}
 							</ThemedText>
-							{ageLabel ? <ThemedText style={styles.photoOverlaySubtext}>{ageLabel}</ThemedText> : null}
-							{career ? <ThemedText style={styles.photoOverlaySubtext}>{career}</ThemedText> : null}
-							{photoInterests.length > 0 ? (
-								<View style={styles.photoTags}>
-									<InterestChipRow>
-										{photoInterests.map((interest) => (
-											<InterestChip key={interest} label={interest} onPhoto />
-										))}
-									</InterestChipRow>
-								</View>
-							) : null}
+							{overlaySubtext ? <ThemedText style={styles.photoOverlaySubtext}>{overlaySubtext}</ThemedText> : null}
 						</View>
 					</View>
+
+					<ProfileBadges mood={mood.data?.mood ?? null} isSynthetic={false} />
+
+					{dailyQuestion.data ? (
+						<View style={styles.block}>
+							<ThemedText type="label">{t("home.todaysQuestion")}</ThemedText>
+							<ThemedText
+								style={[styles.quote, { color: theme.muted }]}
+							>{`"${dailyQuestion.data.question}"`}</ThemedText>
+							<View style={[styles.answerBubble, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+								<ThemedText style={{ lineHeight: 22, color: dailyQuestion.data.answer ? theme.text : theme.muted }}>
+									{dailyQuestion.data.answer ?? t("dailyQuestion.noAnswerYet")}
+								</ThemedText>
+							</View>
+						</View>
+					) : null}
 
 					{bio ? (
 						<View style={styles.block}>
@@ -143,11 +168,10 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 	},
 	photoImage: {
-		height: 320,
+		aspectRatio: 4 / 5,
 		width: "100%",
 	},
 	photoPlaceholder: {
-		height: 320,
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -156,8 +180,13 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
-		height: 160,
-		backgroundColor: "rgba(0, 0, 0, 0.42)",
+		height: 96,
+		backgroundColor: "rgba(0, 0, 0, 0.35)",
+	},
+	modeRibbon: {
+		position: "absolute",
+		top: Spacing.md,
+		left: Spacing.md,
 	},
 	photoOverlay: {
 		position: "absolute",
@@ -173,11 +202,13 @@ const styles = StyleSheet.create({
 		color: "#ffffff",
 		opacity: 0.92,
 	},
-	photoTags: {
-		marginTop: Spacing.sm,
-	},
 	block: {
 		gap: Spacing.sm,
+	},
+	quote: {
+		fontSize: FontSize.md,
+		lineHeight: 24,
+		fontStyle: "italic",
 	},
 	answerBubble: {
 		borderRadius: Radius.lg,

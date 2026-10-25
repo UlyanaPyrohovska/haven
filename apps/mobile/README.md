@@ -71,8 +71,8 @@ pnpm dev:prod
 | Script | Profile | Use case |
 |---|---|---|
 | `build:dev:*` | `development` | Dev client with debug tooling |
-| `build:preview:*` | `preview` | Internal testing |
-| `build:prod:*` | `production` | Store release |
+| `build:preview:*` | `preview` | Internal testing; Android builds an installable APK |
+| `build:prod:ios` | `production` | TestFlight / App Store (iOS only; Android is not on Play) |
 
 ## Useful commands
 

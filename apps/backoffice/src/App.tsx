@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { BackofficeLayout } from "@/components/backoffice-layout";
 import { RequireStaff } from "@/components/RequireStaff";
+import { DashboardPage } from "@/pages/DashboardPage";
 import { GraphPage } from "@/pages/GraphPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { StaffPage } from "@/pages/StaffPage";
@@ -14,14 +15,15 @@ export default function App() {
 				<Route path="/login" element={<LoginPage />} />
 				<Route element={<RequireStaff />}>
 					<Route element={<BackofficeLayout />}>
+						<Route path="/dashboard" element={<DashboardPage />} />
 						<Route path="/users" element={<UsersPage />} />
 						<Route path="/users/:profileId" element={<UserDetailPage />} />
 						<Route path="/graph" element={<GraphPage />} />
 						<Route path="/staff" element={<StaffPage />} />
 					</Route>
 				</Route>
-				<Route path="/" element={<Navigate to="/users" replace />} />
-				<Route path="*" element={<Navigate to="/users" replace />} />
+				<Route path="/" element={<Navigate to="/dashboard" replace />} />
+				<Route path="*" element={<Navigate to="/dashboard" replace />} />
 			</Routes>
 		</BrowserRouter>
 	);

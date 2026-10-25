@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { HavenLogo } from "@/components/HavenLogo";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ export function LoginPage() {
 	const [loading, setLoading] = useState(false);
 
 	if (!isPending && session) {
-		return <Navigate to="/users" replace />;
+		return <Navigate to="/dashboard" replace />;
 	}
 
 	async function onSubmit(event: FormEvent) {
@@ -39,6 +40,7 @@ export function LoginPage() {
 			</div>
 			<Card className="w-full max-w-md">
 				<CardHeader>
+					<HavenLogo className="mb-2 size-10" />
 					<CardTitle>Haven backoffice</CardTitle>
 					<CardDescription>Staff sign-in with your Better Auth admin account.</CardDescription>
 				</CardHeader>

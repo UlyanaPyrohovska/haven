@@ -1,6 +1,6 @@
-import { and, count, desc, eq, getTableColumns, gte, ilike, inArray, or } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, gte, ilike, inArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { interactions, user, userProfiles } from "@/db/schema";
+import { dailyQuestionAnswers, interactions, messages, moodCheckins, reports, user, userProfiles } from "@/db/schema";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
 import type { InteractionGraphQuery, StaffUserListQuery } from "./schemas";
 
@@ -170,4 +170,63 @@ export function listGraphNodes(db: Db, profileIds: number[]) {
 		})
 		.from(userProfiles)
 		.where(inArray(userProfiles.id, profileIds));
+}
+
+export async function profileTotals(db: Db) {
+	const [row] = await db
+		.select({
+			total: count(),
+			synthetic: sql<number>`count(*) filter (where ${userProfiles.isSynthetic})`.mapWith(Number),
+			dating: sql<number>`count(*) filter (where ${userProfiles.lookingFor} = 1)`.mapWith(Number),
+		})
+		.from(userProfiles);
+
+	return row;
+}
+
+export async function activityTotals(db: Db, today: string) {
+	const [[matches], [messageCount], [reportCount], [answersToday], [moodsToday]] = await Promise.all([
+		db.select({ value: count() }).from(interactions).where(eq(interactions.match, true)),
+		db.select({ value: count() }).from(messages),
+		db.select({ value: count() }).from(reports),
+		db.select({ value: count() }).from(dailyQuestionAnswers).where(eq(dailyQuestionAnswers.answerDate, today)),
+		db.select({ value: count() }).from(moodCheckins).where(eq(moodCheckins.checkinDate, today)),
+	]);
+
+	return {
+		matches: matches?.value ?? 0,
+		messages: messageCount?.value ?? 0,
+		reports: reportCount?.value ?? 0,
+		dailyAnswersToday: answersToday?.value ?? 0,
+		moodCheckinsToday: moodsToday?.value ?? 0,
+	};
+}
+
+/** Real (non-synthetic) sign-ups per UTC day since `since`. */
+export function realSignupsByDay(db: Db, since: Date) {
+	const day = sql<string>`to_char(${userProfiles.createdAt}, 'YYYY-MM-DD')`;
+
+	return db
+		.select({ day, count: count() })
+		.from(userProfiles)
+		.where(and(eq(userProfiles.isSynthetic, false), gte(userProfiles.createdAt, since)))
+		.groupBy(day);
+}
+
+export function matchesByDay(db: Db, since: Date) {
+	const day = sql<string>`to_char(${interactions.createdAt}, 'YYYY-MM-DD')`;
+
+	return db
+		.select({ day, count: count() })
+		.from(interactions)
+		.where(and(eq(interactions.match, true), gte(interactions.createdAt, since)))
+		.groupBy(day);
+}
+
+export function moodCounts(db: Db, sinceDate: string) {
+	return db
+		.select({ mood: moodCheckins.mood, count: count() })
+		.from(moodCheckins)
+		.where(gte(moodCheckins.checkinDate, sinceDate))
+		.groupBy(moodCheckins.mood);
 }

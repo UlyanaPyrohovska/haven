@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Dialog } from "@/components/ui/dialog";
+import { ModeIcon } from "@/components/ui/mode-badge";
+import { useMode } from "@/hooks/use-mode";
 import type { MatchSummary } from "@/lib/api/recommendations";
 
 const STORAGE_KEY = "haven.seenMatchIds";
@@ -28,6 +30,7 @@ async function readSeenIds(): Promise<Set<number>> {
 export function NewMatchDialog({ matches }: { matches: MatchSummary[] | undefined }) {
 	const { t } = useTranslation();
 	const router = useRouter();
+	const mode = useMode();
 	const [seen, setSeen] = useState<Set<number> | null>(null);
 
 	useEffect(() => {
@@ -51,9 +54,9 @@ export function NewMatchDialog({ matches }: { matches: MatchSummary[] | undefine
 	return (
 		<Dialog
 			visible={fresh != null}
-			icon="heart"
-			title={t("matches.newMatchTitle")}
-			message={t("matches.newMatchMessage", { name: fresh?.displayName ?? "" })}
+			icon={mode ? ModeIcon[mode] : "heart"}
+			title={t("matches.newMatchTitle", { context: mode ?? undefined })}
+			message={t("matches.newMatchMessage", { name: fresh?.displayName ?? "", context: mode ?? undefined })}
 			confirmLabel={t("matches.sendMessage")}
 			onConfirm={() => {
 				markAllSeen();
