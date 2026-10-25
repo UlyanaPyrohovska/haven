@@ -577,12 +577,10 @@ Bundle id: `com.ulianapyrohovska.haven`.
   npx wrangler secret put APNS_KEY_ID      # the Key ID
   npx wrangler secret put APNS_TEAM_ID     # the Team ID
   npx wrangler secret put APNS_BUNDLE_ID   # com.ulianapyrohovska.haven
-  npx wrangler secret put APNS_SANDBOX     # true
   ```
 
-  `APNS_SANDBOX=true` matches development builds (`pnpm ios`, EAS `development`). For TestFlight or
-  ad hoc builds, delete it (`npx wrangler secret delete APNS_SANDBOX`). If it doesn't match the
-  build type, APNs answers `BadDeviceToken` and the API deletes that token.
+  No sandbox flag: the API sends to production APNs and retries sandbox once on `BadDeviceToken`,
+  so development and TestFlight/ad hoc builds both work.
 - [ ] Rebuild so prebuild adds the `aps-environment` entitlement:
   `cd apps/mobile && pnpm prebuild && pnpm ios --device`, or `pnpm build:dev:ios` (let EAS update
   the provisioning profile).
@@ -591,10 +589,9 @@ Bundle id: `com.ulianapyrohovska.haven`.
   Allow notifications, keep `npx wrangler tail` open, close the app, and message it from a matched
   second account.
 
-If nothing arrives: `BadDeviceToken` means `APNS_SANDBOX` doesn't match the build;
+If nothing arrives: `BadDeviceToken` on both hosts means the token is dead;
 `InvalidProviderToken` means a wrong Key ID, Team ID or `.p8`; `TopicDisallowed` means a wrong
-`APNS_BUNDLE_ID`. Rejected sends are not logged yet. Only network errors show up, as `push send
-failed`.
+`APNS_BUNDLE_ID`. Rejected sends are logged as `apns rejected` with the status and reason.
 
 ---
 

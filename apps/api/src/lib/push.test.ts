@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { apnsBody, classifyApnsResponse, classifyFcmResponse, fcmBody, noticeData, pemToDer, signJwt } from "./push";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+	apnsBody,
+	classifyApnsResponse,
+	classifyFcmResponse,
+	fcmBody,
+	noticeData,
+	pemToDer,
+	sendPush,
+	signJwt,
+} from "./push";
 
 describe("push payloads", () => {
 	it("carries only routing data as strings", () => {
@@ -66,5 +75,38 @@ describe("signJwt", () => {
 			new TextEncoder().encode(`${header}.${claims}`),
 		);
 		expect(valid).toBe(true);
+	});
+});
+
+describe("sendPush to APNs", () => {
+	afterEach(() => vi.unstubAllGlobals());
+
+	it("tries production APNs first, then sandbox on BadDeviceToken", async () => {
+		const pair = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+			"sign",
+			"verify",
+		])) as CryptoKeyPair;
+		const der = (await crypto.subtle.exportKey("pkcs8", pair.privateKey)) as ArrayBuffer;
+		const pem = `-----BEGIN PRIVATE KEY-----\n${Buffer.from(der).toString("base64")}\n-----END PRIVATE KEY-----`;
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(new Response('{"reason":"BadDeviceToken"}', { status: 400 }))
+			.mockResolvedValueOnce(new Response("", { status: 200 }));
+		vi.stubGlobal("fetch", fetchMock);
+		vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const env = {
+			APNS_KEY_ID: "k",
+			APNS_TEAM_ID: "t",
+			APNS_PRIVATE_KEY: pem,
+			APNS_BUNDLE_ID: "b",
+		};
+		const result = await sendPush(env, { token: "abcdef", platform: "ios" }, { kind: "recommendations" });
+
+		expect(result).toBe("sent");
+		expect(fetchMock.mock.calls.map(([url]) => new URL(url).host)).toEqual([
+			"api.push.apple.com",
+			"api.sandbox.push.apple.com",
+		]);
 	});
 });

@@ -7,5 +7,4 @@ interface CloudflareBindings {
 	APNS_TEAM_ID?: string;
 	APNS_PRIVATE_KEY?: string;
 	APNS_BUNDLE_ID?: string;
-	APNS_SANDBOX?: string;
 }

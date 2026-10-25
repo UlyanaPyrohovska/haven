@@ -405,7 +405,10 @@ reminder for the daily question and mood check-in.
 - **Tokens.** `push_tokens` (unique `token`, `user_profile_id` cascade) stores the native device
   token. `PUT /push-token` upserts, so a device that signs into another account moves to it.
   `DELETE /push-token` runs on sign-out. Tokens that FCM/APNs report dead (404/410, invalid
-  token) are pruned after a send.
+  token) are pruned after a send. An APNs `BadDeviceToken` from production is first retried once on
+  sandbox, because Xcode dev-client builds get sandbox tokens and
+  ad-hoc/TestFlight builds get production ones, while one Worker serves both. Every APNs rejection
+  is logged as `apns rejected` (status, reason, last 6 token chars), visible in `wrangler tail`.
 - **Triggers.** `notify(env, db, profileId, notice)` (`modules/notifications/service.ts`) is best
   effort and never throws. Request paths run it in `waitUntil`:
   - `postMessage` notifies the other side of the conversation.
@@ -426,8 +429,8 @@ reminder for the daily question and mood check-in.
   plugin, `googleServicesFile`)
 
 **Setup:** Worker secrets `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY` (Firebase service
-account), `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (.p8), `APNS_BUNDLE_ID`, and
-`APNS_SANDBOX=true` for development builds. Mobile needs `apps/mobile/google-services.json` from the
+account), `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (.p8), `APNS_BUNDLE_ID`. No
+sandbox flag: production APNs is tried first, sandbox only after `BadDeviceToken`. Mobile needs `apps/mobile/google-services.json` from the
 Firebase project, then a native rebuild.
 
 **Missing:** an iOS device test (secrets are set; remaining steps in `docs/path-a-implementation.md` W2.8), an in-app on/off switch per kind (the OS setting is the only control), no push while
