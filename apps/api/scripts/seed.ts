@@ -6,7 +6,7 @@ import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import Papa from "papaparse";
 import pg from "pg";
-import { friendships, interactions, userProfiles } from "../src/db/schema";
+import { interactions, userProfiles } from "../src/db/schema";
 import { MIN_AGE } from "../src/lib/age";
 import { syntheticDisplayName } from "../src/lib/candidate-display";
 import { LookingFor, lookingForFromGoal } from "../src/lib/looking-for";
@@ -21,7 +21,6 @@ config({ path: join(apiRoot, ".env") });
 const EXPECTED_COUNTS = {
 	users: 2000,
 	interactions: 98780,
-	friendships: 7936,
 } as const;
 
 /** Dataset generation timestamp — keeps derived birth dates stable across runs. */
@@ -157,15 +156,6 @@ function mapInteractionRow(row: CsvRow) {
 	};
 }
 
-function mapFriendshipRow(row: CsvRow) {
-	const userA = parseIntField(row, "user_a");
-	const userB = parseIntField(row, "user_b");
-	return {
-		userA: Math.min(userA, userB),
-		userB: Math.max(userA, userB),
-	};
-}
-
 async function batchInsert<T extends Record<string, unknown>>(
 	label: string,
 	rows: T[],
@@ -189,22 +179,17 @@ async function main() {
 	const datasetDir = resolveDatasetDir();
 	const usersPath = join(datasetDir, "synthetic_users.csv");
 	const interactionsPath = join(datasetDir, "synthetic_interactions.csv");
-	const friendshipsPath = join(datasetDir, "synthetic_friendships.csv");
 
 	console.log(`Reading CSVs from ${datasetDir}`);
 
 	const userRows = readCsv(usersPath).map(mapUserRow);
 	const interactionRows = readCsv(interactionsPath).map(mapInteractionRow);
-	const friendshipRows = readCsv(friendshipsPath).map(mapFriendshipRow);
 
 	if (userRows.length !== EXPECTED_COUNTS.users) {
 		throw new Error(`Expected ${EXPECTED_COUNTS.users} users, got ${userRows.length}`);
 	}
 	if (interactionRows.length !== EXPECTED_COUNTS.interactions) {
 		throw new Error(`Expected ${EXPECTED_COUNTS.interactions} interactions, got ${interactionRows.length}`);
-	}
-	if (friendshipRows.length !== EXPECTED_COUNTS.friendships) {
-		throw new Error(`Expected ${EXPECTED_COUNTS.friendships} friendships, got ${friendshipRows.length}`);
 	}
 
 	const pool = new pg.Pool({ connectionString: databaseUrl });
@@ -223,8 +208,7 @@ async function main() {
 			TRUNCATE TABLE
 				recommendations,
 				user_embeddings,
-				interactions,
-				friendships
+				interactions
 			RESTART IDENTITY
 		`);
 		await db.delete(userProfiles).where(eq(userProfiles.isSynthetic, true));
@@ -237,11 +221,6 @@ async function main() {
 		console.log("Inserting interactions…");
 		await batchInsert("interactions", interactionRows, async (batch) => {
 			await db.insert(interactions).values(batch);
-		});
-
-		console.log("Inserting friendships…");
-		await batchInsert("friendships", friendshipRows, async (batch) => {
-			await db.insert(friendships).values(batch);
 		});
 
 		// Explicit ids (1–2000) do not advance the serial sequence; without this, the next
@@ -262,23 +241,17 @@ async function main() {
 			.from(userProfiles)
 			.where(eq(userProfiles.isSynthetic, false));
 		const [interactionCount] = await db.select({ count: sql<number>`count(*)::int` }).from(interactions);
-		const [friendshipCount] = await db.select({ count: sql<number>`count(*)::int` }).from(friendships);
 
 		console.log("\nSeed complete:");
 		console.log(`  user_profiles (synthetic): ${syntheticCount.count}`);
 		console.log(`  user_profiles (real):      ${realCount.count}`);
 		console.log(`  interactions:              ${interactionCount.count}`);
-		console.log(`  friendships:               ${friendshipCount.count}`);
 
 		if (realCount.count !== beforeReal.count) {
 			throw new Error(`Real profile count changed during seed (${beforeReal.count} → ${realCount.count})`);
 		}
 
-		if (
-			syntheticCount.count !== EXPECTED_COUNTS.users ||
-			interactionCount.count !== EXPECTED_COUNTS.interactions ||
-			friendshipCount.count !== EXPECTED_COUNTS.friendships
-		) {
+		if (syntheticCount.count !== EXPECTED_COUNTS.users || interactionCount.count !== EXPECTED_COUNTS.interactions) {
 			throw new Error("Post-seed synthetic row counts do not match the source CSVs");
 		}
 	} finally {

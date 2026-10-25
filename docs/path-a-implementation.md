@@ -256,7 +256,7 @@ export const crossings = pgTable("crossings", {
 }, (t) => [primaryKey({ columns: [t.userA, t.userB] }), index("crossings_user_b_idx").on(t.userB)]);
 ```
 
-Undirected — always store with `user_a < user_b` (same convention as `friendships`).
+Undirected — always store with `user_a < user_b`.
 
 **Scoring extension** (`apps/api/src/lib/scoring.ts`, on top of the W1.2 functions). Crossings
 are symmetric, so this does **not** go inside the directional `unilateral()` — it's applied once
