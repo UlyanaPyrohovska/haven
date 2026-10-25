@@ -49,4 +49,13 @@ staff.openapi(routes.regenerateUserRecommendationsRoute, async (c) => {
 	return c.json(await service.regenerateUserRecommendations(c, profileId), 200);
 });
 
+staff.openapi(routes.getMatchingConfigRoute, async (c) => {
+	return c.json(await service.getMatchingConfig(c), 200);
+});
+
+staff.openapi(routes.putMatchingConfigRoute, async (c) => {
+	const body = c.req.valid("json");
+	return c.json(await service.updateMatchingConfig(c, body), 200);
+});
+
 export default staff;

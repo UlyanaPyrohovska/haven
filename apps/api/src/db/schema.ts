@@ -459,3 +459,20 @@ export const pushTokens = pgTable(
 	},
 	(t) => [uniqueIndex("push_tokens_token_uniq").on(t.token), index("push_tokens_profile_idx").on(t.userProfileId)],
 );
+
+// ────────────────────────────────────────────────────────────────
+// matching_config — single row (id = 1) of staff-editable matching rules; absent means code defaults
+// ────────────────────────────────────────────────────────────────
+export const matchingConfig = pgTable("matching_config", {
+	id: smallint("id").primaryKey().default(1),
+	batchSize: smallint("batch_size").notNull(),
+	cooldownHours: real("cooldown_hours").notNull(),
+	weightBio: real("weight_bio").notNull(),
+	weightInterest: real("weight_interest").notNull(),
+	weightGeo: real("weight_geo").notNull(),
+	weightPref: real("weight_pref").notNull(),
+	crossPathsLambda: real("cross_paths_lambda").notNull(),
+	/** Better Auth user id of the staff member who last saved. */
+	updatedBy: text("updated_by"),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

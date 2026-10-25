@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { weightsSumToOne } from "@/lib/matching-config";
 import { ProfileUpdateSchema } from "@/modules/profile/schemas";
 
 export const StaffUserListQuerySchema = z
@@ -167,6 +168,34 @@ export const StaffRecommendationsResponseSchema = z
 		),
 	})
 	.openapi("StaffRecommendationsResponse");
+
+export const MatchingConfigSchema = z
+	.object({
+		batchSize: z.number().int().min(1).max(50),
+		cooldownHours: z
+			.number()
+			.min(0)
+			.max(24 * 30),
+		weights: z
+			.object({
+				bio: z.number().min(0).max(1),
+				interest: z.number().min(0).max(1),
+				geo: z.number().min(0).max(1),
+				pref: z.number().min(0).max(1),
+			})
+			.refine(weightsSumToOne, { message: "Weights must sum to 1" }),
+		crossPathsLambda: z.number().min(0).max(1),
+	})
+	.openapi("MatchingConfig");
+
+export const MatchingConfigResponseSchema = z
+	.object({
+		config: MatchingConfigSchema,
+		defaults: MatchingConfigSchema,
+		updatedAt: z.string().nullable(),
+		updatedBy: z.string().nullable(),
+	})
+	.openapi("MatchingConfigResponse");
 
 export type StaffUserListQuery = z.infer<typeof StaffUserListQuerySchema>;
 export type StaffUserUpdate = z.infer<typeof StaffUserUpdateSchema>;

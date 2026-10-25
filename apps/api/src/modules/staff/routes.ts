@@ -169,3 +169,36 @@ export const regenerateUserRecommendationsRoute = createRoute({
 		404: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Not found" },
 	},
 });
+
+export const getMatchingConfigRoute = createRoute({
+	method: "get",
+	path: "/staff/matching-config",
+	tags: ["Staff"],
+	summary: "Matching rules in effect (staff)",
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.MatchingConfigResponseSchema } },
+			description: "Current config and code defaults",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+	},
+});
+
+export const putMatchingConfigRoute = createRoute({
+	method: "put",
+	path: "/staff/matching-config",
+	tags: ["Staff"],
+	summary: "Save matching rules (staff)",
+	request: {
+		body: { content: { "application/json": { schema: schemas.MatchingConfigSchema } } },
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.MatchingConfigResponseSchema } },
+			description: "Saved config",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+	},
+});

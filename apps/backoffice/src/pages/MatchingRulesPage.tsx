@@ -1,0 +1,203 @@
+import { type FormEvent, useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { getMatchingConfig, type MatchingConfig, type MatchingConfigResponse, updateMatchingConfig } from "@/lib/api";
+
+type FieldKey = "batchSize" | "cooldownHours" | "bio" | "interest" | "geo" | "pref" | "crossPathsLambda";
+type Form = Record<FieldKey, string>;
+
+const CADENCE_FIELDS = [
+	{ key: "batchSize", label: "Batch size", hint: "People per daily drop (1–50).", step: "1" },
+	{ key: "cooldownHours", label: "Cooldown (hours)", hint: "Wait before a user gets a new batch.", step: "0.5" },
+] as const;
+
+const WEIGHT_FIELDS = [
+	{ key: "bio", label: "Bio similarity", hint: "Dropped and the rest renormalized when a bio is missing." },
+	{ key: "interest", label: "Interests", hint: "17 interests plus custom interests." },
+	{ key: "geo", label: "Distance", hint: "exp(−km / 25); 0.5 when location is missing." },
+	{ key: "pref", label: "Preferences", hint: "u's preferences against v's self-ratings." },
+] as const;
+
+function toForm(config: MatchingConfig): Form {
+	return {
+		batchSize: String(config.batchSize),
+		cooldownHours: String(config.cooldownHours),
+		...(Object.fromEntries(Object.entries(config.weights).map(([key, value]) => [key, String(value)])) as Record<
+			keyof MatchingConfig["weights"],
+			string
+		>),
+		crossPathsLambda: String(config.crossPathsLambda),
+	};
+}
+
+function fromForm(form: Form): MatchingConfig {
+	return {
+		batchSize: Number(form.batchSize),
+		cooldownHours: Number(form.cooldownHours),
+		weights: {
+			bio: Number(form.bio),
+			interest: Number(form.interest),
+			geo: Number(form.geo),
+			pref: Number(form.pref),
+		},
+		crossPathsLambda: Number(form.crossPathsLambda),
+	};
+}
+
+export function MatchingRulesPage() {
+	const [response, setResponse] = useState<MatchingConfigResponse | null>(null);
+	const [form, setForm] = useState<Form | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	const [saving, setSaving] = useState(false);
+	const [saved, setSaved] = useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		getMatchingConfig()
+			.then((data) => {
+				if (cancelled) return;
+				setResponse(data);
+				setForm(toForm(data.config));
+			})
+			.catch((err) => {
+				if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load matching rules");
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	if (!form || !response) {
+		return error ? (
+			<Alert variant="destructive">
+				<AlertDescription>{error}</AlertDescription>
+			</Alert>
+		) : (
+			<p className="text-sm text-muted-foreground">Loading…</p>
+		);
+	}
+
+	const config = fromForm(form);
+	const weightSum = config.weights.bio + config.weights.interest + config.weights.geo + config.weights.pref;
+	const weightsValid = Math.abs(weightSum - 1) < 0.001;
+
+	function setField(key: FieldKey, value: string) {
+		setSaved(false);
+		setForm((current) => (current ? { ...current, [key]: value } : current));
+	}
+
+	async function onSubmit(event: FormEvent) {
+		event.preventDefault();
+		setSaving(true);
+		setError(null);
+		try {
+			const data = await updateMatchingConfig(config);
+			setResponse(data);
+			setForm(toForm(data.config));
+			setSaved(true);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to save matching rules");
+		} finally {
+			setSaving(false);
+		}
+	}
+
+	function renderField(field: { key: FieldKey; label: string; hint: string; step?: string }, defaultValue: number) {
+		return (
+			<div key={field.key} className="space-y-2">
+				<Label htmlFor={`rule-${field.key}`}>{field.label}</Label>
+				<Input
+					id={`rule-${field.key}`}
+					type="number"
+					inputMode="decimal"
+					step={field.step ?? "0.01"}
+					min="0"
+					required
+					value={form?.[field.key] ?? ""}
+					onChange={(event) => setField(field.key, event.target.value)}
+				/>
+				<p className="text-xs text-muted-foreground">
+					{field.hint} Default {defaultValue}.
+				</p>
+			</div>
+		);
+	}
+
+	const { defaults } = response;
+
+	return (
+		<div className="space-y-4">
+			<div>
+				<h1 className="text-xl font-semibold tracking-tight">Matching rules</h1>
+				<p className="text-sm text-muted-foreground">
+					Changes apply to the next batch generated. Existing recommendations keep their stored scores; use Regenerate
+					on a user to rebuild theirs.
+					{response.updatedAt
+						? ` Last saved ${new Date(response.updatedAt).toLocaleString()}.`
+						: " Using code defaults (nothing saved yet)."}
+				</p>
+			</div>
+
+			{error ? (
+				<Alert variant="destructive">
+					<AlertDescription>{error}</AlertDescription>
+				</Alert>
+			) : null}
+
+			<form id="matching-rules-form" className="grid gap-4 lg:grid-cols-2" onSubmit={onSubmit}>
+				<Card>
+					<CardHeader>
+						<CardTitle>Cadence</CardTitle>
+						<CardDescription>How many people a user sees and how often.</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						{CADENCE_FIELDS.map((field) => renderField(field, defaults[field.key]))}
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader>
+						<CardTitle>Score weights</CardTitle>
+						<CardDescription className={weightsValid ? undefined : "text-destructive"}>
+							One-way score = weighted sum of these. Must sum to 1 (now {weightSum.toFixed(3)}).
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="grid gap-4 sm:grid-cols-2">
+						{WEIGHT_FIELDS.map((field) => renderField(field, defaults.weights[field.key]))}
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader>
+						<CardTitle>Crossed-paths boost</CardTitle>
+						<CardDescription>score × (1 + λ · (1 − e^(−count / 3))). 0 turns the boost off.</CardDescription>
+					</CardHeader>
+					<CardContent>
+						{renderField(
+							{
+								key: "crossPathsLambda",
+								label: "Boost strength λ (0–1)",
+								hint: "Keep ≤ 0.25 so it doesn't double-count distance.",
+							},
+							defaults.crossPathsLambda,
+						)}
+					</CardContent>
+					<CardFooter className="justify-end gap-2 border-t">
+						{saved ? <span className="mr-auto text-sm text-muted-foreground">Saved.</span> : null}
+						<Button type="button" variant="outline" onClick={() => setForm(toForm(defaults))} disabled={saving}>
+							Reset to defaults
+						</Button>
+						<Button type="submit" disabled={saving || !weightsValid}>
+							{saving ? "Saving…" : "Save"}
+						</Button>
+					</CardFooter>
+				</Card>
+			</form>
+		</div>
+	);
+}

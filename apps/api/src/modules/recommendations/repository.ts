@@ -17,9 +17,10 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db";
-import { crossings, interactions, recommendations, userEmbeddings, userProfiles } from "@/db/schema";
+import { crossings, interactions, matchingConfig, recommendations, userEmbeddings, userProfiles } from "@/db/schema";
 import { ageFromBirthDate, parseIsoDate } from "@/lib/age";
 import { customInterestKey } from "@/lib/custom-interests";
+import { type MatchingConfig, resolveMatchingConfig, toMatchingConfigRow } from "@/lib/matching-config";
 import { birthDateWindow, mutualFilterMatch, type PartnerFilterProfile } from "@/lib/partner-filters";
 import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile-view";
 import { coerceLastShownAt } from "@/lib/recommendation-cadence";
@@ -624,4 +625,24 @@ export async function dismissPendingFilterMisfits(db: Db, profileId: number): Pr
 	}
 
 	return misfitIds.length;
+}
+
+export async function findMatchingConfigRow(db: Db) {
+	const [row] = await db.select().from(matchingConfig).where(eq(matchingConfig.id, 1)).limit(1);
+
+	return row ?? null;
+}
+
+/** Staff-saved matching rules, else code defaults (`envCooldown` is `REC_COOLDOWN_HOURS`). */
+export async function loadMatchingConfig(db: Db, envCooldown?: string): Promise<MatchingConfig> {
+	return resolveMatchingConfig(await findMatchingConfigRow(db), envCooldown);
+}
+
+export async function saveMatchingConfig(db: Db, config: MatchingConfig, updatedBy: string) {
+	const values = { ...toMatchingConfigRow(config), updatedBy, updatedAt: new Date() };
+
+	await db
+		.insert(matchingConfig)
+		.values({ id: 1, ...values })
+		.onConflictDoUpdate({ target: matchingConfig.id, set: values });
 }

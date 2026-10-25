@@ -1,4 +1,4 @@
-import { LayoutDashboardIcon, NetworkIcon, ShieldIcon, UsersIcon } from "lucide-react";
+import { LayoutDashboardIcon, NetworkIcon, ShieldIcon, SlidersHorizontalIcon, UsersIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { HavenLogo } from "@/components/HavenLogo";
 import {
@@ -17,6 +17,7 @@ const navItems = [
 	{ title: "Dashboard", href: "/dashboard", icon: LayoutDashboardIcon, description: "App stats" },
 	{ title: "Users", href: "/users", icon: UsersIcon, description: "Platform profiles" },
 	{ title: "Graph", href: "/graph", icon: NetworkIcon, description: "Interactions and simulation" },
+	{ title: "Matching rules", href: "/matching", icon: SlidersHorizontalIcon, description: "Recommendation settings" },
 	{ title: "Staff", href: "/staff", icon: ShieldIcon, description: "Backoffice accounts" },
 ] as const;
 

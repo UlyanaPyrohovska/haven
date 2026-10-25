@@ -3,9 +3,9 @@ import { getDb } from "@/db";
 import { displayNameForCandidate } from "@/lib/candidate-display";
 import { fillDailySeries, lastUtcDays } from "@/lib/daily-series";
 import { errors } from "@/lib/errors";
+import { type MatchingConfig, resolveMatchingConfig } from "@/lib/matching-config";
 import { MoodSlugs, moodSlug, utcToday } from "@/lib/mood";
-import { CADENCE, resolveRecCooldownHours } from "@/lib/recommendation-cadence";
-import { applyCrossPathsBoost, DEFAULT_WEIGHTS, reciprocalScore, scoreBreakdown } from "@/lib/scoring";
+import { applyCrossPathsBoost, reciprocalScore, scoreBreakdown } from "@/lib/scoring";
 import { requireStaffAdmin } from "@/lib/session";
 import { notify } from "@/modules/notifications/service";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
@@ -150,7 +150,7 @@ export async function simulationTick(c: Context<{ Bindings: CloudflareBindings }
 
 	return runTick(db, {
 		limit,
-		cooldownHours: resolveRecCooldownHours(c.env.REC_COOLDOWN_HOURS),
+		cooldownHours: (await recommendationsRepository.loadMatchingConfig(db, c.env.REC_COOLDOWN_HOURS)).cooldownHours,
 		notify: (profileId, notice) => notify(c.env, db, profileId, notice),
 	});
 }
@@ -213,7 +213,7 @@ export async function stats(c: Context<{ Bindings: CloudflareBindings }>) {
 }
 
 /**
- * Components are recomputed from current profile data with the default weights, so they can drift
+ * Components are recomputed from current profile data with the current matching config, so they can drift
  * from `storedScore` (written at generation time) after either profile changes.
  */
 export async function userRecommendations(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
@@ -228,14 +228,15 @@ export async function userRecommendations(c: Context<{ Bindings: CloudflareBindi
 
 	const rows = await repository.listRecommendationsForUser(db, profileId);
 	const candidateIds = rows.map((row) => row.candidateId);
-	const [candidates, crossings] = await Promise.all([
+	const [candidates, crossings, config] = await Promise.all([
 		recommendationsRepository.listScoringProfilesByIds(db, candidateIds),
 		recommendationsRepository.listCrossings(db, profileId, candidateIds),
+		recommendationsRepository.loadMatchingConfig(db),
 	]);
 	const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
 
 	return {
-		weights: DEFAULT_WEIGHTS,
+		weights: config.weights,
 		recommendations: rows.flatMap((row) => {
 			const candidate = candidateById.get(row.candidateId);
 
@@ -243,8 +244,8 @@ export async function userRecommendations(c: Context<{ Bindings: CloudflareBindi
 				return [];
 			}
 
-			const breakdown = scoreBreakdown(viewer, candidate);
-			const { pUToV, qVToU } = reciprocalScore(viewer, candidate);
+			const breakdown = scoreBreakdown(viewer, candidate, config.weights);
+			const { pUToV, qVToU } = reciprocalScore(viewer, candidate, config.weights);
 			const crossingCount = crossings.get(row.candidateId)?.count ?? 0;
 
 			return [
@@ -260,7 +261,7 @@ export async function userRecommendations(c: Context<{ Bindings: CloudflareBindi
 					pUToV,
 					qVToU,
 					crossings: crossingCount,
-					score: applyCrossPathsBoost(breakdown.reciprocal, crossingCount),
+					score: applyCrossPathsBoost(breakdown.reciprocal, crossingCount, config.crossPathsLambda),
 				},
 			];
 		}),
@@ -270,7 +271,33 @@ export async function userRecommendations(c: Context<{ Bindings: CloudflareBindi
 /** Same batch the feed would build; acted-on rows stay. Resets the user's feed cooldown (new `shown_at`). */
 export async function regenerateUserRecommendations(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
 	await requireStaffAdmin(c);
-	await generateRecommendations(getDb(c.env.DATABASE_URL), profileId, { k: CADENCE.batchSize });
+	await generateRecommendations(getDb(c.env.DATABASE_URL), profileId);
 
 	return userRecommendations(c, profileId);
+}
+
+async function matchingConfigResponse(c: Context<{ Bindings: CloudflareBindings }>) {
+	const db = getDb(c.env.DATABASE_URL);
+	const row = await recommendationsRepository.findMatchingConfigRow(db);
+
+	return {
+		config: resolveMatchingConfig(row, c.env.REC_COOLDOWN_HOURS),
+		defaults: resolveMatchingConfig(null, c.env.REC_COOLDOWN_HOURS),
+		updatedAt: row?.updatedAt.toISOString() ?? null,
+		updatedBy: row?.updatedBy ?? null,
+	};
+}
+
+export async function getMatchingConfig(c: Context<{ Bindings: CloudflareBindings }>) {
+	await requireStaffAdmin(c);
+
+	return matchingConfigResponse(c);
+}
+
+/** Applies to the next batch generated; existing recommendations keep their stored scores. */
+export async function updateMatchingConfig(c: Context<{ Bindings: CloudflareBindings }>, config: MatchingConfig) {
+	const session = await requireStaffAdmin(c);
+	await recommendationsRepository.saveMatchingConfig(getDb(c.env.DATABASE_URL), config, session.user.id);
+
+	return matchingConfigResponse(c);
 }

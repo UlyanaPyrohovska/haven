@@ -520,7 +520,9 @@ Builds one batch of recommendations for a viewer.
 - The pool is capped at 500. When the viewer has a bio embedding, an HNSW `bio <=> viewer`
   shortlist of 200 runs before exact rescoring. Pending likers are ordered first in both cases, so
   the cap never drops them.
-- Options: `k`, `maxKm`, `weights`, `crossPathsLambda`, `syntheticOnly`.
+- Options: `k`, `maxKm`, `weights`, `crossPathsLambda`, `syntheticOnly`. When `k`, `weights` or
+  `crossPathsLambda` are not passed they come from the staff-editable matching config
+  (`loadMatchingConfig`, see Matching rules), which falls back to the code constants.
 
 **Where:** `src/modules/recommendations/generator.ts`, `repository.ts`,
 `src/lib/recommendation-cadence.ts`
@@ -659,7 +661,7 @@ Staff can:
 - Recommendation scores: `GET /staff/users/{profileId}/recommendations` lists every
   `recommendations` row for the user (pending and acted on, newest batch first) with the stored
   `score` and `rank`. For each candidate it reruns `scoreBreakdown` and `reciprocalScore` from
-  `scoring.ts` with `DEFAULT_WEIGHTS` and applies `applyCrossPathsBoost` with the crossing count
+  `scoring.ts` with the current matching-config weights and applies `applyCrossPathsBoost` (config λ) with the crossing count
   from `listCrossings`. The row shows bio, interest, geo, pref u→v, pref v→u, p u→v, q v→u,
   reciprocal, crossings and the final score. These components use current profile data, so they can
   differ from the stored score if either profile changed after the batch was generated. Only ids,
@@ -671,6 +673,33 @@ Staff can:
 
 **Where:** pages `UsersPage`, `UserDetailPage` (`components/RecommendationScores.tsx`); API
 `/staff/users`, `/staff/users/{profileId}`, `/staff/users/{profileId}/recommendations` (+ `/regenerate`)
+
+### Matching rules — live
+Staff can edit the recommendation rules from the "Matching rules" page:
+- batch size and cooldown (hours) between batches,
+- the four score weights (bio, interest, geo, pref), which must sum to 1,
+- the crossed-paths boost strength λ.
+
+The page shows each default, has "Reset to defaults", and says when the rules were last saved.
+
+**How it works:**
+- One-row table `matching_config` (`id = 1`, migration `0020`). No row means code defaults:
+  `CADENCE`, `DEFAULT_WEIGHTS` and `CROSS_PATHS.lambda` from `scoring.ts`, with the cooldown still
+  overridable by `REC_COOLDOWN_HOURS`. A saved row wins over the env var.
+- `lib/matching-config.ts` (pure, tested): `resolveMatchingConfig`, `toMatchingConfigRow`,
+  `weightsSumToOne`. `recommendations/repository.ts` has `loadMatchingConfig` and
+  `saveMatchingConfig` (upsert, stores the staff auth id in `updated_by`).
+- Readers: `generateRecommendations` (batch size, weights, λ), the feed cooldown in
+  `recommendations/service.ts`, the simulation tick (cron and staff), and the staff recommendation
+  breakdown.
+- `GET /staff/matching-config` returns the config, the defaults and the last update.
+  `PUT` validates with zod (batch size 1–50, cooldown 0–720 h, weights 0–1 summing to 1, λ 0–1).
+- Changes apply to the next batch. Stored recommendation scores are not rewritten.
+
+**Where:** page `MatchingRulesPage` (`/matching`); API `/staff/matching-config`
+
+**Missing:** the geo decay (25 km) and the crossed-paths K are still code constants. There is no
+history of changes, only the last one.
 
 ### Staff accounts — live
 List and create staff admins.
