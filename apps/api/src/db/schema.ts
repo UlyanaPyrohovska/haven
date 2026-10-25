@@ -304,23 +304,6 @@ export const interactions = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
-// friendships — undirected edges, stored with a < b
-// ────────────────────────────────────────────────────────────────
-export const friendships = pgTable(
-	"friendships",
-	{
-		userA: integer("user_a")
-			.notNull()
-			.references(() => userProfiles.id, { onDelete: "cascade" }),
-		userB: integer("user_b")
-			.notNull()
-			.references(() => userProfiles.id, { onDelete: "cascade" }),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-	},
-	(t) => [primaryKey({ columns: [t.userA, t.userB] }), index("friendships_user_b_idx").on(t.userB)],
-);
-
-// ────────────────────────────────────────────────────────────────
 // crossings — simulated (seeded) "crossed paths" counts, undirected, stored with a < b
 // ────────────────────────────────────────────────────────────────
 export const crossings = pgTable(

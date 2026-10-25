@@ -745,7 +745,7 @@ window. A "Run tick" button runs the simulation and shows the tick's stats.
   (`src/modules/legal/`).
 - **Seed scripts — live.**
   - `pnpm db:seed` loads the synthetic dataset from CSV: 2000 users and their historical
-    interactions and friendships, inserted in batches of 500.
+    interactions, inserted in batches of 500.
   - `db:seed-demo` creates the demo account.
   - `db:seed-crossings` seeds the crossed-paths data.
 - **Schema changes.** Edit `src/db/schema.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
