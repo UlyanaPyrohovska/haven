@@ -19,8 +19,6 @@ export type PushEnv = {
 	APNS_TEAM_ID?: string;
 	APNS_PRIVATE_KEY?: string;
 	APNS_BUNDLE_ID?: string;
-	/** "true" for development builds, which get sandbox APNs tokens. */
-	APNS_SANDBOX?: string;
 };
 
 export type PushResult = "sent" | "invalid" | "failed" | "skipped";
@@ -176,6 +174,9 @@ async function sendFcm(env: PushEnv, token: string, notice: PushNotice): Promise
 	return classifyFcmResponse(response.status, await response.text());
 }
 
+const SANDBOX_HOST = "api.sandbox.push.apple.com";
+const PRODUCTION_HOST = "api.push.apple.com";
+
 /** APNs needs HTTP/2, which deployed Workers use; local `wrangler dev` may fail here. */
 async function sendApns(env: PushEnv, token: string, notice: PushNotice): Promise<PushResult> {
 	const { APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY, APNS_BUNDLE_ID } = env;
@@ -184,20 +185,37 @@ async function sendApns(env: PushEnv, token: string, notice: PushNotice): Promis
 		return "skipped";
 	}
 
-	const host = env.APNS_SANDBOX === "true" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
-	const response = await fetch(`https://${host}/3/device/${token}`, {
-		method: "POST",
-		headers: {
-			authorization: `bearer ${await apnsProviderToken({ APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY })}`,
-			"apns-topic": APNS_BUNDLE_ID,
-			"apns-push-type": "alert",
-			"apns-priority": "10",
-			"content-type": "application/json",
-		},
-		body: JSON.stringify(apnsBody(notice)),
-	});
+	const authorization = `bearer ${await apnsProviderToken({ APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY })}`;
+	const post = async (host: string) => {
+		const response = await fetch(`https://${host}/3/device/${token}`, {
+			method: "POST",
+			headers: {
+				authorization,
+				"apns-topic": APNS_BUNDLE_ID,
+				"apns-push-type": "alert",
+				"apns-priority": "10",
+				"content-type": "application/json",
+			},
+			body: JSON.stringify(apnsBody(notice)),
+		});
+		const body = await response.text();
 
-	return classifyApnsResponse(response.status, await response.text());
+		if (response.status !== 200) {
+			// Reason is e.g. {"reason":"BadDeviceToken"}; log the token tail only, never the full token.
+			console.error("apns rejected", { host, status: response.status, body, token: token.slice(-6) });
+		}
+
+		return { status: response.status, body };
+	};
+
+	let result = await post(PRODUCTION_HOST);
+
+	// Ad-hoc/TestFlight builds get production tokens, Xcode debug builds sandbox ones; one Worker serves both.
+	if (result.status === 400 && result.body.includes("BadDeviceToken")) {
+		result = await post(SANDBOX_HOST);
+	}
+
+	return classifyApnsResponse(result.status, result.body);
 }
 
 export async function sendPush(
