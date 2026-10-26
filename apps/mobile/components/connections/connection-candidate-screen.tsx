@@ -10,6 +10,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionDock, connectionDockClearance } from "@/components/connections/connection-dock";
 import { CrossPathsCard } from "@/components/connections/cross-paths-card";
 import { type DecisionKind, DecisionOverlay, useDecisionCardStyle } from "@/components/connections/decision-animation";
+import { MatchCelebration } from "@/components/connections/match-celebration";
+import { markMatchesSeen } from "@/components/connections/new-match-dialog";
 import { ProfileBadges } from "@/components/connections/profile-badges";
 import { SafetyDialogs, type SafetyKind } from "@/components/connections/safety-dialogs";
 import { WhyMatchedCard } from "@/components/connections/why-matched-card";
@@ -18,10 +20,9 @@ import { ProfileHeaderButton } from "@/components/profile/profile-header-button"
 import { ThemedText } from "@/components/themed-text";
 import { BackHomeButton } from "@/components/ui/back-home-button";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { InterestChip, InterestChipRow } from "@/components/ui/interest-chip";
-import { ModeBadge, ModeIcon } from "@/components/ui/mode-badge";
+import { ModeBadge } from "@/components/ui/mode-badge";
 import { FontSize, Radius, Spacing } from "@/constants/app-config";
 import { useHeaderLocation } from "@/hooks/use-header-location";
 import { useMode } from "@/hooks/use-mode";
@@ -179,6 +180,8 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 				await prefetchNextCandidate();
 
 				if (kind === "accept" && result.matched) {
+					// Celebrated here, so home and matches must not announce it again.
+					markMatchesSeen(queryClient, [candidateId]);
 					setMatchedName(connection.data.displayName);
 					setPendingMatch(true);
 				}
@@ -365,10 +368,10 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 
 			<DecisionOverlay kind={decisionKind} onFinished={onAnimationFinished} />
 
-			<Dialog
+			<MatchCelebration
 				visible={matchedDialog}
-				icon={mode ? ModeIcon[mode] : "heart-outline"}
-				tone="default"
+				name={matchedName}
+				photoUrl={connection.data.photoUrl}
 				title={t("connections.matchedTitle", { context: mode ?? undefined })}
 				message={t("connections.matchedMessage", { name: matchedName, context: mode ?? undefined })}
 				confirmLabel={t("connections.continueBrowsing")}

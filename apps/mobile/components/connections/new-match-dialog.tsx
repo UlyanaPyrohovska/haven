@@ -1,14 +1,15 @@
+import { useIsFocused } from "@react-navigation/native";
+import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Dialog } from "@/components/ui/dialog";
-import { ModeIcon } from "@/components/ui/mode-badge";
+import { MatchCelebration } from "@/components/connections/match-celebration";
 import { useMode } from "@/hooks/use-mode";
 import type { MatchSummary } from "@/lib/api/recommendations";
 
 const STORAGE_KEY = "haven.seenMatchIds";
+const seenMatchIdsQueryKey = ["seenMatchIds"] as const;
 
 async function readSeenIds(): Promise<Set<number>> {
 	try {
@@ -20,9 +21,17 @@ async function readSeenIds(): Promise<Set<number>> {
 	}
 }
 
+/** Marks matches as announced for every mounted dialog, so home and matches never both show one. */
+export function markMatchesSeen(queryClient: QueryClient, candidateIds: number[]) {
+	const ids = new Set([...(queryClient.getQueryData<Set<number>>(seenMatchIdsQueryKey) ?? []), ...candidateIds]);
+
+	queryClient.setQueryData(seenMatchIdsQueryKey, ids);
+	void SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify([...ids]));
+}
+
 /**
  * Announces a match made while the user was away (agents answer likes on the simulation tick).
- * Shows the newest unseen match; closing it marks every current match as seen.
+ * Shows the newest unseen match on the focused screen only; closing it marks every current match as seen.
  *
  * shortcut: seen ids live on the device (not per account) and SecureStore values over ~2 KB
  * (~350 ids) may fail to save; move "seen" to the API if accounts share devices or matches grow.
@@ -31,11 +40,9 @@ export function NewMatchDialog({ matches }: { matches: MatchSummary[] | undefine
 	const { t } = useTranslation();
 	const router = useRouter();
 	const mode = useMode();
-	const [seen, setSeen] = useState<Set<number> | null>(null);
-
-	useEffect(() => {
-		void readSeenIds().then(setSeen);
-	}, []);
+	const queryClient = useQueryClient();
+	const isFocused = useIsFocused();
+	const { data: seen } = useQuery({ queryKey: seenMatchIdsQueryKey, queryFn: readSeenIds, staleTime: Infinity });
 
 	const fresh =
 		seen && matches
@@ -44,17 +51,17 @@ export function NewMatchDialog({ matches }: { matches: MatchSummary[] | undefine
 					.sort((a, b) => b.matchedAt.localeCompare(a.matchedAt))[0]
 			: undefined;
 
-	const markAllSeen = () => {
-		const ids = new Set([...(seen ?? []), ...(matches ?? []).map((match) => match.candidateId)]);
-
-		setSeen(ids);
-		void SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify([...ids]));
-	};
+	const markAllSeen = () =>
+		markMatchesSeen(
+			queryClient,
+			(matches ?? []).map((match) => match.candidateId),
+		);
 
 	return (
-		<Dialog
-			visible={fresh != null}
-			icon={mode ? ModeIcon[mode] : "heart"}
+		<MatchCelebration
+			visible={isFocused && fresh != null}
+			name={fresh?.displayName ?? ""}
+			photoUrl={fresh?.photoUrl}
 			title={t("matches.newMatchTitle", { context: mode ?? undefined })}
 			message={t("matches.newMatchMessage", { name: fresh?.displayName ?? "", context: mode ?? undefined })}
 			confirmLabel={t("matches.sendMessage")}

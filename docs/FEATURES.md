@@ -270,8 +270,11 @@ The chat header also has report and block buttons. They work for every peer, inc
 
 **New-match popup.** Agents answer likes on the simulation tick, so most matches appear while the
 user is away. When Home or Matches loads a match the user hasn't seen yet, a "You have a new match!"
-dialog opens for the newest one, with **Send a message** (opens the chat) and **Later**. Closing it
-marks every current match as seen.
+celebration opens for the newest one, with **Send a message** (opens the chat) and **Later**. Closing it
+marks every current match as seen. When the user liked first and the other person likes back later,
+the celebration opens right away on whichever of Home or Matches is open (otherwise on the next visit).
+When the user's own like completes the match, the connection screen celebrates it on the spot, and that
+match is not announced a second time.
 
 **How it works:**
 - `GET /matches` reads `interactions` rows with `match = true` on either side. Interactions are
@@ -294,11 +297,24 @@ marks every current match as seen.
 - The popup (`NewMatchDialog`) compares `GET /matches` with the match ids already seen, which are
   stored in SecureStore (`haven.seenMatchIds`). The seen list is per device, not per account, and
   SecureStore can't reliably hold more than about 2 KB (about 350 ids).
+- The seen set lives in the react-query cache (`["seenMatchIds"]`), so every mounted dialog shares it;
+  `markMatchesSeen` updates the cache and SecureStore together. The dialog only shows on the focused
+  screen, so Home underneath Matches never opens a second copy.
+- Instant delivery: the API pushes `{ type: "match" }` to the user who liked first
+  (`recommendations/service.ts`, simulation `engine.ts`). In the foreground, `useNotifications`
+  (`lib/notifications/index.ts`, mounted on Home, which stays mounted under Matches) listens with
+  `addNotificationReceivedListener` and invalidates `["matches"]`. As a fallback (push denied or
+  late), Home and Matches poll `GET /matches` every 30 s while focused.
+- `MatchCelebration` (`components/connections/match-celebration.tsx`) is the animated modal: the
+  avatar springs in, a ring and a burst of mode icons (heart for dating, people for friends) fly out,
+  a mode badge pops onto the avatar, then the copy rises in, with a success haptic. Reanimated's
+  `useReducedMotion` skips straight to the final frame.
 
 **Where:**
 - Screens: `app/matches/index.tsx`, `app/connections/[candidateId].tsx` (match mode in
   `components/connections/connection-candidate-screen.tsx`, `why-matched-card.tsx`)
 - Code: `components/chat/conversation-row.tsx`, `components/connections/new-match-dialog.tsx`,
+  `components/connections/match-celebration.tsx`,
   `lib/api/recommendations.ts`
 - API: `GET /matches`, `GET /recommendations/{candidateId}`
 
