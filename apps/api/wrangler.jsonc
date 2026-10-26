@@ -23,6 +23,8 @@
 	// Verification emails via Cloudflare Email Sending. The sender domain must be onboarded:
 	// `npx wrangler email sending enable <domain>`. remote: true makes `wrangler dev` send real mail.
 	"send_email": [{ "name": "EMAIL", "remote": true }],
+	// Bio embeddings (@cf/baai/bge-small-en-v1.5). Workers AI is a DPO-approved subprocessor for bios (T9).
+	"ai": { "binding": "AI" },
 	"vars": {
 		"SIMULATION_ENABLED": "true",
 		// Must be an address on the onboarded domain.

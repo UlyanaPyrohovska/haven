@@ -117,6 +117,13 @@ export function runSimulationTick(limit?: number) {
 	});
 }
 
+export type BioEmbeddingBackfill = { embedded: number; removed: number };
+
+/** Re-embeds every bio with Workers AI and drops vectors of cleared bios. */
+export function backfillBioEmbeddings() {
+	return request<BioEmbeddingBackfill>("/staff/embeddings/backfill", { method: "POST" });
+}
+
 export type GraphEdgeFilter = "match" | "like" | "all";
 
 export type InteractionGraph = {

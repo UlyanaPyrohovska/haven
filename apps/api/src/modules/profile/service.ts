@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
+import { syncBioEmbedding } from "@/lib/bio-embedding";
 import { displayNameFromAuthName } from "@/lib/candidate-display";
 import { cleanCustomInterestLabel, customInterestError, dedupeCustomInterests } from "@/lib/custom-interests";
 import { errors, type ServiceError } from "@/lib/errors";
@@ -78,6 +79,13 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 	}
 
 	if (profile) {
+		if (payload.bio !== undefined && payload.bio !== existing?.bio) {
+			// Off the response path; syncBioEmbedding logs failures and never throws.
+			c.executionCtx.waitUntil(
+				syncBioEmbedding(c.env.AI, repository.bioEmbeddingStore(db), (profile as { id: number }).id, profile.bio),
+			);
+		}
+
 		await recommendationService.maybeGenerateOnProfileComplete(db, profile as ProfileRow & { id: number }, wasComplete);
 
 		if (hasCoordinates) {

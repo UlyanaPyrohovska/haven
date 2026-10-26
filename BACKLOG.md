@@ -160,21 +160,23 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 
 ---
 
-### `[ ]` T9 — feat(api): embed bios on write with Cloudflare Workers AI
+### `[~]` T9 — feat(api): embed bios on write with Cloudflare Workers AI
+
+> Code done 2026-10-26. Missing: run the backfill (backoffice → Matching rules → **Re-embed all bios**) on dev and prod after deploy.
 
 - **Labels**: `type:feature` `area:api` `prio:P2`
 - **Description**: Bio embeddings come only from the local script `research/embeddings/generate_embeddings.py` (all-MiniLM-L6-v2). Real users' new or edited bios get no vector until someone re-runs it, so their bio term stays off. Embed bios in the Worker on profile write with Workers AI `@cf/baai/bge-small-en-v1.5` (384-d, fits `user_embeddings.bio vector(384)`).
 
 **Acceptance criteria**
-- [ ] DPO sign-off obtained for Workers AI as a subprocessor; Cloudflare's Workers AI data-locality terms checked and documented. Do not start the rest without this.
-- [ ] `AI` binding added to the API wrangler config; types regenerated
-- [ ] Embedding helper in `apps/api/src/lib/`, returns a 384-length `number[]`
-- [ ] Profile create and PATCH embed the bio when it changes, in `executionCtx.waitUntil`, and upsert `user_embeddings`; clearing the bio deletes the row
-- [ ] An embedding failure is logged and never fails the profile save (the scorer already handles a null embedding)
+- [x] DPO sign-off obtained for Workers AI as a subprocessor; Cloudflare's Workers AI data-locality terms checked and documented. Do not start the rest without this.
+- [x] `AI` binding added to the API wrangler config; types regenerated
+- [x] Embedding helper in `apps/api/src/lib/`, returns a 384-length `number[]`
+- [x] Profile create and PATCH embed the bio when it changes, in `executionCtx.waitUntil`, and upsert `user_embeddings`; clearing the bio deletes the row
+- [x] An embedding failure is logged and never fails the profile save (the scorer already handles a null embedding)
 - [ ] All existing vectors re-embedded with bge-small (one-off backfill); no MiniLM vectors left
-- [ ] `generate_embeddings.py` switched to bge-small or removed; schema comment on `user_embeddings.bio` updated
-- [ ] Tests with a mocked `env.AI` for upsert, delete and failure paths
-- [ ] `docs/FEATURES.md` (Bio embeddings section, data-residency note) and W2.1 in `docs/path-a-implementation.md` updated
+- [x] `generate_embeddings.py` switched to bge-small or removed; schema comment on `user_embeddings.bio` updated
+- [x] Tests with a mocked `env.AI` for upsert, delete and failure paths
+- [x] `docs/FEATURES.md` (Bio embeddings section, data-residency note) and W2.1 in `docs/path-a-implementation.md` updated
 
 **Notes**
 - bge-small and MiniLM vectors are not comparable even though both are 384-d. Never mix the two models in `user_embeddings`.

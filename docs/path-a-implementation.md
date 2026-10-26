@@ -356,6 +356,7 @@ their threshold and temperature with the results. Since the dataset interactions
 
 ## [x] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
 > Status: run on dev on 2026-10-24: 2002 bios, 21 s encode+write (32 s total). Re-run on prod and after participants onboard.
+> Superseded by T9 (2026-10-26): bios are embedded in the Worker with Workers AI `@cf/baai/bge-small-en-v1.5` on profile write, plus a staff backfill route (`POST /staff/embeddings/backfill`). The local MiniLM script below was removed; its vectors are replaced by the backfill. See `docs/FEATURES.md` → Bio embeddings.
 
 **File:** `research/embeddings/generate_embeddings.py` (new `research/` tree). Local only — do
 **not** call external embedding APIs (DPO: bios stay in the EU / on-device). `all-MiniLM-L6-v2`

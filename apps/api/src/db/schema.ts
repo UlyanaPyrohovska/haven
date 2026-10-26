@@ -252,7 +252,7 @@ export const userEmbeddings = pgTable(
 		userProfileId: integer("user_profile_id")
 			.primaryKey()
 			.references(() => userProfiles.id, { onDelete: "cascade" }),
-		bio: vector("bio", { dimensions: 384 }), // all-MiniLM-L6-v2
+		bio: vector("bio", { dimensions: 384 }), // bge-small-en-v1.5 via Workers AI (T9); never mix models
 		updatedAt: timestamp("updated_at").defaultNow().notNull(),
 	},
 	(t) => [

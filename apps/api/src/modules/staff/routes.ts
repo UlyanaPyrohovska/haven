@@ -99,6 +99,21 @@ export const simulationTickRoute = createRoute({
 	},
 });
 
+export const bioEmbeddingBackfillRoute = createRoute({
+	method: "post",
+	path: "/staff/embeddings/backfill",
+	tags: ["Staff"],
+	summary: "Re-embed every bio with Workers AI bge-small and drop vectors of cleared bios (staff)",
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.BioEmbeddingBackfillResponseSchema } },
+			description: "Backfill counts",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+	},
+});
+
 export const interactionGraphRoute = createRoute({
 	method: "get",
 	path: "/staff/graph",

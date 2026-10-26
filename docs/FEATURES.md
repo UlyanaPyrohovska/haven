@@ -627,23 +627,34 @@ walkers in the backoffice); otherwise they never cross.
 ### Bio embeddings — partial
 Bios are embedded so that similar bios raise the compatibility score (the `bio` term, weight 0.3).
 
-**How it works.** `research/embeddings/generate_embeddings.py` runs locally with `all-MiniLM-L6-v2`.
-Bios never go to an external API (DPO: the data stays in the EU). The script writes unit-normalized
-384-d vectors to `user_embeddings.bio`, a pgvector column with an HNSW cosine index. It is idempotent:
-it embeds profiles that have a bio and either no vector or a profile edited since the vector
-(`user_profiles.updated_at > user_embeddings.updated_at`), and it deletes vectors whose bio was
-cleared. The recommendation repository left-joins `user_embeddings`, so `bioEmbedding` is populated
-with no API change. `unilateral` uses the bio term only when both sides have a vector; otherwise it
-drops the term and renormalizes the other weights (tested in `scoring.test.ts`). When the viewer has a
-vector, the candidate pool is an HNSW `bio <=> viewer` shortlist (200).
+**How it works.** The API Worker embeds bios with Cloudflare Workers AI `@cf/baai/bge-small-en-v1.5`
+(binding `AI` in `wrangler.jsonc`) and stores the 384-d vectors in `user_embeddings.bio`, a pgvector
+column with an HNSW cosine index.
+- **On write.** `patchProfile` (`modules/profile/service.ts`) covers both profile create and edit;
+  staff bio edits in the backoffice (`updateUser` in `modules/staff/service.ts`) do the same. When
+  the request changes `bio`, it schedules `syncBioEmbedding` (`src/lib/bio-embedding.ts`) in
+  `executionCtx.waitUntil`, so the response does not wait. A non-blank bio is embedded and upserted
+  (`upsertBioEmbeddings`); a cleared bio deletes the row (`deleteBioEmbedding`). Failures are logged and
+  never fail the save: the scorer already treats a missing vector as neutral.
+- **Backfill.** Staff-only `POST /staff/embeddings/backfill` (`backfillBioEmbeddings` in
+  `modules/staff/service.ts`) deletes vectors of cleared bios, then re-embeds every non-blank bio in
+  batches of 100 (the model's per-call limit) and returns `{ embedded, removed }`. Staff run it
+  with **Re-embed all bios** on the backoffice Matching rules page (`BioEmbeddingsCard` in
+  `apps/backoffice/src/pages/MatchingRulesPage.tsx`). Run it once per
+  environment after deploy and after every `pnpm db:seed` (the seed truncates `user_embeddings`). One
+  request does all rows; add a cursor if the pool outgrows Worker subrequest or time limits.
+- **One model only.** `embedTexts` rejects anything but 384-d vectors. bge-small and the former local
+  `all-MiniLM-L6-v2` vectors are both 384-d but not comparable, so the backfill re-embeds every row and
+  the local script (`research/embeddings/generate_embeddings.py`) is removed.
+- **Scoring.** The recommendation repository left-joins `user_embeddings`, so `bioEmbedding` is
+  populated with no API change. `unilateral` uses the bio term only when both sides have a vector;
+  otherwise it drops the term and renormalizes the other weights (tested in `scoring.test.ts`). When
+  the viewer has a vector, the candidate pool is an HNSW `bio <=> viewer` shortlist (200).
 
-Run: `cd research/embeddings && ENV_FILE=.env.dev .venv/bin/python generate_embeddings.py`
-(`.env.prod` for prod). Dev: 2002 bios embedded in 21 s encode+write (32 s total, Apple Silicon CPU).
+Tests: `src/lib/bio-embedding.test.ts` (mocked `env.AI`: upsert, delete, AI failure, wrong dimension).
 
-**Missing:** not run on prod. New or edited bios of real users get no vector until the script is
-re-run, so their bio term stays off until then (they are scored on interest, geo and preference).
-Embedding at onboarding would need an in-Worker model such as Workers AI, which adds a subprocessor
-and needs DPO sign-off.
+**Missing:** the backfill has not been run on dev or prod yet, so existing rows still hold MiniLM
+vectors until it runs. Daily-question answers still use the lexical stand-in (T7), not embeddings.
 
 ### Simulation engine and synthetic agents — partial
 The 2000 synthetic profiles act as agents. On each tick they:
@@ -867,6 +878,10 @@ window. A "Run tick" button runs the simulation and shows the tick's stats.
   - `db:seed-demo` creates the demo account.
 - **Schema changes.** Edit `src/db/schema.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
   Never hand-edit an applied migration.
-- **Data residency.** The Neon database is in `aws-eu-central-1`. Embeddings are computed locally.
-  The only exception is push: device tokens and generic notification text go to Google FCM and Apple
-  APNs, which is unavoidable for remote push. No profile data, names or message text are sent.
+- **Data residency.** The Neon database is in `aws-eu-central-1`. Two exceptions send data to
+  subprocessors:
+  - Bio text goes to Cloudflare Workers AI for embedding (DPO sign-off obtained, T9). Workers AI does
+    not guarantee EU-only inference, so a bio may be processed outside the EU; only the bio text is
+    sent, with no name, id or other profile field, and only the vector is stored (in Neon).
+  - Push: device tokens and generic notification text go to Google FCM and Apple APNs, which is
+    unavoidable for remote push. No profile data, names or message text are sent.
