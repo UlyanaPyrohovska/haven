@@ -24,14 +24,16 @@ Root cause found: the phone build has a production APNs token, but `APNS_SANDBOX
 
 ---
 
-### `[ ]` T2 — fix(mobile): match popup not shown on matches screen
+### `[x]` T2 — fix(mobile): match popup not shown on matches screen
+
+Root cause: the matches screen fetched `GET /matches` only on focus (home polls every 30 s), so a match made while it was open never arrived there. Each `NewMatchDialog` also kept its own copy of the seen ids, so home, still mounted underneath, announced the same match again. Fix: a match push received in the foreground (the other person liked back) invalidates `GET /matches`, so the popup opens right away on the open screen, home or matches. Matches also polls every 30 s as a fallback. The seen set is shared through the react-query cache (`markMatchesSeen`), and the dialog only shows on the focused screen. A match completed by the user's own like is celebrated on the connection screen and marked seen there. Both popups now use the animated `MatchCelebration`.
 
 - **Labels**: `type:bug` `area:mobile` `prio:P1`
 - **Description**: When a match happens while the user is on the matches screen, no popup appears. It only appears after navigating back to home.
 
 **Acceptance criteria**
-- [ ] Match popup shows immediately on the matches screen when a match occurs
-- [ ] Popup is not shown twice (once on matches, again on home)
+- [x] Match popup shows immediately on the matches screen when a match occurs (via the match push; 30 s poll if push is off)
+- [x] Popup is not shown twice (once on matches, again on home)
 
 **Notes**
 - Popup trigger likely lives only in the home screen; move it to a shared place (layout-level or a hook used by both screens).
@@ -197,5 +199,21 @@ Root cause found: the phone build has a production APNs token, but `APNS_SANDBOX
 - Risk: most edges come from synthetic agents, so the GNN may learn the simulator's rules rather than real taste. Report results separately for real and synthetic users.
 - Reciprocity matters: a like is only useful when it is mutual. Consider training on mutual matches, or scoring both directions and taking the harmonic mean, as `scoring.ts` already does.
 - Too little real data makes this unreliable. Treat it as a thesis extension, not a launch blocker.
+
+---
+
+### `[ ]` T11 — fix(mobile): long location name overflows the home header
+
+- **Labels**: `type:bug` `area:mobile` `prio:P2`
+- **Description**: When the location label is long (for example a long city plus country from reverse geocoding), the home header still tries to fit the whole label and the pill crowds the settings and avatar buttons.
+
+**Acceptance criteria**
+- [ ] A long location label is truncated with an ellipsis inside the pill
+- [ ] Settings and avatar buttons keep their size and position
+- [ ] Short labels look the same as now
+
+**Notes**
+- `LocationPill` (`apps/mobile/components/location/location-pill.tsx`) already sets `numberOfLines={1}`, so the cause is probably layout. `headerCenter` and `headerPillPressable` in `apps/mobile/app/home.tsx` likely need `flexShrink: 1` / `minWidth: 0` so the text can shrink and truncate.
+- The label comes from `resolveLocationLabel` in `apps/mobile/lib/profile/device-location.ts` (city or region, then country).
 
 ---

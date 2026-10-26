@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Notifications from "expo-notifications";
 import { type Href, useRouter } from "expo-router";
 import { useEffect } from "react";
@@ -6,6 +6,7 @@ import { Platform } from "react-native";
 import { fetchTodayDailyQuestion, todayDailyQuestionQueryKey } from "@/lib/api/daily-question";
 import { fetchTodayMood, todayMoodQueryKey } from "@/lib/api/mood";
 import { registerPushToken, unregisterPushToken } from "@/lib/api/notifications";
+import { matchesQueryKey } from "@/lib/api/recommendations";
 import i18n from "@/lib/i18n";
 
 /** Must match the API's `ANDROID_CHANNEL_ID`. */
@@ -124,9 +125,13 @@ function hrefFor(data: Record<string, unknown>): Href | null {
 	}
 }
 
-/** Mounted on home (signed in, profile complete): registers push, plans the reminder, routes notification taps. */
+/**
+ * Mounted on home (signed in, profile complete): registers push, plans the reminder, routes notification taps,
+ * and refetches matches when a match push arrives in the foreground. Home stays mounted under the matches stack.
+ */
 export function useNotifications() {
 	const router = useRouter();
+	const queryClient = useQueryClient();
 	const lastResponse = Notifications.useLastNotificationResponse();
 	const question = useQuery({ queryKey: todayDailyQuestionQueryKey, queryFn: fetchTodayDailyQuestion });
 	const mood = useQuery({ queryKey: todayMoodQueryKey, queryFn: fetchTodayMood });
@@ -139,6 +144,17 @@ export function useNotifications() {
 
 		return () => subscription.remove();
 	}, []);
+
+	// A like answered while the app is open: refetch now so the focused screen (home or matches) celebrates it.
+	useEffect(() => {
+		const subscription = Notifications.addNotificationReceivedListener((notification) => {
+			if (notification.request.content.data?.type === "match") {
+				void queryClient.invalidateQueries({ queryKey: matchesQueryKey });
+			}
+		});
+
+		return () => subscription.remove();
+	}, [queryClient]);
 
 	const doneToday = question.data ? question.data.answer !== null && mood.data?.mood != null : null;
 

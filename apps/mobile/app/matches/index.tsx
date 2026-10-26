@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type Href, useFocusEffect, useRouter } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { ConversationRow } from "@/components/chat/conversation-row";
@@ -20,15 +20,20 @@ export default function MatchesScreen() {
 	const router = useRouter();
 	const theme = useTheme();
 	const mode = useMode();
+	const [isFocused, setIsFocused] = useState(true);
+	// Polls like home so a match made while this screen is open shows its popup here.
 	const matches = useQuery({
 		queryKey: matchesQueryKey,
 		queryFn: fetchMatches,
+		refetchInterval: isFocused ? 30_000 : false,
 	});
 
 	// Refresh previews when coming back from a thread.
 	useFocusEffect(
 		useCallback(() => {
+			setIsFocused(true);
 			void matches.refetch();
+			return () => setIsFocused(false);
 		}, [matches.refetch]),
 	);
 
