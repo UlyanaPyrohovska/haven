@@ -113,6 +113,22 @@ export const MatchesListSchema = z
 	})
 	.openapi("MatchesList");
 
+export const MatchAnswersTodaySchema = z
+	.object({
+		question: z.string(),
+		/** True until the viewer answers today; `answers` is then empty. */
+		locked: z.boolean(),
+		answers: z.array(
+			z.object({
+				candidateId: z.number().int(),
+				displayName: z.string(),
+				photoUrl: z.string().url(),
+				answer: z.string(),
+			}),
+		),
+	})
+	.openapi("MatchAnswersToday");
+
 export const RegenerateResponseSchema = z
 	.object({
 		count: z.number().int(),

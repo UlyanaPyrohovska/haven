@@ -16,6 +16,7 @@ import { useTheme } from "@/hooks/use-theme";
 import {
 	DAILY_ANSWER_MAX_LENGTH,
 	fetchTodayDailyQuestion,
+	matchAnswersTodayQueryKey,
 	saveTodayDailyQuestion,
 	todayDailyQuestionQueryKey,
 } from "@/lib/api/daily-question";
@@ -66,6 +67,7 @@ export default function DailyQuestionScreen() {
 		onSuccess: async (result) => {
 			queryClient.setQueryData(todayDailyQuestionQueryKey, result);
 			await queryClient.invalidateQueries({ queryKey: recommendationsQueryKey });
+			await queryClient.invalidateQueries({ queryKey: matchAnswersTodayQueryKey });
 			setConfirmed(true);
 			setTimeout(() => router.back(), 1400);
 		},

@@ -6,7 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getMatchingConfig, type MatchingConfig, type MatchingConfigResponse, updateMatchingConfig } from "@/lib/api";
 
-type FieldKey = "batchSize" | "cooldownHours" | "bio" | "interest" | "geo" | "pref" | "crossPathsLambda";
+type FieldKey =
+	| "batchSize"
+	| "cooldownHours"
+	| "bio"
+	| "interest"
+	| "geo"
+	| "pref"
+	| "mood"
+	| "dailyAnswer"
+	| "crossPathsLambda";
 type Form = Record<FieldKey, string>;
 
 const CADENCE_FIELDS = [
@@ -19,6 +28,12 @@ const WEIGHT_FIELDS = [
 	{ key: "interest", label: "Interests", hint: "17 interests plus custom interests." },
 	{ key: "geo", label: "Distance", hint: "exp(−km / 25); 0.5 when location is missing." },
 	{ key: "pref", label: "Preferences", hint: "u's preferences against v's self-ratings." },
+	{ key: "mood", label: "Mood", hint: "Today's check-ins via a mood matrix; dropped when either side has none." },
+	{
+		key: "dailyAnswer",
+		label: "Daily answer",
+		hint: "Word overlap of today's answers (0.5 = none); dropped when either side has none.",
+	},
 ] as const;
 
 function toForm(config: MatchingConfig): Form {
@@ -42,6 +57,8 @@ function fromForm(form: Form): MatchingConfig {
 			interest: Number(form.interest),
 			geo: Number(form.geo),
 			pref: Number(form.pref),
+			mood: Number(form.mood),
+			dailyAnswer: Number(form.dailyAnswer),
 		},
 		crossPathsLambda: Number(form.crossPathsLambda),
 	};
@@ -83,7 +100,7 @@ export function MatchingRulesPage() {
 	}
 
 	const config = fromForm(form);
-	const weightSum = config.weights.bio + config.weights.interest + config.weights.geo + config.weights.pref;
+	const weightSum = Object.values(config.weights).reduce((sum, weight) => sum + weight, 0);
 	const weightsValid = Math.abs(weightSum - 1) < 0.001;
 
 	function setField(key: FieldKey, value: string) {

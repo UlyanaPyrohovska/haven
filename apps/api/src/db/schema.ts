@@ -486,6 +486,9 @@ export const matchingConfig = pgTable("matching_config", {
 	weightInterest: real("weight_interest").notNull(),
 	weightGeo: real("weight_geo").notNull(),
 	weightPref: real("weight_pref").notNull(),
+	// Default 0 keeps a row saved before these terms existed summing to 1.
+	weightMood: real("weight_mood").notNull().default(0),
+	weightDailyAnswer: real("weight_daily_answer").notNull().default(0),
 	crossPathsLambda: real("cross_paths_lambda").notNull(),
 	/** Better Auth user id of the staff member who last saved. */
 	updatedBy: text("updated_by"),

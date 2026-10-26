@@ -169,6 +169,13 @@
       "when": 1793005915388,
       "tag": "0023_lame_donald_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793009731603,
+      "tag": "0024_military_maggott",
+      "breakpoints": true
     }
   ]
 }

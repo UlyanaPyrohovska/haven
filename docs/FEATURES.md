@@ -379,10 +379,20 @@ on your card for other users.
 - Answers go in `daily_question_answers`, with a unique index on `(user_profile_id, answer_date)`.
 - `PUT` upserts the answer, so editing on the same day overwrites it.
 - Dates always come from `utcToday()`.
+- Today's answer also feeds the `dailyAnswer` term of compatibility scoring (see Compatibility scoring).
+- **Matches' answers.** After answering, "See today's answers" on the home card opens
+  `app/daily-answers.tsx`, which lists what the user's matches answered today (tap a row to open the
+  match). `GET /matches/answers/today` (`getMatchAnswersToday` in `recommendations/service.ts`) walks
+  `listMatchInteractions`, keeps only matches in the viewer's current `lookingFor` pool, and resolves
+  each answer with `resolveCandidateDailyAnswer` (synthetic matches get `syntheticDailyAnswer`). Only
+  matches who answered are returned, with id, display name, photo and answer; never other users. Until
+  the viewer answers today the response is `locked` with no answers, and the screen offers the answer
+  modal. Saving an answer invalidates this query. It does not depend on recommendations, so it works
+  when none are left; an empty list shows an empty state.
 
 **Where:**
-- Screens: `app/daily-question.tsx`, `components/home/daily-question-card.tsx`
-- API: `GET/PUT /daily-question/today`; code `src/lib/daily-questions.ts`
+- Screens: `app/daily-question.tsx`, `app/daily-answers.tsx`, `components/home/daily-question-card.tsx`
+- API: `GET/PUT /daily-question/today`, `GET /matches/answers/today`; code `src/lib/daily-questions.ts`
 
 ### Mood check-in — live
 One mood per day, shown as context on candidate cards.
@@ -392,6 +402,7 @@ One mood per day, shown as context on candidate cards.
   upserted. `src/lib/mood.ts` maps codes to slugs.
 - A real candidate shows only today's check-in, or nothing if there isn't one. A synthetic
   candidate gets a deterministic mood.
+- Today's check-in also feeds the `mood` term of compatibility scoring (see Compatibility scoring).
 
 **Where:**
 - Code: `components/home/mood-card.tsx`, `lib/mood/`
@@ -513,14 +524,25 @@ age range. These are hard filters, unlike the 6 preference sliders, which only r
 Scores how well two profiles fit each other.
 
 **How it works:**
-- **One-way score.** `unilateral(u→v)` is a weighted sum, clamped to [0, 1]. The weights are
-  `DEFAULT_WEIGHTS = { bio: 0.35, interest: 0.3, geo: 0.2, pref: 0.15 }`:
+- **One-way score.** `unilateral(u→v)` is a weighted mean, clamped to [0, 1]. The default weights are
+  `DEFAULT_WEIGHTS = { bio: 0.3, interest: 0.25, geo: 0.15, pref: 0.15, mood: 0.05, dailyAnswer: 0.1 }`
+  (staff can change them in Matching rules):
   - **interest:** cosine over the 17 interests plus one extra dimension per custom interest.
   - **pref:** cosine between u's preferences and v's self-ratings. This is the only term where
     u→v differs from v→u.
   - **geo:** `exp(−km / 25)`, or 0.5 when coordinates are missing.
   - **bio:** cosine of the bio embeddings. When either side has no embedding, this term is dropped
     and the other weights are rescaled to sum to 1.
+  - **mood:** `moodCompatibility` looks up today's two check-ins in a symmetric 6×6 matrix over
+    `MoodSlugs` (calm pairs well with anything; low↔low is weak), not plain equality.
+  - **dailyAnswer:** `dailyAnswerSimilarity` is the word-overlap (Jaccard, stopwords removed) of
+    today's two answers, mapped to [0.5, 1] so no overlap is neutral. This is a stand-in for
+    embedding cosine until bios/answers are embedded in the Worker (T9).
+  - Mood and dailyAnswer, like bio, are dropped and the rest renormalized when either side has no
+    data today. Only today's (UTC) check-in and answer count: `recommendations/repository.ts` loads
+    them with the scoring profile for `utcToday()`; synthetic profiles use `syntheticMoodForProfile`
+    and `syntheticDailyAnswer`. They are read when a batch is generated, so the daily-drop cadence
+    picks up each day's data without extra rescoring.
 - **Missing data** counts as neutral: interests default to 5 and preferences to the midpoint.
 - **Two-way score.** `reciprocalScore` is the harmonic mean `2pq / (p + q)`, so a one-sided fit
   scores low.
@@ -590,7 +612,7 @@ processing. Synthetic profiles only report locations while staff make them walk 
 walkers in the backoffice); otherwise they never cross.
 
 ### Bio embeddings — partial
-Bios are embedded so that similar bios raise the compatibility score (the `bio` term, weight 0.35).
+Bios are embedded so that similar bios raise the compatibility score (the `bio` term, weight 0.3).
 
 **How it works.** `research/embeddings/generate_embeddings.py` runs locally with `all-MiniLM-L6-v2`.
 Bios never go to an external API (DPO: the data stays in the EU). The script writes unit-normalized
@@ -707,7 +729,7 @@ Staff can:
   `recommendations` row for the user (pending and acted on, newest batch first) with the stored
   `score` and `rank`. For each candidate it reruns `scoreBreakdown` and `reciprocalScore` from
   `scoring.ts` with the current matching-config weights and applies `applyCrossPathsBoost` (config λ) with the crossing count
-  from `listCrossings`. The row shows bio, interest, geo, pref u→v, pref v→u, p u→v, q v→u,
+  from `listCrossings`. The row shows bio, interest, geo, pref u→v, pref v→u, mood, answer, p u→v, q v→u,
   reciprocal, crossings and the final score. These components use current profile data, so they can
   differ from the stored score if either profile changed after the batch was generated. Only ids,
   names and scores are returned; no coordinates.
@@ -722,13 +744,14 @@ Staff can:
 ### Matching rules — live
 Staff can edit the recommendation rules from the "Matching rules" page:
 - batch size and cooldown (hours) between batches,
-- the four score weights (bio, interest, geo, pref), which must sum to 1,
+- the six score weights (bio, interest, geo, pref, mood, daily answer), which must sum to 1,
 - the crossed-paths boost strength λ.
 
 The page shows each default, has "Reset to defaults", and says when the rules were last saved.
 
 **How it works:**
-- One-row table `matching_config` (`id = 1`, migration `0020`). No row means code defaults:
+- One-row table `matching_config` (`id = 1`, migration `0020`; `weight_mood` and
+  `weight_daily_answer` added in `0024` with default 0, so a row saved earlier keeps summing to 1). No row means code defaults:
   `CADENCE`, `DEFAULT_WEIGHTS` and `CROSS_PATHS.lambda` from `scoring.ts`, with the cooldown still
   overridable by `REC_COOLDOWN_HOURS`. A saved row wins over the env var.
 - `lib/matching-config.ts` (pure, tested): `resolveMatchingConfig`, `toMatchingConfigRow`,

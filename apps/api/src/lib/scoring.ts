@@ -1,3 +1,4 @@
+import type { MoodSlug } from "@/lib/mood";
 import { haversineKm } from "@/lib/profile-view";
 
 export type ScoringProfile = {
@@ -10,6 +11,10 @@ export type ScoringProfile = {
 	latitude: number | null;
 	longitude: number | null;
 	bioEmbedding: number[] | null;
+	/** Today's mood check-in; null when the user has not checked in today. */
+	mood?: MoodSlug | null;
+	/** Today's daily-question answer; null when the user has not answered today. */
+	dailyAnswer?: string | null;
 };
 
 export type ScoringWeights = {
@@ -17,13 +22,17 @@ export type ScoringWeights = {
 	interest: number;
 	geo: number;
 	pref: number;
+	mood: number;
+	dailyAnswer: number;
 };
 
 export const DEFAULT_WEIGHTS: ScoringWeights = {
-	bio: 0.35,
-	interest: 0.3,
-	geo: 0.2,
+	bio: 0.3,
+	interest: 0.25,
+	geo: 0.15,
 	pref: 0.15,
+	mood: 0.05,
+	dailyAnswer: 0.1,
 };
 
 /** Daily-drop feed: small batch size and cooldown between batches (hours). */
@@ -161,23 +170,125 @@ export function bioSimilarity(a: number[] | null | undefined, b: number[] | null
 	return clampUnitInterval(rawCosine(a, b));
 }
 
-export function unilateral(u: ScoringProfile, v: ScoringProfile, w: ScoringWeights = DEFAULT_WEIGHTS): number {
-	const interest = interestSimilarity(u.interests, v.interests, u.customInterests, v.customInterests);
-	const geo = geoProximity(u, v);
-	const pref = preferenceMatch(u.pref, v.self);
-	const bio = bioSimilarity(u.bioEmbedding, v.bioEmbedding);
+/**
+ * How well two moods sit together today, symmetric, in [0, 1]. 0.5 is neutral: calm pairs well
+ * with anything, two low or stressed people are a weak pairing.
+ */
+const MOOD_COMPAT: Record<MoodSlug, Record<MoodSlug, number>> = {
+	happy: { happy: 0.8, calm: 0.7, excited: 0.8, tired: 0.5, low: 0.4, stressed: 0.4 },
+	calm: { happy: 0.7, calm: 0.7, excited: 0.5, tired: 0.7, low: 0.6, stressed: 0.7 },
+	excited: { happy: 0.8, calm: 0.5, excited: 0.8, tired: 0.3, low: 0.3, stressed: 0.4 },
+	tired: { happy: 0.5, calm: 0.7, excited: 0.3, tired: 0.5, low: 0.4, stressed: 0.4 },
+	low: { happy: 0.4, calm: 0.6, excited: 0.3, tired: 0.4, low: 0.2, stressed: 0.3 },
+	stressed: { happy: 0.4, calm: 0.7, excited: 0.4, tired: 0.4, low: 0.3, stressed: 0.3 },
+};
 
-	if (bio === null) {
-		const renorm = w.interest + w.geo + w.pref;
-
-		if (renorm === 0) {
-			return 0;
-		}
-
-		return clampUnitInterval((w.interest * interest + w.geo * geo + w.pref * pref) / renorm);
+export function moodCompatibility(a: MoodSlug | null | undefined, b: MoodSlug | null | undefined): number | null {
+	if (a == null || b == null) {
+		return null;
 	}
 
-	return clampUnitInterval(w.bio * bio + w.interest * interest + w.geo * geo + w.pref * pref);
+	return MOOD_COMPAT[a][b];
+}
+
+// Words of 1-2 letters are dropped by length, so only longer filler is listed.
+const ANSWER_STOPWORDS = new Set([
+	"the",
+	"and",
+	"for",
+	"with",
+	"that",
+	"this",
+	"was",
+	"were",
+	"are",
+	"you",
+	"your",
+	"our",
+	"but",
+	"not",
+	"have",
+	"had",
+	"has",
+	"from",
+	"about",
+	"just",
+	"into",
+	"out",
+	"its",
+	"it's",
+	"i'm",
+	"i've",
+	"she",
+	"they",
+	"them",
+	"what",
+	"when",
+	"who",
+	"how",
+	"all",
+	"one",
+	"some",
+	"very",
+	"really",
+	"finally",
+	"after",
+	"before",
+]);
+
+function answerTokens(text: string): Set<string> {
+	const words = text.toLowerCase().match(/[\p{L}\p{N}']+/gu) ?? [];
+
+	return new Set(words.filter((word) => word.length > 2 && !ANSWER_STOPWORDS.has(word)));
+}
+
+/**
+ * Word overlap between today's two answers, mapped to [0.5, 1] so no overlap is neutral, not a penalty.
+ * shortcut: lexical Jaccard, not semantic; switch to embedding cosine once T9 adds Workers AI embeddings.
+ */
+export function dailyAnswerSimilarity(a: string | null | undefined, b: string | null | undefined): number | null {
+	const tokensA = answerTokens(a ?? "");
+	const tokensB = answerTokens(b ?? "");
+
+	if (tokensA.size === 0 || tokensB.size === 0) {
+		return null;
+	}
+
+	let shared = 0;
+
+	for (const token of tokensA) {
+		if (tokensB.has(token)) {
+			shared++;
+		}
+	}
+
+	return 0.5 + (0.5 * shared) / (tokensA.size + tokensB.size - shared);
+}
+
+/**
+ * Weighted mean of the components both sides have data for. Missing bio, mood or answer drops that
+ * term and renormalizes the rest, so missing data is neutral rather than a penalty.
+ */
+export function unilateral(u: ScoringProfile, v: ScoringProfile, w: ScoringWeights = DEFAULT_WEIGHTS): number {
+	const components: [number, number | null][] = [
+		[w.interest, interestSimilarity(u.interests, v.interests, u.customInterests, v.customInterests)],
+		[w.geo, geoProximity(u, v)],
+		[w.pref, preferenceMatch(u.pref, v.self)],
+		[w.bio, bioSimilarity(u.bioEmbedding, v.bioEmbedding)],
+		[w.mood, moodCompatibility(u.mood, v.mood)],
+		[w.dailyAnswer, dailyAnswerSimilarity(u.dailyAnswer, v.dailyAnswer)],
+	];
+	let weighted = 0;
+	let totalWeight = 0;
+
+	for (const [weight, value] of components) {
+		if (value !== null) {
+			weighted += weight * value;
+			totalWeight += weight;
+		}
+	}
+
+	return totalWeight === 0 ? 0 : clampUnitInterval(weighted / totalWeight);
 }
 
 export type ReciprocalScoreResult = {
@@ -207,6 +318,10 @@ export type ScoreBreakdown = {
 	/** How well u fits what v is looking for. */
 	prefVToU: number;
 	bio: number | null;
+	/** Null when either side has not checked in today. */
+	mood: number | null;
+	/** Null when either side has not answered today's question. */
+	dailyAnswer: number | null;
 	reciprocal: number;
 };
 
@@ -222,6 +337,8 @@ export function scoreBreakdown(
 		prefUToV: preferenceMatch(u.pref, v.self),
 		prefVToU: preferenceMatch(v.pref, u.self),
 		bio: bioSimilarity(u.bioEmbedding, v.bioEmbedding),
+		mood: moodCompatibility(u.mood, v.mood),
+		dailyAnswer: dailyAnswerSimilarity(u.dailyAnswer, v.dailyAnswer),
 		reciprocal: reciprocalScore(u, v, w).reciprocal,
 	};
 }

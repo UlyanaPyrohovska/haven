@@ -15,6 +15,8 @@ export type MatchingConfigRow = {
 	weightInterest: number;
 	weightGeo: number;
 	weightPref: number;
+	weightMood: number;
+	weightDailyAnswer: number;
 	crossPathsLambda: number;
 };
 
@@ -32,7 +34,14 @@ export function resolveMatchingConfig(row: MatchingConfigRow | null | undefined,
 	return {
 		batchSize: row.batchSize,
 		cooldownHours: row.cooldownHours,
-		weights: { bio: row.weightBio, interest: row.weightInterest, geo: row.weightGeo, pref: row.weightPref },
+		weights: {
+			bio: row.weightBio,
+			interest: row.weightInterest,
+			geo: row.weightGeo,
+			pref: row.weightPref,
+			mood: row.weightMood,
+			dailyAnswer: row.weightDailyAnswer,
+		},
 		crossPathsLambda: row.crossPathsLambda,
 	};
 }
@@ -45,11 +54,13 @@ export function toMatchingConfigRow(config: MatchingConfig): MatchingConfigRow {
 		weightInterest: config.weights.interest,
 		weightGeo: config.weights.geo,
 		weightPref: config.weights.pref,
+		weightMood: config.weights.mood,
+		weightDailyAnswer: config.weights.dailyAnswer,
 		crossPathsLambda: config.crossPathsLambda,
 	};
 }
 
-/** `unilateral` assumes the weights sum to 1; allow float noise from the form. */
+/** Keeps staff weights readable as shares of the score; allow float noise from the form. */
 export function weightsSumToOne(weights: ScoringWeights): boolean {
-	return Math.abs(weights.bio + weights.interest + weights.geo + weights.pref - 1) < 0.001;
+	return Math.abs(Object.values(weights).reduce((sum, weight) => sum + weight, 0) - 1) < 0.001;
 }

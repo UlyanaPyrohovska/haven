@@ -4,8 +4,10 @@ import {
 	bioSimilarity,
 	crossPathsNorm,
 	DEFAULT_WEIGHTS,
+	dailyAnswerSimilarity,
 	geoProximity,
 	interestSimilarity,
+	moodCompatibility,
 	preferenceMatch,
 	reciprocalScore,
 	type ScoringProfile,
@@ -129,7 +131,7 @@ describe("unilateral and reciprocalScore", () => {
 			longitude: -9.14,
 		});
 
-		const prefOnly = { bio: 0, interest: 0, geo: 0, pref: 1 };
+		const prefOnly = { bio: 0, interest: 0, geo: 0, pref: 1, mood: 0, dailyAnswer: 0 };
 		const { reciprocal, pUToV, qVToU } = reciprocalScore(u, v, prefOnly);
 		const arithmetic = (pUToV + qVToU) / 2;
 
@@ -138,7 +140,11 @@ describe("unilateral and reciprocalScore", () => {
 	});
 
 	it("renormalizes weights when bio embedding is missing and stays in [0, 1]", () => {
-		const u = makeProfile({ id: 1, bioEmbedding: null });
+		const u = makeProfile({
+			id: 1,
+			bioEmbedding: null,
+			interests: Array.from({ length: 17 }, (_, i) => (i < 9 ? 10 : 1)),
+		});
 		const v = makeProfile({
 			id: 2,
 			bioEmbedding: Array.from({ length: 384 }, () => 1),
@@ -151,7 +157,8 @@ describe("unilateral and reciprocalScore", () => {
 
 		const withBio = unilateral({ ...u, bioEmbedding: Array.from({ length: 384 }, () => 1) }, v, DEFAULT_WEIGHTS);
 
-		expect(withBio).not.toBe(score);
+		// Identical bios (similarity 1) lift a pair whose other terms are below 1.
+		expect(withBio).toBeGreaterThan(score);
 	});
 
 	it("uses α only when both sides have an embedding (mixed pairing)", () => {
@@ -169,12 +176,13 @@ describe("unilateral and reciprocalScore", () => {
 		expect(unilateral(withEmb, withoutEmb)).toBeCloseTo(backbone, 10);
 		expect(unilateral({ ...withEmb, bioEmbedding: null }, otherWithEmb)).toBeCloseTo(backbone, 10);
 
-		// Both present → plain weighted sum including the bio term.
+		// Both present → weighted sum including the bio term (mood and answer still missing, so renormalized).
 		const expected =
-			w.bio * (breakdown.bio ?? 0) +
-			w.interest * breakdown.interest +
-			w.geo * breakdown.geo +
-			w.pref * breakdown.prefUToV;
+			(w.bio * (breakdown.bio ?? 0) +
+				w.interest * breakdown.interest +
+				w.geo * breakdown.geo +
+				w.pref * breakdown.prefUToV) /
+			(w.bio + w.interest + w.geo + w.pref);
 		expect(breakdown.bio).toBeCloseTo(1, 10);
 		expect(unilateral(withEmb, otherWithEmb)).toBeCloseTo(expected, 10);
 	});
@@ -220,5 +228,65 @@ describe("scoreBreakdown", () => {
 		expect(breakdown.prefUToV).toBeGreaterThan(breakdown.prefVToU);
 		expect(breakdown.bio).toBeNull();
 		expect(breakdown.reciprocal).toBeCloseTo(reciprocalScore(u, v).reciprocal, 10);
+	});
+});
+
+describe("moodCompatibility", () => {
+	it("is null when either side has no check-in", () => {
+		expect(moodCompatibility(null, "happy")).toBeNull();
+		expect(moodCompatibility("calm", undefined)).toBeNull();
+	});
+
+	it("is symmetric and not plain equality", () => {
+		expect(moodCompatibility("calm", "stressed")).toBe(moodCompatibility("stressed", "calm"));
+		expect(moodCompatibility("calm", "stressed")).toBeGreaterThan(moodCompatibility("low", "low") as number);
+	});
+});
+
+describe("dailyAnswerSimilarity", () => {
+	it("is null when either side has no answer or only filler words", () => {
+		expect(dailyAnswerSimilarity(null, "Coffee with a friend")).toBeNull();
+		expect(dailyAnswerSimilarity("the and", "Coffee with a friend")).toBeNull();
+	});
+
+	it("is neutral (0.5) with no overlap and 1 for the same answer", () => {
+		expect(dailyAnswerSimilarity("Sunset from the hill", "Coffee with a friend")).toBe(0.5);
+		expect(dailyAnswerSimilarity("Coffee with a friend", "coffee, with a FRIEND!")).toBe(1);
+	});
+
+	it("rises with shared words", () => {
+		const some = dailyAnswerSimilarity("Coffee with an old friend", "Coffee at the bakery") as number;
+
+		expect(some).toBeGreaterThan(0.5);
+		expect(some).toBeLessThan(1);
+	});
+});
+
+describe("unilateral with mood and daily answer", () => {
+	it("drops missing mood and answer terms instead of scoring them as zero", () => {
+		const u = makeProfile({ id: 1 });
+		const v = makeProfile({ id: 2 });
+		const base = unilateral(u, v);
+
+		expect(unilateral({ ...u, mood: "happy" }, v)).toBeCloseTo(base, 10);
+		expect(unilateral(u, { ...v, dailyAnswer: "A long walk" })).toBeCloseTo(base, 10);
+	});
+
+	it("includes both terms when both sides have them", () => {
+		const u = makeProfile({ id: 1, mood: "low", dailyAnswer: "A long walk by the sea" });
+		const v = makeProfile({ id: 2, mood: "low", dailyAnswer: "Swimming in the sea" });
+		const b = scoreBreakdown(u, v);
+		const w = DEFAULT_WEIGHTS;
+		const expected =
+			(w.interest * b.interest +
+				w.geo * b.geo +
+				w.pref * b.prefUToV +
+				w.mood * (b.mood as number) +
+				w.dailyAnswer * (b.dailyAnswer as number)) /
+			(w.interest + w.geo + w.pref + w.mood + w.dailyAnswer);
+
+		expect(b.mood).toBe(moodCompatibility("low", "low"));
+		expect(b.dailyAnswer).toBeGreaterThan(0.5);
+		expect(unilateral(u, v)).toBeCloseTo(expected, 10);
 	});
 });

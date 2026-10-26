@@ -377,6 +377,53 @@ export function dismissPendingFilterMisfits(db: Db, profileId: number) {
 	return repository.dismissPendingFilterMisfits(db, profileId);
 }
 
+/**
+ * Today's answers from the viewer's matches in the current mode (`lookingFor` pools never cross).
+ * Locked, with no answers, until the viewer has answered today, like the candidate detail.
+ */
+export async function getMatchAnswersToday({ db, viewer }: ViewerContext) {
+	const today = utcToday();
+	const question = dailyQuestion(today);
+	const viewerAnswer = await dailyQuestionRepository.findAnswerForDate(db, viewer.id, today);
+
+	if (!viewerAnswer?.answer?.trim()) {
+		return { question, locked: true, answers: [] };
+	}
+
+	const interactionRows = await repository.listMatchInteractions(db, viewer.id);
+	const answers = await Promise.all(
+		interactionRows.map(async (interaction) => {
+			const candidateId = interaction.userA === viewer.id ? interaction.userB : interaction.userA;
+			const candidate = await repository.findCandidateProfile(db, candidateId);
+
+			if (!candidate || candidate.lookingFor !== viewer.lookingFor) {
+				return null;
+			}
+
+			const isSynthetic = Boolean(candidate.isSynthetic);
+			const answer = await resolveCandidateDailyAnswer(db, candidateId, isSynthetic, today);
+
+			if (!answer) {
+				return null;
+			}
+
+			return {
+				candidateId,
+				displayName: displayNameForCandidate({
+					id: candidateId,
+					displayName: candidate.displayName as string | null | undefined,
+					gender: candidate.gender as number | null | undefined,
+					isSynthetic,
+				}),
+				photoUrl: resolveProfilePhotoUrl({ ...candidate, id: candidateId }),
+				answer,
+			};
+		}),
+	);
+
+	return { question, locked: false, answers: answers.filter((row) => row !== null) };
+}
+
 export async function getMatches({ db, viewer }: ViewerContext) {
 	const interactionRows = await repository.listMatchInteractions(db, viewer.id);
 	const stats = await chatRepository.listInboxStats(

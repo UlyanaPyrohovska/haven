@@ -144,7 +144,14 @@ export const StaffStatsResponseSchema = z
 
 export const StaffRecommendationsResponseSchema = z
 	.object({
-		weights: z.object({ bio: z.number(), interest: z.number(), geo: z.number(), pref: z.number() }),
+		weights: z.object({
+			bio: z.number(),
+			interest: z.number(),
+			geo: z.number(),
+			pref: z.number(),
+			mood: z.number(),
+			dailyAnswer: z.number(),
+		}),
 		recommendations: z.array(
 			z.object({
 				candidateId: z.number().int(),
@@ -159,6 +166,8 @@ export const StaffRecommendationsResponseSchema = z
 				geo: z.number(),
 				prefUToV: z.number(),
 				prefVToU: z.number(),
+				mood: z.number().nullable(),
+				dailyAnswer: z.number().nullable(),
 				pUToV: z.number(),
 				qVToU: z.number(),
 				reciprocal: z.number(),
@@ -182,6 +191,8 @@ export const MatchingConfigSchema = z
 				interest: z.number().min(0).max(1),
 				geo: z.number().min(0).max(1),
 				pref: z.number().min(0).max(1),
+				mood: z.number().min(0).max(1),
+				dailyAnswer: z.number().min(0).max(1),
 			})
 			.refine(weightsSumToOne, { message: "Weights must sum to 1" }),
 		crossPathsLambda: z.number().min(0).max(1),

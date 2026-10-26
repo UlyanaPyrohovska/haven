@@ -18,8 +18,19 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db";
-import { crossings, interactions, matchingConfig, recommendations, userEmbeddings, userProfiles } from "@/db/schema";
+import {
+	crossings,
+	dailyQuestionAnswers,
+	interactions,
+	matchingConfig,
+	moodCheckins,
+	recommendations,
+	userEmbeddings,
+	userProfiles,
+} from "@/db/schema";
 import { ageFromBirthDate, parseIsoDate } from "@/lib/age";
+import { syntheticDailyAnswer } from "@/lib/candidate-daily-answer";
+import { syntheticMoodForProfile } from "@/lib/candidate-mood";
 import {
 	boundingBox,
 	CROSSING_COOLDOWN_HOURS,
@@ -29,6 +40,7 @@ import {
 } from "@/lib/crossings";
 import { customInterestKey } from "@/lib/custom-interests";
 import { type MatchingConfig, resolveMatchingConfig, toMatchingConfigRow } from "@/lib/matching-config";
+import { moodSlug, utcToday } from "@/lib/mood";
 import { birthDateWindow, mutualFilterMatch, type PartnerFilterProfile } from "@/lib/partner-filters";
 import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile-view";
 import { coerceLastShownAt } from "@/lib/recommendation-cadence";
@@ -48,8 +60,18 @@ export type ScoringViewerProfile = ScoringProfile &
 const PREF_KEYS = ["prefAttr", "prefSinc", "prefIntel", "prefFun", "prefAmb", "prefShar"] as const;
 const SELF_KEYS = ["selfAttr", "selfSinc", "selfIntel", "selfFun", "selfAmb", "selfShar"] as const;
 
-const scoringProfileSelect = {
+/** Scoring columns plus the profile's mood and daily answer for `date` (UTC). */
+const scoringProfileSelect = (date: string) => ({
 	id: userProfiles.id,
+	isSynthetic: userProfiles.isSynthetic,
+	moodToday: sql<number | null>`(
+		SELECT ${moodCheckins.mood} FROM ${moodCheckins}
+		WHERE ${moodCheckins.userProfileId} = ${userProfiles.id} AND ${moodCheckins.checkinDate} = ${date}
+	)`,
+	dailyAnswerToday: sql<string | null>`(
+		SELECT ${dailyQuestionAnswers.answer} FROM ${dailyQuestionAnswers}
+		WHERE ${dailyQuestionAnswers.userProfileId} = ${userProfiles.id} AND ${dailyQuestionAnswers.answerDate} = ${date}
+	)`,
 	lookingFor: userProfiles.lookingFor,
 	gender: userProfiles.gender,
 	birthDate: userProfiles.birthDate,
@@ -89,10 +111,13 @@ const scoringProfileSelect = {
 	selfAmb: userProfiles.selfAmb,
 	selfShar: userProfiles.selfShar,
 	bio: userEmbeddings.bio,
-} as const;
+});
 
 type ScoringProfileRow = {
 	id: number;
+	isSynthetic: boolean;
+	moodToday: number | null;
+	dailyAnswerToday: string | null;
 	lookingFor: number;
 	gender: number | null;
 	birthDate: string | null;
@@ -143,7 +168,8 @@ function parseBioEmbedding(value: unknown): number[] | null {
 	return null;
 }
 
-function mapScoringProfileRow(row: ScoringProfileRow): ScoringViewerProfile {
+/** Synthetic profiles get their deterministic mood and answer for `date`, like the detail screen shows. */
+function mapScoringProfileRow(row: ScoringProfileRow, date: string): ScoringViewerProfile {
 	return {
 		id: row.id,
 		lookingFor: row.lookingFor,
@@ -159,11 +185,17 @@ function mapScoringProfileRow(row: ScoringProfileRow): ScoringViewerProfile {
 		pref: PREF_KEYS.map((key) => row[key]),
 		self: SELF_KEYS.map((key) => row[key]),
 		bioEmbedding: parseBioEmbedding(row.bio),
+		mood: row.isSynthetic
+			? syntheticMoodForProfile(row.id, date)
+			: row.moodToday == null
+				? null
+				: moodSlug(row.moodToday),
+		dailyAnswer: row.isSynthetic ? syntheticDailyAnswer(row.id, date) : row.dailyAnswerToday?.trim() || null,
 	};
 }
 
-function mapCandidateScoringProfile(row: ScoringProfileRow): ScoringProfile {
-	const mapped = mapScoringProfileRow(row);
+function mapCandidateScoringProfile(row: ScoringProfileRow, date: string): ScoringProfile {
+	const mapped = mapScoringProfileRow(row, date);
 
 	return {
 		id: mapped.id,
@@ -174,6 +206,8 @@ function mapCandidateScoringProfile(row: ScoringProfileRow): ScoringProfile {
 		latitude: mapped.latitude,
 		longitude: mapped.longitude,
 		bioEmbedding: mapped.bioEmbedding,
+		mood: mapped.mood,
+		dailyAnswer: mapped.dailyAnswer,
 	};
 }
 
@@ -283,14 +317,15 @@ function poolConditions(viewer: ScoringViewerProfile, maxKm: number | null | und
 }
 
 export async function findScoringProfileById(db: Db, profileId: number): Promise<ScoringViewerProfile | null> {
+	const date = utcToday();
 	const [row] = await db
-		.select(scoringProfileSelect)
+		.select(scoringProfileSelect(date))
 		.from(userProfiles)
 		.leftJoin(userEmbeddings, eq(userEmbeddings.userProfileId, userProfiles.id))
 		.where(eq(userProfiles.id, profileId))
 		.limit(1);
 
-	return row ? mapScoringProfileRow(row as ScoringProfileRow) : null;
+	return row ? mapScoringProfileRow(row as ScoringProfileRow, date) : null;
 }
 
 export async function listScoringProfilesByIds(db: Db, profileIds: number[]): Promise<ScoringViewerProfile[]> {
@@ -298,13 +333,14 @@ export async function listScoringProfilesByIds(db: Db, profileIds: number[]): Pr
 		return [];
 	}
 
+	const date = utcToday();
 	const rows = await db
-		.select(scoringProfileSelect)
+		.select(scoringProfileSelect(date))
 		.from(userProfiles)
 		.leftJoin(userEmbeddings, eq(userEmbeddings.userProfileId, userProfiles.id))
 		.where(inArray(userProfiles.id, profileIds));
 
-	return rows.map((row) => mapScoringProfileRow(row as ScoringProfileRow));
+	return rows.map((row) => mapScoringProfileRow(row as ScoringProfileRow, date));
 }
 
 export async function listCandidatePool(
@@ -316,8 +352,9 @@ export async function listCandidatePool(
 	const annShortlistLimit = opts.annShortlistLimit ?? 200;
 	const maxKm = opts.maxKm ?? null;
 	const whereClause = poolConditions(viewer, maxKm, opts.syntheticOnly);
+	const date = utcToday();
 	const baseQuery = db
-		.select(scoringProfileSelect)
+		.select(scoringProfileSelect(date))
 		.from(userProfiles)
 		.leftJoin(userEmbeddings, eq(userEmbeddings.userProfileId, userProfiles.id))
 		.where(whereClause);
@@ -331,7 +368,7 @@ export async function listCandidatePool(
 				.limit(Math.min(limit, annShortlistLimit))
 		: await baseQuery.orderBy(likedFirst).limit(limit);
 
-	return rows.map((row) => mapCandidateScoringProfile(row as ScoringProfileRow));
+	return rows.map((row) => mapCandidateScoringProfile(row as ScoringProfileRow, date));
 }
 
 export async function replaceRecommendations(db: Db, viewerId: number, rows: RecommendationWriteRow[]) {
