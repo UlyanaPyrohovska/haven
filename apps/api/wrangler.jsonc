@@ -10,9 +10,10 @@
 	"observability": {
 		"enabled": true
 	},
-	// Simulation tick at 08:00 and 20:00 UTC (agents act, real users get due drops). Gated by SIMULATION_ENABLED.
+	// Simulation tick at 08:00 and 20:00 UTC (agents act, real users get due drops), and a location-walker
+	// step every 10 min (staff test tool; see src/index.ts WALKER_CRON). Both gated by SIMULATION_ENABLED.
 	"triggers": {
-		"crons": ["0 8,20 * * *"]
+		"crons": ["0 8,20 * * *", "*/10 * * * *"]
 	},
 	// Chat sockets: one ChatRoom per conversation, always created in the EU jurisdiction.
 	"durable_objects": {

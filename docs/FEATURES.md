@@ -158,8 +158,9 @@ Users can view and edit their profile, including a preview of how others see it.
   - The phone reads a low-accuracy position (`expo-location`, `Accuracy.Low`) and turns it into a
     place label.
   - Exact coordinates are only used on the server, for distance. Other users get
-    `candidateLocationLabel`: the user's own display location, "Setúbal, Portugal" under 5 km, or
-    "N km away". They get nothing if `shareLocation` is off.
+    `candidateLocationLabel`: the user's city-level display location, or a coarse distance
+    (`coarseDistanceLabel`: "Less than 1 km away", whole km up to 10, then 5 km steps). They get
+    nothing if `shareLocation` is off.
 - **Photo:** resized on the device to at most 512 px (`expo-image-manipulator`) and stored on the
   Better Auth `user.image`. When there is no photo, the API serves a deterministic portrait from a
   hash of the profile id (`src/lib/avatar-url.ts`).
@@ -255,7 +256,8 @@ Accept or decline plays a decision animation.
 
 ### Matches — live
 A match is two people who both accepted each other. The Matches screen is an inbox: one row per
-match with photo, name, last message preview, time and unread count, most recent activity first.
+match with photo, name, approximate location (city-level area or coarse distance, hidden when they
+turned off `shareLocation`), last message preview, time and unread count, most recent activity first.
 The home dock's messages button shows the total unread count across matches (summed from the same
 `GET /matches` query, hidden at 0, capped at "99+"). Chat sockets are per-conversation, so home
 refetches that query on focus and polls it every 30 s while focused.
@@ -280,7 +282,8 @@ match is not announced a second time.
 - `GET /matches` reads `interactions` rows with `match = true` on either side. Interactions are
   undirected pairs, so a match exists exactly once. Each row also gets `lastMessage`,
   `unreadCount` and `lastActivityAt` from `listInboxStats` (one `DISTINCT ON` and one grouped
-  count over `messages`).
+  count over `messages`). `locationLabel` comes from `candidateLocationLabel`, the same helper the
+  connection screen uses; coordinates and exact distances are never returned.
 - `GET /recommendations/{candidateId}` adds `match: { matchedAt, compatibility, reasons }` when the
   pair is matched. `describeMatch` reloads both scoring profiles and calls `scoreBreakdown`
   (`scoring.ts`, pure). That function splits `reciprocalScore` into interest, geo, bio and the two
@@ -546,22 +549,38 @@ Builds one batch of recommendations for a viewer.
 **Where:** `src/modules/recommendations/generator.ts`, `repository.ts`,
 `src/lib/recommendation-cadence.ts`
 
-### "You've crossed paths" boost — partial
-A small extra score for people you have crossed paths with. The data is simulated (seeded), not
-tracked.
+### "You've crossed paths" — partial
+Counts how often two people were near each other, shows it on the connection screen and gives a
+small ranking boost.
 
 **How it works:**
-- The `crossings` table stores each pair once (`user_a < user_b`), with a count, last place and
-  last time.
+- Detection is foreground-only. When home is open, `useCrossingsLocation` reads a coarse device fix
+  (`Accuracy.Low`) on mount and whenever the app becomes active, at most every 10 min. It sends
+  `latitude`, `longitude` and the city-level label through `PATCH /me`. It runs only when the user
+  shares device location and cross paths, and permission was already granted. It never prompts and
+  never runs in the background.
+- `patchProfile` stamps `user_profiles.location_updated_at` on new coordinates (cleared with them)
+  and calls `recordCrossingsOnLocationUpdate`. `recordCrossings` finds people in the same
+  `looking_for` pool with `share_cross_paths` on, location not hidden, a location update in the last
+  30 min, and within 1 km (`src/lib/crossings.ts`: bounding-box prefilter, then haversine).
+- The `crossings` table stores each pair once (`user_a < user_b`): count, last time and the
+  viewer's city-level label as the place. A pair counts again only after 6 h, so staying near each
+  other is one crossing. No location history and no coordinates of the other person are stored or
+  returned.
 - After the two-way score, the boost is applied:
   `score × (1 + λ · (1 − e^(−count / K)))`, with `λ = 0.2` and `K = 3`.
-- The boost counts only when both users have `shareCrossPaths` on (`shouldShowCrossPaths`).
+- The boost and the count count only when both users have `shareCrossPaths` on
+  (`shouldShowCrossPaths`, and `listCrossings` filters both sides).
 - Setting `λ = 0` reproduces the plain ranking, which is the thesis ablation.
+- Migration `0022` drops the previously seeded (simulated) rows.
 
-**Where:** `applyCrossPathsBoost` in `scoring.ts`, `listCrossings` in the repository,
-`scripts/seed-crossings.ts`
+**Where:** `src/lib/crossings.ts`, `recordCrossings` / `listCrossings` in
+`src/modules/recommendations/repository.ts`, `applyCrossPathsBoost` in `scoring.ts`,
+`apps/mobile/hooks/use-crossings-location.ts`, `components/connections/cross-paths-card.tsx`
 
-**Missing:** `pnpm db:migrate`, `pnpm db:seed-crossings`, and an on-device check.
+**Missing:** `pnpm db:migrate`, an on-device check, and a DPO/ethics update for the new encounter
+processing. Synthetic profiles only report locations while staff make them walk (see Location
+walkers in the backoffice); otherwise they never cross.
 
 ### Bio embeddings — partial
 Bios are embedded so that similar bios raise the compatibility score (the `bio` term, weight 0.35).
@@ -720,6 +739,43 @@ The page shows each default, has "Reset to defaults", and says when the rules we
 **Missing:** the geo decay (25 km) and the crossed-paths K are still code constants. There is no
 history of changes, only the last one.
 
+### Location walkers — partial
+A staff test tool for crossed paths: synthetic profiles walk around a user's area, so crossings can be
+tested with one phone. Shown as the **Location simulation** card on user detail.
+
+**How it works:**
+- `location_walkers` has one row per walking synthetic profile (`walker_id` PK): the target, walk
+  center, radius (default 800 m), step (default 150 m), active flag, last step, and the walker's seeded
+  location (`original_*`), which is restored when the walk is removed.
+- Assigning (`POST /staff/users/{id}/walkers`) takes explicit ids or picks `count` random synthetic
+  profiles that are discoverable, in the target's pool, have cross paths on and location visible. Only
+  synthetic profiles can walk, so a real user's location is never overwritten. The center defaults to
+  the target's location. Each walker starts at a random point in the circle and takes the target's area
+  label, which becomes the crossing's place.
+- A step (`stepWalkers` in `src/modules/simulation/walkers.ts`) moves each active walker one step of a
+  random walk that stays in the circle (`src/lib/location-walk.ts`, pure, tested). It stamps
+  `location_updated_at` and calls the same `recordCrossingsOnLocationUpdate` the app uses, so the
+  pool, privacy, 1 km / 30 min and 6 h cooldown rules are identical.
+- Steps run on a `*/10 * * * *` cron (`WALKER_CRON` in `src/index.ts`, gated by
+  `SIMULATION_ENABLED`) and on **Step now** (`POST /staff/users/{id}/walkers/step`).
+  **Mark target present** first stamps the target's `location_updated_at` (coordinates unchanged),
+  as if their app had just reported, so a crossing doesn't need the app open.
+- `GET /staff/users/{id}/walkers` returns the target's location and freshness, each walker's
+  position, distance to the target, `blockers` (`crossingBlockers` in `src/lib/crossings.ts`: why a
+  step can't cross right now), its crossing with the target, and every crossing of the user. If the
+  profile is itself a walker, it says for whom. The card refreshes every 30 s.
+- The card draws an SVG plot in meters around the target (crossing radius, walk areas, walkers). There
+  are no map tiles, so no coordinates go to a third party. Staff see exact coordinates here, as on user
+  detail; the app never does.
+- `PATCH /staff/walkers/{id}` pauses, resumes or tunes a walker. `DELETE` restores its seeded
+  location; crossings it made stay.
+
+**Where:** `src/modules/simulation/walkers.ts`, `src/modules/simulation/repository.ts`, staff routes
+in `src/modules/staff/`, `apps/backoffice/src/components/LocationWalkers.tsx`
+
+**Missing:** `pnpm db:migrate` (migration `0023`) and a run against a real device. If the target
+is deleted, its walk rows go with it (cascade), but the walkers keep their walked location.
+
 ### Staff accounts — live
 List and create staff admins.
 
@@ -766,7 +822,6 @@ window. A "Run tick" button runs the simulation and shows the tick's stats.
   - `pnpm db:seed` loads the synthetic dataset from CSV: 2000 users and their historical
     interactions, inserted in batches of 500.
   - `db:seed-demo` creates the demo account.
-  - `db:seed-crossings` seeds the crossed-paths data.
 - **Schema changes.** Edit `src/db/schema.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
   Never hand-edit an applied migration.
 - **Data residency.** The Neon database is in `aws-eu-central-1`. Embeddings are computed locally.

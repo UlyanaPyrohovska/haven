@@ -197,6 +197,106 @@ export const MatchingConfigResponseSchema = z
 	})
 	.openapi("MatchingConfigResponse");
 
+export const StaffWalkerIdParamSchema = z.object({
+	walkerId: z.coerce.number().int().positive(),
+});
+
+const radiusM = z.number().int().min(100).max(5000);
+const stepM = z.number().int().min(10).max(1000);
+
+export const AssignWalkersBodySchema = z
+	.object({
+		/** Specific synthetic profile ids; when omitted, `count` are picked at random from the target's pool. */
+		walkerIds: z.array(z.number().int().positive()).max(20).optional(),
+		count: z.number().int().min(1).max(20).optional(),
+		/** Walk center; defaults to the target's current location. */
+		centerLat: z.number().min(-90).max(90).optional(),
+		centerLon: z.number().min(-180).max(180).optional(),
+		radiusM: radiusM.default(800),
+		stepM: stepM.default(150),
+	})
+	.openapi("AssignWalkersBody");
+
+export const StepWalkersBodySchema = z
+	.object({
+		/** Stamp the target's location as fresh first, as if their app had just reported it. */
+		markTargetPresent: z.boolean().optional(),
+	})
+	.openapi("StepWalkersBody");
+
+export const UpdateWalkerBodySchema = z
+	.object({ active: z.boolean().optional(), radiusM: radiusM.optional(), stepM: stepM.optional() })
+	.openapi("UpdateWalkerBody");
+
+const CrossingSchema = z.object({
+	count: z.number().int(),
+	lastCrossedAt: z.string().nullable(),
+	lastPlace: z.string().nullable(),
+});
+
+export const WalkersOverviewSchema = z
+	.object({
+		rules: z.object({
+			crossingRadiusM: z.number(),
+			windowMinutes: z.number(),
+			cooldownHours: z.number(),
+			stepEveryMinutes: z.number(),
+		}),
+		target: z.object({
+			profileId: z.number().int(),
+			name: z.string(),
+			isSynthetic: z.boolean(),
+			lookingFor: z.number().int(),
+			latitude: z.number().nullable(),
+			longitude: z.number().nullable(),
+			displayLocation: z.string().nullable(),
+			locationUpdatedAt: z.string().nullable(),
+			shareCrossPaths: z.boolean(),
+			locationHidden: z.boolean(),
+		}),
+		/** Set when this profile is itself a walker. */
+		walkingFor: z.object({ targetId: z.number().int(), name: z.string() }).nullable(),
+		walkers: z.array(
+			z.object({
+				walkerId: z.number().int(),
+				name: z.string(),
+				latitude: z.number().nullable(),
+				longitude: z.number().nullable(),
+				locationUpdatedAt: z.string().nullable(),
+				centerLat: z.number(),
+				centerLon: z.number(),
+				radiusM: z.number().int(),
+				stepM: z.number().int(),
+				active: z.boolean(),
+				lastStepAt: z.string().nullable(),
+				createdAt: z.string(),
+				createdBy: z.string().nullable(),
+				distanceToTargetM: z.number().nullable(),
+				/** Why the next step can't record a crossing with the target; empty when it can. */
+				blockers: z.array(z.string()),
+				crossing: CrossingSchema.nullable(),
+			}),
+		),
+		crossings: z.array(
+			CrossingSchema.extend({
+				otherId: z.number().int(),
+				name: z.string(),
+				isSynthetic: z.boolean(),
+				isWalker: z.boolean(),
+			}),
+		),
+		lastAction: z
+			.object({
+				assigned: z.number().int().optional(),
+				stepped: z.number().int().optional(),
+				crossingsRecorded: z.number().int(),
+			})
+			.nullable(),
+	})
+	.openapi("WalkersOverview");
+
+export type AssignWalkersBody = z.infer<typeof AssignWalkersBodySchema>;
+export type UpdateWalkerBody = z.infer<typeof UpdateWalkerBodySchema>;
 export type StaffUserListQuery = z.infer<typeof StaffUserListQuerySchema>;
 export type StaffUserUpdate = z.infer<typeof StaffUserUpdateSchema>;
 export type InteractionGraphQuery = z.infer<typeof InteractionGraphQuerySchema>;

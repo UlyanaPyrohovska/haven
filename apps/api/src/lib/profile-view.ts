@@ -149,11 +149,16 @@ export function candidateLocationLabel(viewer: ProfileRow, candidate: ProfileRow
 		return undefined;
 	}
 
-	if (distance < 5) {
-		return "Setúbal, Portugal";
+	return coarseDistanceLabel(distance);
+}
+
+/** Buckets a distance so it can't be used to pinpoint someone: under 1 km, whole km up to 10, then 5 km steps. */
+export function coarseDistanceLabel(km: number): string {
+	if (km < 1) {
+		return "Less than 1 km away";
 	}
 
-	return `${distance.toFixed(0)} km away`;
+	return `${km < 10 ? Math.round(km) : Math.round(km / 5) * 5} km away`;
 }
 
 export type PublicProfileFields = {

@@ -209,3 +209,79 @@ export function updateMatchingConfig(config: MatchingConfig) {
 		body: JSON.stringify(config),
 	});
 }
+
+export type WalkerCrossing = { count: number; lastCrossedAt: string | null; lastPlace: string | null };
+
+export type Walker = {
+	walkerId: number;
+	name: string;
+	latitude: number | null;
+	longitude: number | null;
+	locationUpdatedAt: string | null;
+	centerLat: number;
+	centerLon: number;
+	radiusM: number;
+	stepM: number;
+	active: boolean;
+	lastStepAt: string | null;
+	createdAt: string;
+	createdBy: string | null;
+	distanceToTargetM: number | null;
+	blockers: string[];
+	crossing: WalkerCrossing | null;
+};
+
+export type WalkersOverview = {
+	rules: { crossingRadiusM: number; windowMinutes: number; cooldownHours: number; stepEveryMinutes: number };
+	target: {
+		profileId: number;
+		name: string;
+		isSynthetic: boolean;
+		lookingFor: number;
+		latitude: number | null;
+		longitude: number | null;
+		displayLocation: string | null;
+		locationUpdatedAt: string | null;
+		shareCrossPaths: boolean;
+		locationHidden: boolean;
+	};
+	walkingFor: { targetId: number; name: string } | null;
+	walkers: Walker[];
+	crossings: (WalkerCrossing & { otherId: number; name: string; isSynthetic: boolean; isWalker: boolean })[];
+	lastAction: { assigned?: number; stepped?: number; crossingsRecorded: number } | null;
+};
+
+export type AssignWalkersInput = {
+	walkerIds?: number[];
+	count?: number;
+	centerLat?: number;
+	centerLon?: number;
+	radiusM?: number;
+	stepM?: number;
+};
+
+export function getWalkers(profileId: number) {
+	return request<WalkersOverview>(`/staff/users/${profileId}/walkers`);
+}
+
+export function assignWalkers(profileId: number, input: AssignWalkersInput) {
+	return request<WalkersOverview>(`/staff/users/${profileId}/walkers`, {
+		method: "POST",
+		body: JSON.stringify(input),
+	});
+}
+
+export function stepWalkers(profileId: number, markTargetPresent: boolean) {
+	return request<WalkersOverview>(`/staff/users/${profileId}/walkers/step`, {
+		method: "POST",
+		body: JSON.stringify({ markTargetPresent }),
+	});
+}
+
+export function updateWalker(walkerId: number, updates: { active?: boolean; radiusM?: number; stepM?: number }) {
+	return request<WalkersOverview>(`/staff/walkers/${walkerId}`, { method: "PATCH", body: JSON.stringify(updates) });
+}
+
+export function removeWalker(walkerId: number) {
+	return request<WalkersOverview>(`/staff/walkers/${walkerId}`, { method: "DELETE" });
+}

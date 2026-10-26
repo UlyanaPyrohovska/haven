@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { LocationWalkers } from "@/components/LocationWalkers";
 import { ModeBadge } from "@/components/ModeBadge";
 import { RecommendationScores } from "@/components/RecommendationScores";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -307,6 +308,7 @@ export function UserDetailPage() {
 			</Card>
 
 			<RecommendationScores profileId={id} />
+			<LocationWalkers profileId={id} />
 
 			<Card>
 				<CardHeader>

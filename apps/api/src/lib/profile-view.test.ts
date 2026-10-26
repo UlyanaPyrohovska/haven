@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isProfileComplete } from "@/lib/profile-view";
+import { coarseDistanceLabel, isProfileComplete } from "@/lib/profile-view";
 
 describe("isProfileComplete", () => {
 	it("accepts real onboarding rows where selfShar is null", () => {
@@ -39,5 +39,13 @@ describe("isProfileComplete", () => {
 				selfAmb: 4,
 			}),
 		).toBe(false);
+	});
+});
+
+describe("coarseDistanceLabel", () => {
+	it("buckets distances", () => {
+		expect(coarseDistanceLabel(0.3)).toBe("Less than 1 km away");
+		expect(coarseDistanceLabel(3.4)).toBe("3 km away");
+		expect(coarseDistanceLabel(23)).toBe("25 km away");
 	});
 });

@@ -1,10 +1,17 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
 import { displayNameForCandidate } from "@/lib/candidate-display";
+import {
+	CROSSING_COOLDOWN_HOURS,
+	CROSSING_RADIUS_KM,
+	CROSSING_WINDOW_MINUTES,
+	crossingBlockers,
+} from "@/lib/crossings";
 import { fillDailySeries, lastUtcDays } from "@/lib/daily-series";
 import { errors } from "@/lib/errors";
 import { type MatchingConfig, resolveMatchingConfig } from "@/lib/matching-config";
 import { MoodSlugs, moodSlug, utcToday } from "@/lib/mood";
+import { haversineKm } from "@/lib/profile-view";
 import { applyCrossPathsBoost, reciprocalScore, scoreBreakdown } from "@/lib/scoring";
 import { requireStaffAdmin } from "@/lib/session";
 import { notify } from "@/modules/notifications/service";
@@ -12,8 +19,16 @@ import type { ProfileUpdate } from "@/modules/profile/schemas";
 import { generateRecommendations } from "@/modules/recommendations/generator";
 import * as recommendationsRepository from "@/modules/recommendations/repository";
 import { runTick } from "@/modules/simulation/engine";
+import * as simulationRepository from "@/modules/simulation/repository";
+import * as walkers from "@/modules/simulation/walkers";
 import * as repository from "./repository";
-import type { InteractionGraphQuery, StaffUserListQuery, StaffUserUpdate } from "./schemas";
+import type {
+	AssignWalkersBody,
+	InteractionGraphQuery,
+	StaffUserListQuery,
+	StaffUserUpdate,
+	UpdateWalkerBody,
+} from "./schemas";
 
 function serializeAuthUser(row: NonNullable<Awaited<ReturnType<typeof repository.findAuthUserById>>>) {
 	return {
@@ -300,4 +315,187 @@ export async function updateMatchingConfig(c: Context<{ Bindings: CloudflareBind
 	await recommendationsRepository.saveMatchingConfig(getDb(c.env.DATABASE_URL), config, session.user.id);
 
 	return matchingConfigResponse(c);
+}
+
+/** Must match the walker cron in wrangler.jsonc. */
+const WALKER_STEP_MINUTES = 10;
+
+type Db = ReturnType<typeof getDb>;
+type WalkerProfile = simulationRepository.WalkerProfile;
+
+function profileName(profile: Pick<WalkerProfile, "id" | "displayName" | "gender" | "isSynthetic">) {
+	return displayNameForCandidate(profile, `#${profile.id}`);
+}
+
+function serializeCrossing(crossing: { count: number; lastCrossedAt: Date | null; lastPlace: string | null }) {
+	return {
+		count: crossing.count,
+		lastCrossedAt: crossing.lastCrossedAt?.toISOString() ?? null,
+		lastPlace: crossing.lastPlace,
+	};
+}
+
+/** Staff see exact coordinates here (as on user detail); the app never does. */
+async function walkersOverview(
+	db: Db,
+	targetId: number,
+	lastAction: { assigned?: number; stepped?: number; crossingsRecorded: number } | null = null,
+) {
+	const [target] = await simulationRepository.findWalkerProfiles(db, [targetId]);
+
+	if (!target) {
+		throw errors.not_found;
+	}
+
+	const [walks, crossingRows, ownWalk] = await Promise.all([
+		simulationRepository.listWalkers(db, { targetId }),
+		simulationRepository.listCrossingsOf(db, targetId),
+		simulationRepository.findWalk(db, targetId),
+	]);
+	const others = await simulationRepository.findWalkerProfiles(db, [
+		...crossingRows.map((row) => row.otherId),
+		...(ownWalk ? [ownWalk.targetId] : []),
+	]);
+	const otherById = new Map(others.map((profile) => [profile.id, profile]));
+	const crossingByOther = new Map(crossingRows.map((row) => [row.otherId, row]));
+	const walkerIds = new Set(walks.map((row) => row.walk.walkerId));
+	const now = new Date();
+	const ownTarget = ownWalk ? otherById.get(ownWalk.targetId) : undefined;
+
+	return {
+		rules: {
+			crossingRadiusM: CROSSING_RADIUS_KM * 1000,
+			windowMinutes: CROSSING_WINDOW_MINUTES,
+			cooldownHours: CROSSING_COOLDOWN_HOURS,
+			stepEveryMinutes: WALKER_STEP_MINUTES,
+		},
+		target: {
+			profileId: target.id,
+			name: profileName(target),
+			isSynthetic: target.isSynthetic,
+			lookingFor: target.lookingFor,
+			latitude: target.latitude,
+			longitude: target.longitude,
+			displayLocation: target.displayLocation,
+			locationUpdatedAt: target.locationUpdatedAt?.toISOString() ?? null,
+			shareCrossPaths: target.shareCrossPaths,
+			locationHidden: target.locationHidden,
+		},
+		walkingFor: ownWalk
+			? { targetId: ownWalk.targetId, name: ownTarget ? profileName(ownTarget) : `#${ownWalk.targetId}` }
+			: null,
+		walkers: walks.map(({ walk, profile }) => {
+			const km = target.locationHidden
+				? undefined
+				: haversineKm(profile.latitude, profile.longitude, target.latitude, target.longitude);
+			const crossing = crossingByOther.get(walk.walkerId);
+
+			return {
+				walkerId: walk.walkerId,
+				name: profileName(profile),
+				latitude: profile.latitude,
+				longitude: profile.longitude,
+				locationUpdatedAt: profile.locationUpdatedAt?.toISOString() ?? null,
+				centerLat: walk.centerLat,
+				centerLon: walk.centerLon,
+				radiusM: walk.radiusM,
+				stepM: walk.stepM,
+				active: walk.active,
+				lastStepAt: walk.lastStepAt?.toISOString() ?? null,
+				createdAt: walk.createdAt.toISOString(),
+				createdBy: walk.createdBy,
+				distanceToTargetM: km === undefined ? null : Math.round(km * 1000),
+				blockers: [...(walk.active ? [] : ["paused"]), ...crossingBlockers(profile, target, now)],
+				crossing: crossing ? serializeCrossing(crossing) : null,
+			};
+		}),
+		crossings: crossingRows.map((row) => {
+			const other = otherById.get(row.otherId);
+
+			return {
+				otherId: row.otherId,
+				name: other ? profileName(other) : `#${row.otherId}`,
+				isSynthetic: other?.isSynthetic ?? false,
+				isWalker: walkerIds.has(row.otherId),
+				...serializeCrossing(row),
+			};
+		}),
+		lastAction,
+	};
+}
+
+export async function getWalkers(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
+	await requireStaffAdmin(c);
+
+	return walkersOverview(getDb(c.env.DATABASE_URL), profileId);
+}
+
+export async function assignWalkers(
+	c: Context<{ Bindings: CloudflareBindings }>,
+	profileId: number,
+	body: AssignWalkersBody,
+) {
+	const session = await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+	const result = await walkers.assignWalkers(db, profileId, { ...body, createdBy: session.user.id });
+
+	return walkersOverview(db, profileId, result);
+}
+
+export async function stepWalkers(
+	c: Context<{ Bindings: CloudflareBindings }>,
+	profileId: number,
+	body: { markTargetPresent?: boolean },
+) {
+	await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+
+	if (body.markTargetPresent) {
+		const [target] = await simulationRepository.findWalkerProfiles(db, [profileId]);
+
+		if (!target) {
+			throw errors.not_found;
+		}
+
+		// Only the timestamp changes: the target's coordinates stay what their app last reported.
+		await simulationRepository.setProfileLocation(db, profileId, {
+			latitude: target.latitude,
+			longitude: target.longitude,
+			locationUpdatedAt: new Date(),
+		});
+	}
+
+	return walkersOverview(db, profileId, await walkers.stepWalkers(db, { targetId: profileId }));
+}
+
+export async function updateWalker(
+	c: Context<{ Bindings: CloudflareBindings }>,
+	walkerId: number,
+	body: UpdateWalkerBody,
+) {
+	await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+	const walk = await simulationRepository.findWalk(db, walkerId);
+
+	if (!walk) {
+		throw errors.not_found;
+	}
+
+	await simulationRepository.updateWalk(db, walkerId, body);
+
+	return walkersOverview(db, walk.targetId);
+}
+
+export async function deleteWalker(c: Context<{ Bindings: CloudflareBindings }>, walkerId: number) {
+	await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+	const walk = await simulationRepository.findWalk(db, walkerId);
+
+	if (!walk) {
+		throw errors.not_found;
+	}
+
+	await walkers.removeWalker(db, walkerId);
+
+	return walkersOverview(db, walk.targetId);
 }

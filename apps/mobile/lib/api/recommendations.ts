@@ -22,10 +22,10 @@ export type RecommendationDetail = RecommendationSummary & {
 	questionAnswer: string | null;
 	answerLocked: boolean;
 	crossPathsCount: number | null;
-	/** Landmark label of the last crossing (approximate area, never coordinates). */
+	/** City-level area of the last crossing (approximate, never coordinates). */
 	crossPathsPlace: string | null;
 	crossPathsLastAt: string | null;
-	distanceKm?: number;
+	/** City-level area or coarse distance; never coordinates. */
 	locationLabel?: string;
 	actedOn: boolean;
 	mood: MoodSlug | null;
@@ -49,6 +49,8 @@ export type MatchSummary = {
 	photoUrl: string;
 	ageLabel?: string;
 	topInterests: string[];
+	/** City-level area or coarse distance; absent when they don't share location. */
+	locationLabel?: string;
 	matchedAt: string;
 	isSynthetic: boolean;
 	lastMessage: ChatMessage | null;

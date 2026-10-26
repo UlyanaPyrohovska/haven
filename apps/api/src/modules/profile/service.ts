@@ -49,6 +49,9 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 	const db = getDb(c.env.DATABASE_URL);
 	const profileId = await repository.findProfileIdByUserId(db, userId);
 	const payload = normalizeProfileUpdate(updates);
+	const hasCoordinates = typeof payload.latitude === "number" && typeof payload.longitude === "number";
+	// Crossings only pair people whose location is fresh; clearing coordinates clears the timestamp too.
+	const locationUpdatedAt = hasCoordinates ? new Date() : payload.latitude === null ? null : undefined;
 
 	if (payload.customInterests) {
 		payload.customInterests = await repository.upsertCustomInterests(
@@ -62,19 +65,24 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 	let profile: Awaited<ReturnType<typeof repository.updateProfileById>>;
 
 	if (profileId) {
-		profile = await repository.updateProfileById(db, profileId, payload);
+		profile = await repository.updateProfileById(db, profileId, { ...payload, locationUpdatedAt });
 	} else {
 		const authName = await repository.findAuthUserName(db, userId);
 		const displayName = displayNameFromAuthName(authName);
 
 		profile = await repository.insertProfile(db, userId, {
 			...payload,
+			locationUpdatedAt,
 			...(displayName ? { displayName } : {}),
 		});
 	}
 
 	if (profile) {
 		await recommendationService.maybeGenerateOnProfileComplete(db, profile as ProfileRow & { id: number }, wasComplete);
+
+		if (hasCoordinates) {
+			await recommendationService.recordCrossingsOnLocationUpdate(db, profile as ProfileRow & { id: number });
+		}
 
 		if (FILTER_FIELDS.some((field) => payload[field] !== undefined)) {
 			await recommendationService.dismissPendingFilterMisfits(db, (profile as { id: number }).id);
