@@ -12,7 +12,7 @@ import { FormScreen } from "@/components/ui/form-screen";
 import { Radius, Spacing } from "@/constants/app-config";
 import { profileQueryKey } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
-import { saveProfile } from "@/lib/api/profile";
+import { fetchProfile, saveProfile } from "@/lib/api/profile";
 import { useSession } from "@/lib/auth/client";
 import { useProfileDraft } from "@/lib/onboarding/profile-draft";
 import { ONBOARDING_STEP_COUNT, onboardingStepNumber, previousOnboardingRoute } from "@/lib/onboarding/steps";
@@ -46,7 +46,9 @@ export default function PrivacyStep() {
 	const submit = useMutation({
 		mutationFn: () => saveProfile(draft),
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: profileQueryKey });
+			// fetchQuery, not invalidate: the only profile observer here is useMode's disabled one, which
+			// invalidate skips, so home would first paint in the default theme before its own fetch lands.
+			await queryClient.fetchQuery({ queryKey: profileQueryKey, queryFn: fetchProfile, staleTime: 0 });
 			reset();
 			router.replace("/home");
 		},

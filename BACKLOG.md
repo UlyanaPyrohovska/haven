@@ -53,14 +53,14 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 
 ---
 
-### `[ ]` T4 — fix(mobile): yellow home flashes after registration before selected mode
+### `[x]` T4 — fix(mobile): yellow home flashes after registration before selected mode
 
 - **Labels**: `type:bug` `area:mobile` `prio:P2`
 - **Description**: After finishing registration, home briefly renders in the yellow (default) theme, then switches to the mode the user selected.
 
 **Acceptance criteria**
-- [ ] Home renders in the user's selected mode on first paint after onboarding
-- [ ] No theme flash on cold start either
+- [x] Home renders in the user's selected mode on first paint after onboarding
+- [x] No theme flash on cold start either
 
 **Notes**
 - Mode probably resolves from the profile query after first render; seed it from the onboarding draft or hold render until it is known.
