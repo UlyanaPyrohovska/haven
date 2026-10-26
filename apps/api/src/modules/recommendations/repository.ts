@@ -7,6 +7,7 @@ import {
 	gt,
 	gte,
 	inArray,
+	isNotNull,
 	isNull,
 	lt,
 	lte,
@@ -371,7 +372,8 @@ export async function listCandidatePool(
 	return rows.map((row) => mapCandidateScoringProfile(row as ScoringProfileRow, date));
 }
 
-export async function replaceRecommendations(db: Db, viewerId: number, rows: RecommendationWriteRow[]) {
+/** `shownAt` set keeps the batch's original time, so a regenerated batch doesn't move the cooldown. */
+export async function replaceRecommendations(db: Db, viewerId: number, rows: RecommendationWriteRow[], shownAt?: Date) {
 	const deletePending = db
 		.delete(recommendations)
 		.where(and(eq(recommendations.userId, viewerId), eq(recommendations.actedOn, false)));
@@ -387,6 +389,7 @@ export async function replaceRecommendations(db: Db, viewerId: number, rows: Rec
 		score: row.score,
 		rank: row.rank,
 		actedOn: false,
+		...(shownAt ? { shownAt } : {}),
 	}));
 
 	const upsertPending = db
@@ -664,6 +667,43 @@ export async function getLastBatchShownAt(db: Db, viewerId: number): Promise<Dat
 		.where(eq(recommendations.userId, viewerId));
 
 	return coerceLastShownAt(row?.lastShown ?? null);
+}
+
+/**
+ * Whether the viewer accepted or declined anyone in the current batch (rows sharing the latest `shown_at`,
+ * compared at ms precision because a regenerated batch reuses it through a JS Date). Rows retired by
+ * `dismissPendingFilterMisfits` are acted-on too but have no viewer decision, so they don't count.
+ */
+export async function hasDecidedInCurrentBatch(db: Db, viewerId: number): Promise<boolean> {
+	const batchStart = sql`date_trunc('milliseconds', (select max(${recommendations.shownAt}) from ${recommendations} where ${recommendations.userId} = ${viewerId}))`;
+	const [row] = await db
+		.select({ id: recommendations.id })
+		.from(recommendations)
+		.innerJoin(
+			interactions,
+			or(
+				and(
+					eq(interactions.userA, viewerId),
+					eq(interactions.userB, recommendations.candidateId),
+					isNotNull(interactions.decA),
+				),
+				and(
+					eq(interactions.userB, viewerId),
+					eq(interactions.userA, recommendations.candidateId),
+					isNotNull(interactions.decB),
+				),
+			),
+		)
+		.where(
+			and(
+				eq(recommendations.userId, viewerId),
+				eq(recommendations.actedOn, true),
+				gte(recommendations.shownAt, batchStart),
+			),
+		)
+		.limit(1);
+
+	return Boolean(row);
 }
 
 const filterProfileSelect = {

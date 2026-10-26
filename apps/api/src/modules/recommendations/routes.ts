@@ -45,7 +45,7 @@ export const postRegenerateRoute = createRoute({
 	method: "post",
 	path: "/recommendations/regenerate",
 	tags: ["Recommendations"],
-	summary: "Replace pending recommendations with a fresh batch (ignores cooldown)",
+	summary: "Replace the pending batch with a fresh one while nothing in it was accepted or declined",
 	responses: {
 		200: {
 			content: { "application/json": { schema: schemas.RegenerateResponseSchema } },
@@ -53,6 +53,10 @@ export const postRegenerateRoute = createRoute({
 		},
 		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
 		400: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "No profile" },
+		409: {
+			content: { "application/json": { schema: schemas.ErrorSchema } },
+			description: "Already acted on the current batch",
+		},
 	},
 });
 

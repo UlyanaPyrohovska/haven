@@ -37,6 +37,11 @@ export const errors = {
 		code: "NOT_MATCHED",
 		message: "You can only message your matches",
 	},
+	regenerate_not_allowed: {
+		status: 409,
+		code: "REGENERATE_NOT_ALLOWED",
+		message: "You already acted on this batch; new people arrive after the cooldown",
+	},
 	internal_error: {
 		status: 500,
 		code: "INTERNAL_ERROR",

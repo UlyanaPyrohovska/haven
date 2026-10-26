@@ -232,6 +232,11 @@ Each candidate has a detail screen with:
 
 Accept or decline plays a decision animation.
 
+**Regenerate.** While the user hasn't accepted or declined anyone in the current batch (for example
+right after changing filters), a "Show me different people" button swaps the batch for a fresh one.
+It shows on the candidate screen and on the empty / caught-up screen, and disappears after the first
+decision.
+
 **How it works:**
 - **Lazy generation.** `GET /recommendations` calls `service.ensureBatch`. It generates a new batch
   only when all of these hold:
@@ -249,6 +254,14 @@ Accept or decline plays a decision animation.
   - `match` is true when both sides accepted.
 
   The recommendation is then marked `acted_on`.
+- **Regenerate.** `POST /recommendations/regenerate` calls `service.regenerate`. It refuses with
+  409 `REGENERATE_NOT_ALLOWED` when `hasDecidedInCurrentBatch` finds a viewer decision in the current
+  batch: rows at the latest `shown_at` (ms precision) that are acted on and have a matching
+  `interactions` decision by the viewer. Rows retired by `dismissPendingFilterMisfits` are acted on but
+  have no decision, so they don't block it. The new batch goes through the normal generator (current
+  filters, same `lookingFor` pool, same batch size) but reuses the old batch's `shown_at`, so the
+  cooldown doesn't move. `GET /recommendations` returns `canRegenerate` for the UI. Not capped: an
+  untouched batch can be regenerated repeatedly, and the replaced pending rows are deleted.
 - **Audit log.** Acted-on recommendations are never deleted. They are the record used for the
   exposure and fairness metrics.
 - **Synthetic candidates.** Their mood and daily answer are generated deterministically from
@@ -259,7 +272,7 @@ Accept or decline plays a decision animation.
 - Screens: `app/connections/index.tsx`, `app/connections/[candidateId].tsx`
 - Code: `components/connections/`, `lib/api/recommendations.ts`
 - API: `GET /recommendations`, `GET /recommendations/{candidateId}`,
-  `POST /recommendations/{candidateId}/decision`, `POST /recommendations/regenerate` (study reset)
+  `POST /recommendations/{candidateId}/decision`, `POST /recommendations/regenerate` (user regenerate, guarded)
 
 ### Matches — live
 A match is two people who both accepted each other. The Matches screen is an inbox: one row per
