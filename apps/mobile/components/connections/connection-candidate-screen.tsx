@@ -41,6 +41,9 @@ type ConnectionCandidateScreenProps = {
 	candidateId: number;
 	/** Called after the decision animation (or match dialog) when browsing should advance. */
 	onAdvance: (remainingCount: number) => Promise<void>;
+	/** Shown while the batch is untouched; swaps it for a fresh one. */
+	onRegenerate?: () => void;
+	regenerating?: boolean;
 };
 
 function DailyQuestionAnswerBlock({
@@ -92,7 +95,12 @@ function DailyQuestionAnswerBlock({
 	);
 }
 
-export function ConnectionCandidateScreen({ candidateId, onAdvance }: ConnectionCandidateScreenProps) {
+export function ConnectionCandidateScreen({
+	candidateId,
+	onAdvance,
+	onRegenerate,
+	regenerating,
+}: ConnectionCandidateScreenProps) {
 	const { t } = useTranslation();
 	const theme = useTheme();
 	const insets = useSafeAreaInsets();
@@ -353,6 +361,16 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 						</Pressable>
 					))}
 				</View>
+
+				{onRegenerate && !match ? (
+					<Button
+						label={t("connections.regenerate")}
+						variant="ghost"
+						loading={regenerating}
+						disabled={decisionKind !== null || decide.isPending}
+						onPress={onRegenerate}
+					/>
+				) : null}
 			</ScrollView>
 
 			{match ? (

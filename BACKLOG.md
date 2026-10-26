@@ -139,24 +139,24 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 
 ---
 
-### `[ ]` T8 — feat(api,mobile): let users regenerate recommendations if they haven't acted on today's batch
+### `[x]` T8 — feat(api,mobile): let users regenerate recommendations if they haven't acted on today's batch
 
 - **Labels**: `type:feature` `area:api` `area:mobile` `prio:P2`
 - **Description**: Users wait about 24 hours (recommendation cooldown) for new recommendations, even after changing their filters. Let them regenerate the batch, but only while they haven't acted (like/pass) on any recommendation from the current daily batch, so the daily limit can't be bypassed.
 
 **Acceptance criteria**
-- [ ] User can regenerate recommendations from the app while no recommendation in the current batch has been acted on
-- [ ] Regenerate is hidden or disabled once the user has acted on at least one recommendation; the normal cooldown applies again
-- [ ] API enforces the rule (not only the UI); returns a clear error when not allowed
-- [ ] New batch uses the current filters and respects `lookingFor` pools
-- [ ] Regenerating does not reset the daily limit or the cooldown timer
-- [ ] Copy in `locales/en.json`
+- [x] User can regenerate recommendations from the app while no recommendation in the current batch has been acted on
+- [x] Regenerate is hidden or disabled once the user has acted on at least one recommendation; the normal cooldown applies again
+- [x] API enforces the rule (not only the UI); returns a clear error when not allowed
+- [x] New batch uses the current filters and respects `lookingFor` pools
+- [x] Regenerating does not reset the daily limit or the cooldown timer
+- [x] Copy in `locales/en.json`
 
 **Notes**
 - `POST /recommendations/regenerate` already exists (`regenerate()` in `apps/api/src/modules/recommendations/service.ts`), but it's a study knob that ignores the cooldown and has no guard. Add the "no action taken in current batch" check there, or add a separate user-facing route.
 - Changing filters currently only calls `dismissPendingFilterMisfits()`, which drops misfits without refilling. Offering regenerate right after a filter change is a natural entry point.
 - Cooldown helpers are in `apps/api/src/lib/recommendation-cadence.ts`.
-- Open question: should regenerating be capped (e.g. once per day) even without actions?
+- Open question: should regenerating be capped (e.g. once per day) even without actions? Not capped yet: while untouched, a user can regenerate repeatedly.
 
 ---
 

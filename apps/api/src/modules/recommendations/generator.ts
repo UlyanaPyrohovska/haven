@@ -26,6 +26,8 @@ export type GenerateRecommendationsOptions = {
 	crossPathsLambda?: number;
 	/** Restrict the pool to synthetic profiles (simulation agents). */
 	syntheticOnly?: boolean;
+	/** Reuse this `shown_at` instead of now (user regenerate keeps the cooldown). */
+	shownAt?: Date;
 };
 
 export type RankedCandidate = { candidateId: number; score: number };
@@ -97,6 +99,7 @@ export async function generateRecommendations(
 			score: row.score,
 			rank: index + 1,
 		})),
+		opts.shownAt,
 	);
 
 	return ranked.length;

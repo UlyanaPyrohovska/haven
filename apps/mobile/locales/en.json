@@ -101,6 +101,8 @@
 		"caughtUpTitle": "You're all caught up",
 		"caughtUpSubtitle": "New people on {{date}}.",
 		"backHome": "Back to home",
+		"regenerate": "Show me different people",
+		"regenerateFailed": "Couldn't refresh your connections. Try again.",
 		"matchedTitle": "It's a match!",
 		"matchedMessage": "{{name}} accepted too. Say hi from your matches.",
 		"continueBrowsing": "See next connection",

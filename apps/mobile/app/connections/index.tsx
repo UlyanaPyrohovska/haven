@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigation } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,9 +6,10 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { ConnectionCandidateScreen } from "@/components/connections/connection-candidate-screen";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { FormScreen } from "@/components/ui/form-screen";
 import { useTheme } from "@/hooks/use-theme";
-import { fetchRecommendations, recommendationsQueryKey } from "@/lib/api/recommendations";
+import { fetchRecommendations, recommendationsQueryKey, regenerateRecommendations } from "@/lib/api/recommendations";
 export default function ConnectionsIndexScreen() {
 	const { t } = useTranslation();
 	const navigation = useNavigation();
@@ -20,6 +21,12 @@ export default function ConnectionsIndexScreen() {
 		queryKey: recommendationsQueryKey,
 		queryFn: fetchRecommendations,
 	});
+
+	const regenerate = useMutation({
+		mutationFn: regenerateRecommendations,
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: recommendationsQueryKey }),
+	});
+	const onRegenerate = recommendations.data?.canRegenerate ? () => regenerate.mutate() : undefined;
 
 	useEffect(() => {
 		const first = recommendations.data?.recommendations[0];
@@ -96,12 +103,28 @@ export default function ConnectionsIndexScreen() {
 				}
 				showBack
 			>
-				<Button label={t("connections.backHome")} onPress={() => navigation.goBack()} />
+				{regenerate.isError ? <ErrorBanner message={t("connections.regenerateFailed")} /> : null}
+				{onRegenerate ? (
+					<Button label={t("connections.regenerate")} loading={regenerate.isPending} onPress={onRegenerate} />
+				) : null}
+				<Button
+					label={t("connections.backHome")}
+					variant={onRegenerate ? "secondary" : "primary"}
+					onPress={() => navigation.goBack()}
+				/>
 			</FormScreen>
 		);
 	}
 
-	return <ConnectionCandidateScreen key={candidateId} candidateId={candidateId} onAdvance={onAdvance} />;
+	return (
+		<ConnectionCandidateScreen
+			key={candidateId}
+			candidateId={candidateId}
+			onAdvance={onAdvance}
+			onRegenerate={onRegenerate}
+			regenerating={regenerate.isPending}
+		/>
+	);
 }
 
 const styles = StyleSheet.create({

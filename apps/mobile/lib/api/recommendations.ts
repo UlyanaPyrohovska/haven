@@ -62,6 +62,8 @@ export type RecommendationsListResponse = {
 	recommendations: RecommendationSummary[];
 	count: number;
 	dailyQuestion: string;
+	/** True while nothing in the current batch was accepted or declined. */
+	canRegenerate: boolean;
 	nextRefreshAt?: string;
 };
 
@@ -70,6 +72,16 @@ export async function fetchRecommendations(): Promise<RecommendationsListRespons
 
 	if (!response.ok) {
 		throw new Error(`Failed to load recommendations (${response.status})`);
+	}
+
+	return response.json();
+}
+
+export async function regenerateRecommendations(): Promise<{ count: number }> {
+	const response = await apiFetch("/recommendations/regenerate", { method: "POST" });
+
+	if (!response.ok) {
+		throw new Error(`Failed to regenerate recommendations (${response.status})`);
 	}
 
 	return response.json();

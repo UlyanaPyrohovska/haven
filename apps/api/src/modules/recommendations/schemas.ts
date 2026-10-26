@@ -32,6 +32,8 @@ export const RecommendationsListSchema = z
 		recommendations: z.array(RecommendationSummarySchema),
 		count: z.number().int(),
 		dailyQuestion: z.string(),
+		/** True while the viewer hasn't accepted or declined anyone in the current batch. */
+		canRegenerate: z.boolean(),
 		nextRefreshAt: z.string().datetime().optional(),
 	})
 	.openapi("RecommendationsList");

@@ -119,6 +119,7 @@ export async function getRecommendations({ db, viewer, recCooldownHours }: Viewe
 	}
 
 	const rows = await repository.listPendingRecommendations(db, viewer.id);
+	const canRegenerate = isProfileComplete(viewer) && !(await repository.hasDecidedInCurrentBatch(db, viewer.id));
 
 	const summaries = rows.map(({ recommendation, candidate }) =>
 		summariseCandidate(viewer, candidate as repository.ViewerProfile, recommendation),
@@ -130,6 +131,7 @@ export async function getRecommendations({ db, viewer, recCooldownHours }: Viewe
 		recommendations: summaries,
 		count: summaries.length,
 		dailyQuestion: todayQuestion,
+		canRegenerate,
 		...(nextRefreshAt ? { nextRefreshAt } : {}),
 	};
 }
@@ -361,13 +363,22 @@ export async function recordCrossingsOnLocationUpdate(db: Db, profile: ProfileRo
 	}
 }
 
-/** Study knob: drop un-acted recs and generate a fresh batch (ignores cooldown). */
+/**
+ * Swap the pending batch for a fresh one (e.g. after a filter change), only while the viewer hasn't
+ * accepted or declined anyone in it. The new rows keep the batch's `shown_at`, so the cooldown and the
+ * batch size stay the same and regenerating can't be used to get extra people.
+ */
 export async function regenerate({ db, viewer }: ViewerContext) {
 	if (!isProfileComplete(viewer)) {
 		return { count: 0 };
 	}
 
-	const count = await generateRecommendations(db, viewer.id);
+	if (await repository.hasDecidedInCurrentBatch(db, viewer.id)) {
+		throw errors.regenerate_not_allowed;
+	}
+
+	const lastShown = await repository.getLastBatchShownAt(db, viewer.id);
+	const count = await generateRecommendations(db, viewer.id, { shownAt: lastShown ?? undefined });
 
 	return { count };
 }
