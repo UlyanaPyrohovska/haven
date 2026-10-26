@@ -168,7 +168,9 @@ Users can view and edit their profile, including a preview of how others see it.
     nothing if `shareLocation` is off.
 - **Photo:** resized on the device to at most 512 px (`expo-image-manipulator`) and stored on the
   Better Auth `user.image`. When there is no photo, the API serves a deterministic portrait from a
-  hash of the profile id (`src/lib/avatar-url.ts`).
+  hash of the profile id (`src/lib/avatar-url.ts`), drawn from a gender-matched pool (gender 1 →
+  male pool, otherwise female pool) of hand-checked Unsplash slugs. If an image fails to load, the
+  mobile app shows a placeholder: initials in `UserAvatar`, a person icon on the candidate card.
 - **Theme:** a device-only preference (`lib/theme/preference.tsx`).
 - **Public preview:** `components/profile/profile-public-preview.tsx` mirrors the candidate screen
   layout (4:5 photo with name and "age · career", mood badge, today's question and answer, about,

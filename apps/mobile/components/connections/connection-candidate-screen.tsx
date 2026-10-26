@@ -103,6 +103,7 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 	const [matchedName, setMatchedName] = useState("");
 	const [pendingMatch, setPendingMatch] = useState(false);
 	const [safetyDialog, setSafetyDialog] = useState<SafetyKind | null>(null);
+	const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
 	// Pools never cross, so the candidate is in the viewer's mode.
 	const mode = useMode();
 
@@ -244,7 +245,18 @@ export function ConnectionCandidateScreen({ candidateId, onAdvance }: Connection
 
 				<Animated.View style={cardStyle}>
 					<View style={[styles.photoCard, { backgroundColor: theme.field, borderColor: theme.border }]}>
-						<Image source={{ uri: data.photoUrl }} style={styles.photoImage} contentFit="cover" contentPosition="top" />
+						<Image
+							source={{ uri: data.photoUrl }}
+							style={styles.photoImage}
+							contentFit="cover"
+							contentPosition="top"
+							onError={() => setFailedPhotoUrl(data.photoUrl)}
+						/>
+						{failedPhotoUrl === data.photoUrl ? (
+							<View style={styles.photoFallback}>
+								<Ionicons name="person-outline" size={72} color={theme.muted} />
+							</View>
+						) : null}
 						<View style={styles.photoScrim} />
 						{mode ? (
 							<View style={styles.modeRibbon}>
@@ -430,6 +442,11 @@ const styles = StyleSheet.create({
 	photoImage: {
 		aspectRatio: 4 / 5,
 		width: "100%",
+	},
+	photoFallback: {
+		...StyleSheet.absoluteFill,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	photoScrim: {
 		position: "absolute",

@@ -1,6 +1,7 @@
 /**
  * Deterministic avatar URLs from curated Unsplash portrait photos.
  * Used when `user_profiles.photo_url` is null.
+ * Every slug was checked by eye to match its pool's gender and to resolve (200) on images.unsplash.com.
  */
 
 const UNSPLASH_IMAGE_BASE = "https://images.unsplash.com";
@@ -13,11 +14,10 @@ const FEMALE_PORTRAITS = [
 	"photo-1524504388940-b1c1722653e1",
 	"photo-1517841905240-472988babdf9",
 	"photo-1487412720507-e7ab37603c6f",
-	"photo-1489424731088-a5d8b2193775",
 	"photo-1529626455594-4ff0802cfb7e",
-	"photo-1531746020758-e7763a404329",
 	"photo-1508214751196-bcfd4ca60f91",
 	"photo-1522075469751-3a6694fb2f61",
+	"photo-1580489944761-15a19d654956",
 ] as const;
 
 const MALE_PORTRAITS = [
@@ -27,12 +27,13 @@ const MALE_PORTRAITS = [
 	"photo-1519345182560-3f2917c472ef",
 	"photo-1472099645785-5658abf4ff4e",
 	"photo-1560250097-0b93528c311a",
-	"photo-1552058544-f228b0847218",
-	"photo-1573496359142-b8d87734a5a2",
-	"photo-1519085369753-2e2f0f2315c7",
-	"photo-1504257432387-305f79f98635",
-	"photo-1463453091185-820ea4a55618",
 	"photo-1539571696357-5a69c17a67c6",
+	"photo-1527980965255-d3b416303d12",
+	"photo-1531427186611-ecfd6d936c79",
+	"photo-1568602471122-7832951cc4c5",
+	"photo-1570295999919-56ceb5ecca61",
+	"photo-1599566150163-29194dcaad36",
+	"photo-1633332755192-727a05c4013d",
 ] as const;
 
 export type AvatarProfile = {

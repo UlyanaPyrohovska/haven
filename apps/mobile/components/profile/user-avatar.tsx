@@ -1,4 +1,5 @@
 import { Image, type ImageStyle } from "expo-image";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -17,13 +18,16 @@ export function UserAvatar({ imageUrl, name, size = 88, style }: UserAvatarProps
 	const theme = useTheme();
 	const initials = profileInitials(name);
 	const dimension = { width: size, height: size, borderRadius: size / 2 };
+	// Keyed by URL so a new photo gets a fresh attempt.
+	const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
-	if (imageUrl) {
+	if (imageUrl && imageUrl !== failedUrl) {
 		return (
 			<Image
 				source={{ uri: imageUrl }}
 				style={[styles.avatar, dimension, { borderColor: theme.tint }, style]}
 				contentFit="cover"
+				onError={() => setFailedUrl(imageUrl)}
 				accessibilityRole="image"
 				accessibilityLabel={name ? `${name}'s profile photo` : "Profile photo"}
 			/>
