@@ -1,5 +1,14 @@
 /** Ordered onboarding routes, driving both the progress indicator and step-to-step navigation. */
-export const OnboardingSteps = ["basics", "bio", "interests", "partner", "self", "location", "privacy"] as const;
+export const OnboardingSteps = [
+	"basics",
+	"bio",
+	"interests",
+	"partner",
+	"self",
+	"location",
+	"photo",
+	"privacy",
+] as const;
 
 export type OnboardingStep = (typeof OnboardingSteps)[number];
 

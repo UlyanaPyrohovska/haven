@@ -420,6 +420,11 @@
 			"levels": ["Not really me", "A little", "Somewhat", "Mostly", "Totally me"],
 			"incomplete": "Rate every slider to continue."
 		},
+		"photo": {
+			"title": "Add a profile photo",
+			"subtitle": "Optional. A photo helps people recognise you. You can add or change it later in your profile.",
+			"choose": "Choose a photo"
+		},
 		"privacy": {
 			"title": "Privacy",
 			"subtitle": "Choose what others see on your profile. You can change this anytime in Settings.",

@@ -34,6 +34,8 @@ export type ProfileDraft = {
 	ageRange: { min: number; max: number } | undefined;
 	self: Partial<Record<SelfKey, number>>;
 	privacy: typeof DEFAULT_PRIVACY_SETTINGS;
+	/** Optional JPEG data URL; uploaded to Better Auth `user.image` on submit, null when skipped. */
+	photo: string | null;
 	/** Unset preset leaves location columns untouched; coordinates are only filled for "device". */
 	location: {
 		preset: LocationPresetId | undefined;
@@ -60,6 +62,7 @@ const emptyDraft: ProfileDraft = {
 	ageRange: undefined,
 	self: {},
 	privacy: { ...DEFAULT_PRIVACY_SETTINGS },
+	photo: null,
 	location: {
 		preset: undefined,
 		displayLocation: null,

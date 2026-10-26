@@ -131,6 +131,8 @@ export function profileRecordToDraft(record: ProfileRecord): ProfileDraft {
 		ageRange: readAgeRange(record),
 		self: readSelfRatings(record),
 		privacy: readPrivacySettings(record),
+		// Photo lives on the auth user and is edited from the profile screen, not this draft.
+		photo: null,
 		// No preset: saving the edit flow leaves stored coordinates untouched.
 		location: { ...readLocationSettings(record), preset: undefined },
 	};
