@@ -80,16 +80,18 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 
 ---
 
-### `[ ]` T6 — fix(api,mobile): AI-agent candidates show wrong or missing profile picture
+### `[x]` T6 — fix(api,mobile): AI-agent candidates show wrong or missing profile picture
 
 - **Labels**: `type:bug` `area:api` `area:mobile` `prio:P2`
 - **Description**: Users shown in recommendations that are AI agents (synthetic/seeded profiles) often have a profile picture that doesn't match the profile, or no picture at all.
 
 **Acceptance criteria**
-- [ ] Root cause identified and documented
-- [ ] Every AI-agent candidate in recommendations shows a picture
-- [ ] Picture matches the profile (e.g. gender) and stays the same across sessions
-- [ ] Real users' uploaded photos unchanged
+- [x] Root cause identified and documented
+- [x] Every AI-agent candidate in recommendations shows a picture
+- [x] Picture matches the profile (e.g. gender) and stays the same across sessions
+- [x] Real users' uploaded photos unchanged
+
+**Root cause**: the fallback was applied everywhere, but 7 of 24 curated Unsplash slugs in `avatar-url.ts` returned 404 (blank picture) and one slug in the male pool (`photo-1573496359142`) was a woman (mismatch). Replaced them with checked slugs; mobile now shows a placeholder when an image fails to load.
 
 **Notes**
 - Fallback avatars come from `apps/api/src/lib/avatar-url.ts` (curated Unsplash portraits picked by profile id and gender, used when `user_profiles.photo_url` is null). Check that recommendation responses actually apply this fallback, that the portrait lists are correctly split by gender, and that every Unsplash URL still resolves.
