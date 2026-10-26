@@ -27,8 +27,6 @@ export function LocationPill({ label, hidden = false, unset = false }: LocationP
 				type="caption"
 				style={[styles.label, muted ? { color: theme.muted } : undefined]}
 				numberOfLines={1}
-				adjustsFontSizeToFit
-				minimumFontScale={0.85}
 			>
 				{label}
 			</ThemedText>
@@ -46,8 +44,11 @@ const styles = StyleSheet.create({
 		paddingHorizontal: Spacing.md,
 		paddingVertical: Spacing.sm,
 		maxWidth: "100%",
+		flexShrink: 1,
+		minWidth: 0,
 	},
 	label: {
 		flexShrink: 1,
+		minWidth: 0,
 	},
 });

@@ -323,6 +323,7 @@ const styles = StyleSheet.create({
 	},
 	headerSide: {
 		width: 44,
+		flexShrink: 0,
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -334,6 +335,8 @@ const styles = StyleSheet.create({
 	},
 	headerPillPressable: {
 		maxWidth: "100%",
+		flexShrink: 1,
+		minWidth: 0,
 	},
 	iconButton: {
 		width: 40,
