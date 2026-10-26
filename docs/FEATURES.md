@@ -125,13 +125,18 @@ A step-by-step profile setup:
 4. Partner step: "Show me" and age-range filters (see Partner filters), then the 6 preference dimensions.
 5. Self-ratings (6 dimensions).
 6. Location.
-7. Privacy.
+7. Profile photo (optional, "Skip for now" continues without one).
+8. Privacy.
 
 **How it works:**
 - The step order comes from the `OnboardingSteps` array in `lib/onboarding/steps.ts`, which also
   drives the progress bar and next/back navigation. To add a step, add it to that array.
 - Answers collect in a React context (`ProfileDraftContext` in `profile-draft.tsx`) and are saved
   once at the end with `PATCH /me`.
+- The photo step reuses `lib/profile/photo.ts` (`pickProfilePhotoDataUrl`: square crop, 512 px JPEG)
+  and keeps the data URL in `draft.photo`, so nothing is uploaded mid-flow. The privacy step's
+  preview shows it, and on Finish `saveProfilePhoto` writes it to Better Auth `user.image` before
+  `PATCH /me`. Skipping leaves `user.image` empty, so the API's generated portrait is used.
 - On the server, `profile/service.ts > patchProfile` does three things:
   1. Takes the display name from the first word of the Better Auth name.
   2. Cleans up and de-duplicates custom interests, and checks them against a blocked-words list

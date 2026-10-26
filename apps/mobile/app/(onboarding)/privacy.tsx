@@ -3,8 +3,8 @@ import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-
 import { ProfilePrivacyControls } from "@/components/profile/profile-privacy-controls";
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -16,7 +16,7 @@ import { fetchProfile, saveProfile } from "@/lib/api/profile";
 import { useSession } from "@/lib/auth/client";
 import { useProfileDraft } from "@/lib/onboarding/profile-draft";
 import { ONBOARDING_STEP_COUNT, onboardingStepNumber, previousOnboardingRoute } from "@/lib/onboarding/steps";
-import { profileInitials } from "@/lib/profile/display";
+import { saveProfilePhoto } from "@/lib/profile/photo";
 import { draftPublicProfilePreview } from "@/lib/profile/privacy";
 
 function PreviewTag({ label }: { label: string }) {
@@ -41,10 +41,14 @@ export default function PrivacyStep() {
 
 	const displayName = session?.user.name?.trim() || t("profile.fallbackName");
 	const preview = useMemo(() => draftPublicProfilePreview(draft), [draft]);
-	const initials = profileInitials(displayName);
 
 	const submit = useMutation({
-		mutationFn: () => saveProfile(draft),
+		mutationFn: async () => {
+			if (draft.photo) {
+				await saveProfilePhoto(draft.photo);
+			}
+			await saveProfile(draft);
+		},
 		onSuccess: async () => {
 			// fetchQuery, not invalidate: the only profile observer here is useMode's disabled one, which
 			// invalidate skips, so home would first paint in the default theme before its own fetch lands.
@@ -75,11 +79,7 @@ export default function PrivacyStep() {
 				</ThemedText>
 
 				<View style={[styles.previewCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-					<View style={[styles.previewAvatar, { backgroundColor: theme.accentSoft }]}>
-						<ThemedText type="title" style={{ color: theme.tint }}>
-							{initials}
-						</ThemedText>
-					</View>
+					<UserAvatar imageUrl={draft.photo} name={displayName} size={72} style={styles.previewAvatar} />
 
 					<View style={styles.previewCopy}>
 						<ThemedText type="label">{displayName}</ThemedText>
@@ -140,11 +140,7 @@ const styles = StyleSheet.create({
 		gap: Spacing.md,
 	},
 	previewAvatar: {
-		width: 72,
-		height: 72,
 		borderRadius: Radius.lg,
-		alignItems: "center",
-		justifyContent: "center",
 	},
 	previewCopy: {
 		flex: 1,

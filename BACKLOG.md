@@ -67,16 +67,16 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 
 ---
 
-### `[ ]` T5 — feat(mobile): optional profile picture step in onboarding
+### `[x]` T5 — feat(mobile): optional profile picture step in onboarding
 
 - **Labels**: `type:feature` `area:mobile` `prio:P2`
 - **Description**: Add a profile picture step to onboarding. It must be skippable.
 
 **Acceptance criteria**
-- [ ] New step added via `lib/onboarding/steps.ts` + `profile-draft.tsx`
-- [ ] Reuses existing photo upload logic in `lib/profile/photo`
-- [ ] "Skip" completes onboarding without a photo
-- [ ] Copy in `locales/en.json`
+- [x] New step added via `lib/onboarding/steps.ts` + `profile-draft.tsx`
+- [x] Reuses existing photo upload logic in `lib/profile/photo`
+- [x] "Skip" completes onboarding without a photo
+- [x] Copy in `locales/en.json`
 
 ---
 
