@@ -1,6 +1,6 @@
 import { desc, eq, getTableColumns, inArray, like, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { customInterests, user, userProfiles } from "@/db/schema";
+import { customInterests, user, userEmbeddings, userProfiles } from "@/db/schema";
 import { customInterestKey } from "@/lib/custom-interests";
 import type { ProfileUpdate } from "./schemas";
 
@@ -70,6 +70,58 @@ export async function deleteAccount(db: Db, userId: string) {
 		db.delete(userProfiles).where(eq(userProfiles.userId, userId)),
 		db.delete(user).where(eq(user.id, userId)),
 	]);
+}
+
+/** Inserts or replaces bio vectors (bge-small, 384-d). */
+export async function upsertBioEmbeddings(db: Db, rows: { userProfileId: number; bio: number[] }[]) {
+	if (rows.length === 0) return;
+
+	await db
+		.insert(userEmbeddings)
+		.values(rows.map((row) => ({ ...row, updatedAt: new Date() })))
+		.onConflictDoUpdate({
+			target: userEmbeddings.userProfileId,
+			set: { bio: sql`excluded.bio`, updatedAt: sql`excluded.updated_at` },
+		});
+}
+
+export async function deleteBioEmbedding(db: Db, profileId: number) {
+	await db.delete(userEmbeddings).where(eq(userEmbeddings.userProfileId, profileId));
+}
+
+/** Storage for `syncBioEmbedding`. */
+export function bioEmbeddingStore(db: Db) {
+	return {
+		upsert: (profileId: number, bio: number[]) => upsertBioEmbeddings(db, [{ userProfileId: profileId, bio }]),
+		remove: (profileId: number) => deleteBioEmbedding(db, profileId),
+	};
+}
+
+/** Removes vectors whose profile bio is now blank; returns how many. */
+export async function deleteClearedBioEmbeddings(db: Db) {
+	const removed = await db
+		.delete(userEmbeddings)
+		.where(
+			inArray(
+				userEmbeddings.userProfileId,
+				db
+					.select({ id: userProfiles.id })
+					.from(userProfiles)
+					.where(sql`${userProfiles.bio} IS NULL OR btrim(${userProfiles.bio}) = ''`),
+			),
+		)
+		.returning({ id: userEmbeddings.userProfileId });
+
+	return removed.length;
+}
+
+/** Every profile with a non-blank bio, ordered by id. */
+export async function listProfileBios(db: Db) {
+	return db
+		.select({ id: userProfiles.id, bio: userProfiles.bio })
+		.from(userProfiles)
+		.where(sql`btrim(coalesce(${userProfiles.bio}, '')) <> ''`)
+		.orderBy(userProfiles.id);
 }
 
 /** Adds new labels to the shared catalog and returns the canonical spelling for each one, in order. */

@@ -30,6 +30,10 @@ staff.openapi(routes.simulationTickRoute, async (c) => {
 	return c.json(await service.simulationTick(c, body.limit), 200);
 });
 
+staff.openapi(routes.bioEmbeddingBackfillRoute, async (c) => {
+	return c.json(await service.backfillBioEmbeddings(c), 200);
+});
+
 staff.openapi(routes.interactionGraphRoute, async (c) => {
 	const query = c.req.valid("query");
 	return c.json(await service.interactionGraph(c, query), 200);

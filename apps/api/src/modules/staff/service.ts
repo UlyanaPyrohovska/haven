@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
+import { BIO_EMBEDDING_BATCH, embedTexts, syncBioEmbedding } from "@/lib/bio-embedding";
 import { displayNameForCandidate } from "@/lib/candidate-display";
 import {
 	CROSSING_COOLDOWN_HOURS,
@@ -15,6 +16,7 @@ import { haversineKm } from "@/lib/profile-view";
 import { applyCrossPathsBoost, reciprocalScore, scoreBreakdown } from "@/lib/scoring";
 import { requireStaffAdmin } from "@/lib/session";
 import { notify } from "@/modules/notifications/service";
+import * as profileRepository from "@/modules/profile/repository";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
 import { generateRecommendations } from "@/modules/recommendations/generator";
 import * as recommendationsRepository from "@/modules/recommendations/repository";
@@ -114,6 +116,12 @@ export async function updateUser(
 			throw errors.not_found;
 		}
 		profile = updated;
+
+		if (profileUpdates.bio !== undefined && profileUpdates.bio !== existing.bio) {
+			c.executionCtx.waitUntil(
+				syncBioEmbedding(c.env.AI, profileRepository.bioEmbeddingStore(db), profileId, updated.bio),
+			);
+		}
 	}
 
 	let auth = existing.userId ? await repository.findAuthUserById(db, existing.userId) : null;
@@ -168,6 +176,33 @@ export async function simulationTick(c: Context<{ Bindings: CloudflareBindings }
 		cooldownHours: (await recommendationsRepository.loadMatchingConfig(db, c.env.REC_COOLDOWN_HOURS)).cooldownHours,
 		notify: (profileId, notice) => notify(c.env, db, profileId, notice),
 	});
+}
+
+/**
+ * One-off (and after each `db:seed`): re-embeds every bio with bge-small so no vectors from another model
+ * remain, and drops vectors whose bio was cleared. Unlike the write path, failures here surface to staff.
+ * shortcut: one request does all rows; add an afterId cursor if the pool outgrows Worker subrequest/time limits.
+ */
+export async function backfillBioEmbeddings(c: Context<{ Bindings: CloudflareBindings }>) {
+	await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+
+	const removed = await profileRepository.deleteClearedBioEmbeddings(db);
+	const profiles = await profileRepository.listProfileBios(db);
+
+	for (let i = 0; i < profiles.length; i += BIO_EMBEDDING_BATCH) {
+		const batch = profiles.slice(i, i + BIO_EMBEDDING_BATCH);
+		const vectors = await embedTexts(
+			c.env.AI,
+			batch.map((p) => p.bio as string),
+		);
+		await profileRepository.upsertBioEmbeddings(
+			db,
+			batch.map((p, j) => ({ userProfileId: p.id, bio: vectors[j] })),
+		);
+	}
+
+	return { embedded: profiles.length, removed };
 }
 
 /** Ids and display names only — never coordinates. */

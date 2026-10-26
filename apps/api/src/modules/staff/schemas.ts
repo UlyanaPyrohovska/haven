@@ -87,6 +87,13 @@ export const SimulationTickResponseSchema = z
 	})
 	.openapi("SimulationTickResponse");
 
+export const BioEmbeddingBackfillResponseSchema = z
+	.object({
+		embedded: z.number().int(),
+		removed: z.number().int(),
+	})
+	.openapi("BioEmbeddingBackfillResponse");
+
 export const InteractionGraphQuerySchema = z
 	.object({
 		lookingFor: z.coerce.number().int().min(0).max(1).default(1),

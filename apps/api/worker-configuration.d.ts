@@ -13,6 +13,8 @@ interface __BaseEnv_CloudflareBindings {
 	EMAIL: SendEmail;
 	/** Sender address on the onboarded email domain. */
 	EMAIL_FROM: string;
+	/** Workers AI binding (wrangler.jsonc ai), used for bio embeddings. */
+	AI: Ai;
 	CHAT: DurableObjectNamespace<import("./src/index").ChatRoom>;
 }
 declare namespace Cloudflare {

@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getMatchingConfig, type MatchingConfig, type MatchingConfigResponse, updateMatchingConfig } from "@/lib/api";
+import {
+	type BioEmbeddingBackfill,
+	backfillBioEmbeddings,
+	getMatchingConfig,
+	type MatchingConfig,
+	type MatchingConfigResponse,
+	updateMatchingConfig,
+} from "@/lib/api";
 
 type FieldKey =
 	| "batchSize"
@@ -215,6 +222,58 @@ export function MatchingRulesPage() {
 					</CardFooter>
 				</Card>
 			</form>
+
+			<BioEmbeddingsCard />
 		</div>
+	);
+}
+
+/** Run once per environment after deploy and after every `pnpm db:seed` (the seed empties user_embeddings). */
+function BioEmbeddingsCard() {
+	const [running, setRunning] = useState(false);
+	const [result, setResult] = useState<BioEmbeddingBackfill | null>(null);
+	const [error, setError] = useState<string | null>(null);
+
+	async function onBackfill() {
+		setRunning(true);
+		setError(null);
+		setResult(null);
+		try {
+			setResult(await backfillBioEmbeddings());
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Backfill failed");
+		} finally {
+			setRunning(false);
+		}
+	}
+
+	return (
+		<Card className="lg:max-w-[calc(50%-0.5rem)]">
+			<CardHeader>
+				<CardTitle>Bio embeddings</CardTitle>
+				<CardDescription>
+					Re-embeds every bio with Workers AI and removes vectors of cleared bios. Run after a deploy or a reseed; it
+					takes up to a minute.
+				</CardDescription>
+			</CardHeader>
+			{error || result ? (
+				<CardContent>
+					{error ? (
+						<Alert variant="destructive">
+							<AlertDescription>{error}</AlertDescription>
+						</Alert>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							{result?.embedded} bios embedded, {result?.removed} vectors removed.
+						</p>
+					)}
+				</CardContent>
+			) : null}
+			<CardFooter className="justify-end border-t">
+				<Button type="button" onClick={onBackfill} disabled={running}>
+					{running ? "Embedding…" : "Re-embed all bios"}
+				</Button>
+			</CardFooter>
+		</Card>
 	);
 }
