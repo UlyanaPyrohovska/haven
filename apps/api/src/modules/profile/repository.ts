@@ -34,7 +34,11 @@ export async function findProfileIdByUserId(db: Db, userId: string) {
 	return existing?.id ?? null;
 }
 
-export async function updateProfileById(db: Db, profileId: number, updates: ProfileUpdate) {
+export async function updateProfileById(
+	db: Db,
+	profileId: number,
+	updates: ProfileUpdate & { locationUpdatedAt?: Date | null },
+) {
 	const [row] = await db
 		.update(userProfiles)
 		.set({ ...updates, updatedAt: new Date() })
@@ -44,7 +48,11 @@ export async function updateProfileById(db: Db, profileId: number, updates: Prof
 	return row ?? null;
 }
 
-export async function insertProfile(db: Db, userId: string, updates: ProfileUpdate) {
+export async function insertProfile(
+	db: Db,
+	userId: string,
+	updates: ProfileUpdate & { locationUpdatedAt?: Date | null },
+) {
 	const [row] = await db
 		.insert(userProfiles)
 		.values({ ...updates, userId, isSynthetic: false })

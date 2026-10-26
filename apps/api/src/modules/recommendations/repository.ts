@@ -8,6 +8,7 @@ import {
 	gte,
 	inArray,
 	isNull,
+	lt,
 	lte,
 	ne,
 	not,
@@ -19,6 +20,13 @@ import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db";
 import { crossings, interactions, matchingConfig, recommendations, userEmbeddings, userProfiles } from "@/db/schema";
 import { ageFromBirthDate, parseIsoDate } from "@/lib/age";
+import {
+	boundingBox,
+	CROSSING_COOLDOWN_HOURS,
+	CROSSING_WINDOW_MINUTES,
+	crossedIds,
+	crossingPair,
+} from "@/lib/crossings";
 import { customInterestKey } from "@/lib/custom-interests";
 import { type MatchingConfig, resolveMatchingConfig, toMatchingConfigRow } from "@/lib/matching-config";
 import { birthDateWindow, mutualFilterMatch, type PartnerFilterProfile } from "@/lib/partner-filters";
@@ -401,6 +409,63 @@ export async function listCrossings(db: Db, viewerId: number, candidateIds: numb
 	}
 
 	return counts;
+}
+
+type CrossingViewer = {
+	id: number;
+	lookingFor: number;
+	latitude: number;
+	longitude: number;
+	/** Area label of the viewer (city level), stored as the crossing's place. */
+	displayLocation: string | null;
+};
+
+/**
+ * Records a crossing with every same-pool user who reported a location within the crossing radius in the
+ * last `CROSSING_WINDOW_MINUTES`. Both sides must share cross paths and not hide their location. A pair
+ * counts again only after `CROSSING_COOLDOWN_HOURS`. Only the count, time and area label are stored.
+ */
+export async function recordCrossings(db: Db, viewer: CrossingViewer, now = new Date()): Promise<number> {
+	const box = boundingBox(viewer.latitude, viewer.longitude);
+	const nearby = await db
+		.select({ id: userProfiles.id, latitude: userProfiles.latitude, longitude: userProfiles.longitude })
+		.from(userProfiles)
+		.where(
+			and(
+				ne(userProfiles.id, viewer.id),
+				eq(userProfiles.lookingFor, viewer.lookingFor),
+				eq(userProfiles.shareCrossPaths, true),
+				eq(userProfiles.locationHidden, false),
+				gte(userProfiles.locationUpdatedAt, new Date(now.getTime() - CROSSING_WINDOW_MINUTES * 60_000)),
+				gte(userProfiles.latitude, box.minLat),
+				lte(userProfiles.latitude, box.maxLat),
+				gte(userProfiles.longitude, box.minLon),
+				lte(userProfiles.longitude, box.maxLon),
+			),
+		);
+	const ids = crossedIds(viewer, nearby);
+
+	if (ids.length === 0) {
+		return 0;
+	}
+
+	const cooldownStart = new Date(now.getTime() - CROSSING_COOLDOWN_HOURS * 3_600_000);
+	const place = viewer.displayLocation?.trim() || null;
+
+	await db
+		.insert(crossings)
+		.values(ids.map((id) => ({ ...crossingPair(viewer.id, id), count: 1, lastCrossedAt: now, lastPlace: place })))
+		.onConflictDoUpdate({
+			target: [crossings.userA, crossings.userB],
+			set: {
+				count: sql`least(${crossings.count} + 1, 32767)`,
+				lastCrossedAt: now,
+				lastPlace: place,
+			},
+			setWhere: or(isNull(crossings.lastCrossedAt), lt(crossings.lastCrossedAt, cooldownStart)),
+		});
+
+	return ids.length;
 }
 
 /** Profile ids whose like on the viewer is still unanswered. */

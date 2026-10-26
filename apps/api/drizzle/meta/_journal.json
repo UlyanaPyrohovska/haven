@@ -155,6 +155,20 @@
       "when": 1792944764636,
       "tag": "0021_fair_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793005338642,
+      "tag": "0022_volatile_wildside",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793005915388,
+      "tag": "0023_lame_donald_blake",
+      "breakpoints": true
     }
   ]
 }

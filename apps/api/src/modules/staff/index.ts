@@ -58,4 +58,29 @@ staff.openapi(routes.putMatchingConfigRoute, async (c) => {
 	return c.json(await service.updateMatchingConfig(c, body), 200);
 });
 
+staff.openapi(routes.getWalkersRoute, async (c) => {
+	const { profileId } = c.req.valid("param");
+	return c.json(await service.getWalkers(c, profileId), 200);
+});
+
+staff.openapi(routes.assignWalkersRoute, async (c) => {
+	const { profileId } = c.req.valid("param");
+	return c.json(await service.assignWalkers(c, profileId, c.req.valid("json")), 200);
+});
+
+staff.openapi(routes.stepWalkersRoute, async (c) => {
+	const { profileId } = c.req.valid("param");
+	return c.json(await service.stepWalkers(c, profileId, c.req.valid("json")), 200);
+});
+
+staff.openapi(routes.updateWalkerRoute, async (c) => {
+	const { walkerId } = c.req.valid("param");
+	return c.json(await service.updateWalker(c, walkerId, c.req.valid("json")), 200);
+});
+
+staff.openapi(routes.deleteWalkerRoute, async (c) => {
+	const { walkerId } = c.req.valid("param");
+	return c.json(await service.deleteWalker(c, walkerId), 200);
+});
+
 export default staff;

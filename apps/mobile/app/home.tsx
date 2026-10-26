@@ -16,6 +16,7 @@ import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemedText } from "@/components/themed-text";
 import { FontFamily, Radius, Spacing } from "@/constants/app-config";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useCrossingsLocation } from "@/hooks/use-crossings-location";
 import { useHeaderLocation } from "@/hooks/use-header-location";
 import { useProfileQuery } from "@/hooks/use-profile";
 import { type Theme, useTheme } from "@/hooks/use-theme";
@@ -124,6 +125,7 @@ export default function HomeScreen() {
 	useNotifications();
 	const hasSession = Boolean(session);
 	const profile = useProfileQuery(hasSession);
+	useCrossingsLocation(profile.data);
 
 	const recommendations = useQuery({
 		queryKey: recommendationsQueryKey,

@@ -40,16 +40,16 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 
 ---
 
-### `[ ]` T3 — feat(api,mobile): implement crossings for real (replace mocks)
+### `[x]` T3 — feat(api,mobile): implement crossings for real (replace mocks)
 
 - **Labels**: `type:feature` `area:api` `area:mobile` `prio:P1`
 - **Description**: All "crossing" data is mocked. Implement it end to end and use approximate location on the matches page.
 
 **Acceptance criteria**
-- [ ] Crossings computed from real data, no mock data left in API or mobile
-- [ ] Matches page shows approximate location / coarse distance only
-- [ ] Never exposes raw coordinates; respects users' hide-location privacy flags
-- [ ] Respects `lookingFor` pools
+- [x] Crossings computed from real data, no mock data left in API or mobile
+- [x] Matches page shows approximate location / coarse distance only
+- [x] Never exposes raw coordinates; respects users' hide-location privacy flags
+- [x] Respects `lookingFor` pools
 
 ---
 

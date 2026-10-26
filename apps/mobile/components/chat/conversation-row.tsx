@@ -30,7 +30,12 @@ export function ConversationRow({ match, onPress }: { match: MatchSummary; onPre
 					<ThemedText type="label" numberOfLines={1} style={styles.name}>
 						{match.displayName}
 					</ThemedText>
-					<ThemedText type="caption" style={{ color: unread ? theme.tint : theme.muted }}>
+					{match.locationLabel ? (
+						<ThemedText type="caption" numberOfLines={1} style={[styles.location, { color: theme.muted }]}>
+							{match.locationLabel}
+						</ThemedText>
+					) : null}
+					<ThemedText type="caption" style={[styles.time, { color: unread ? theme.tint : theme.muted }]}>
 						{formatMessageTime(match.lastActivityAt)}
 					</ThemedText>
 				</View>
@@ -74,7 +79,13 @@ const styles = StyleSheet.create({
 		gap: Spacing.sm,
 	},
 	name: {
-		flex: 1,
+		flexShrink: 1,
+	},
+	location: {
+		flexShrink: 1,
+	},
+	time: {
+		marginLeft: "auto",
 	},
 	preview: {
 		flex: 1,

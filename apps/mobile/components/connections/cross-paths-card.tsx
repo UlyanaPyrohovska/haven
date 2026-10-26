@@ -39,7 +39,7 @@ function daysAgo(iso: string | null): number | null {
 }
 
 /**
- * Illustrated (not geographic) map of where two people crossed paths. Only the public landmark
+ * Illustrated (not geographic) map of where two people crossed paths. Only the area
  * label is real; nothing here is derived from either person's coordinates.
  */
 function IllustratedMap({ place }: { place: string | null }) {

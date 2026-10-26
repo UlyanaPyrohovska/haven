@@ -154,6 +154,8 @@ export const userProfiles = pgTable(
 		displayLocation: varchar("display_location", { length: 200 }),
 		/** When true, the header shows a hidden-location state instead of `displayLocation`. */
 		locationHidden: boolean("location_hidden").notNull().default(false),
+		/** Last time the device sent coordinates; crossings only pair users seen recently. */
+		locationUpdatedAt: timestamp("location_updated_at"),
 
 		// Free text
 		bio: text("bio"),
@@ -304,7 +306,7 @@ export const interactions = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
-// crossings — simulated (seeded) "crossed paths" counts, undirected, stored with a < b
+// crossings — "crossed paths" counts from foreground location updates, undirected, stored with a < b
 // ────────────────────────────────────────────────────────────────
 export const crossings = pgTable(
 	"crossings",
@@ -321,6 +323,36 @@ export const crossings = pgTable(
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(t) => [primaryKey({ columns: [t.userA, t.userB] }), index("crossings_user_b_idx").on(t.userB)],
+);
+
+// ────────────────────────────────────────────────────────────────
+// location_walkers — staff test tool: synthetic profiles that walk around a real user's area
+// ────────────────────────────────────────────────────────────────
+export const locationWalkers = pgTable(
+	"location_walkers",
+	{
+		/** The synthetic profile that moves. One walk per walker. */
+		walkerId: integer("walker_id")
+			.primaryKey()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		/** The (usually real) profile whose neighbourhood it walks. */
+		targetId: integer("target_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		centerLat: doublePrecision("center_lat").notNull(),
+		centerLon: doublePrecision("center_lon").notNull(),
+		radiusM: integer("radius_m").notNull().default(800),
+		stepM: integer("step_m").notNull().default(150),
+		active: boolean("active").notNull().default(true),
+		lastStepAt: timestamp("last_step_at"),
+		/** Seeded location, restored when the walk is removed. */
+		originalLat: doublePrecision("original_lat"),
+		originalLon: doublePrecision("original_lon"),
+		originalDisplayLocation: varchar("original_display_location", { length: 200 }),
+		createdBy: text("created_by"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => [index("location_walkers_target_idx").on(t.targetId)],
 );
 
 // ────────────────────────────────────────────────────────────────

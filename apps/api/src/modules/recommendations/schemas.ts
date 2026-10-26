@@ -53,10 +53,10 @@ export const RecommendationDetailSchema = z
 		questionAnswer: z.string().nullable(),
 		answerLocked: z.boolean(),
 		crossPathsCount: z.number().int().nullable(),
-		/** Public landmark label of the last (simulated) crossing; never a user's coordinates. */
+		/** City-level area label of the last crossing; never a user's coordinates. */
 		crossPathsPlace: z.string().nullable(),
 		crossPathsLastAt: z.string().datetime().nullable(),
-		distanceKm: z.number().optional(),
+		/** City-level area or coarse distance; never coordinates. */
 		locationLabel: z.string().optional(),
 		actedOn: z.boolean(),
 		mood: MoodSlugSchema.nullable(),
@@ -94,6 +94,8 @@ export const MatchSummarySchema = z
 		photoUrl: z.string().url(),
 		ageLabel: z.string().optional(),
 		topInterests: z.array(z.string()),
+		/** City-level area or coarse distance; never coordinates. */
+		locationLabel: z.string().optional(),
 		matchedAt: z.string(),
 		isSynthetic: z.boolean(),
 		lastMessage: z

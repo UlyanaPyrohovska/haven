@@ -168,14 +168,6 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 		: undefined;
 	const publicFields = publicProfileFields(viewer, candidate);
 	const shareLocation = readPrivacySettings(candidate).shareLocation;
-	const distance = shareLocation
-		? haversineKm(
-				viewer.latitude as number | null,
-				viewer.longitude as number | null,
-				candidate.latitude as number | null,
-				candidate.longitude as number | null,
-			)
-		: undefined;
 
 	const interaction = await repository.findInteractionBetween(db, viewer.id, candidate.id);
 	const match = interaction?.match
@@ -204,7 +196,6 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 		crossPathsCount: crossing?.count ?? null,
 		crossPathsPlace: crossing?.lastPlace ?? null,
 		crossPathsLastAt: crossing?.lastCrossedAt?.toISOString() ?? null,
-		distanceKm: distance,
 		locationLabel: candidateLocationLabel(viewer, candidate),
 		actedOn: row.recommendation.actedOn,
 		mood,
@@ -343,6 +334,33 @@ export async function maybeGenerateOnProfileComplete(
 	}
 }
 
+/** The device sent a fresh location: count crossings with people near it right now. */
+export async function recordCrossingsOnLocationUpdate(db: Db, profile: ProfileRow & { id: number }): Promise<number> {
+	const { latitude, longitude } = profile;
+
+	if (
+		!readPrivacySettings(profile).shareCrossPaths ||
+		profile.locationHidden === true ||
+		typeof latitude !== "number" ||
+		typeof longitude !== "number"
+	) {
+		return 0;
+	}
+
+	try {
+		return await repository.recordCrossings(db, {
+			id: profile.id,
+			lookingFor: profile.lookingFor as number,
+			latitude,
+			longitude,
+			displayLocation: typeof profile.displayLocation === "string" ? profile.displayLocation : null,
+		});
+	} catch (err) {
+		console.error("recordCrossingsOnLocationUpdate failed", err);
+		return 0;
+	}
+}
+
 /** Study knob: drop un-acted recs and generate a fresh batch (ignores cooldown). */
 export async function regenerate({ db, viewer }: ViewerContext) {
 	if (!isProfileComplete(viewer)) {
@@ -394,6 +412,7 @@ export async function getMatches({ db, viewer }: ViewerContext) {
 				photoUrl: resolveProfilePhotoUrl({ ...candidate, id: candidateId }),
 				ageLabel: publicFields.ageLabel,
 				topInterests: publicFields.topInterests,
+				locationLabel: candidateLocationLabel(viewer, candidate),
 				matchedAt,
 				isSynthetic: Boolean(candidate.isSynthetic),
 				lastMessage: lastMessage ? toMessagePayload(lastMessage) : null,
