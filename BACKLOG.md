@@ -205,15 +205,15 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 
 ---
 
-### `[ ]` T11 — fix(mobile): long location name overflows the home header
+### `[x]` T11 — fix(mobile): long location name overflows the home header
 
 - **Labels**: `type:bug` `area:mobile` `prio:P2`
 - **Description**: When the location label is long (for example a long city plus country from reverse geocoding), the home header still tries to fit the whole label and the pill crowds the settings and avatar buttons.
 
 **Acceptance criteria**
-- [ ] A long location label is truncated with an ellipsis inside the pill
-- [ ] Settings and avatar buttons keep their size and position
-- [ ] Short labels look the same as now
+- [x] A long location label is truncated with an ellipsis inside the pill
+- [x] Settings and avatar buttons keep their size and position
+- [x] Short labels look the same as now
 
 **Notes**
 - `LocationPill` (`apps/mobile/components/location/location-pill.tsx`) already sets `numberOfLines={1}`, so the cause is probably layout. `headerCenter` and `headerPillPressable` in `apps/mobile/app/home.tsx` likely need `flexShrink: 1` / `minWidth: 0` so the text can shrink and truncate.
