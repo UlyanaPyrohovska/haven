@@ -2,8 +2,26 @@ import { describe, expect, it } from "vitest";
 import { matchReasons } from "@/lib/match-reasons";
 import type { ScoreBreakdown } from "@/lib/scoring";
 
-const weak: ScoreBreakdown = { interest: 0.3, geo: 0.1, prefUToV: 0.4, prefVToU: 0.4, bio: null, reciprocal: 0.4 };
-const strong: ScoreBreakdown = { interest: 0.9, geo: 0.9, prefUToV: 0.95, prefVToU: 0.85, bio: null, reciprocal: 0.9 };
+const weak: ScoreBreakdown = {
+	interest: 0.3,
+	geo: 0.1,
+	prefUToV: 0.4,
+	prefVToU: 0.4,
+	bio: null,
+	mood: null,
+	dailyAnswer: null,
+	reciprocal: 0.4,
+};
+const strong: ScoreBreakdown = {
+	interest: 0.9,
+	geo: 0.9,
+	prefUToV: 0.95,
+	prefVToU: 0.85,
+	bio: null,
+	mood: null,
+	dailyAnswer: null,
+	reciprocal: 0.9,
+};
 
 describe("matchReasons", () => {
 	it("falls back to compatible when no component stands out", () => {

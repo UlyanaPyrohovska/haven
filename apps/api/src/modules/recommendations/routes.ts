@@ -27,6 +27,20 @@ export const listMatchesRoute = createRoute({
 	},
 });
 
+export const listMatchAnswersTodayRoute = createRoute({
+	method: "get",
+	path: "/matches/answers/today",
+	tags: ["Recommendations"],
+	summary: "Today's daily-question answers from the signed-in user's matches in the current mode",
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.MatchAnswersTodaySchema } },
+			description: "Matches' answers",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+	},
+});
+
 export const postRegenerateRoute = createRoute({
 	method: "post",
 	path: "/recommendations/regenerate",

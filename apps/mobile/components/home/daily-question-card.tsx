@@ -68,7 +68,7 @@ export function DailyQuestionCard() {
 							</Pressable>
 							<Pressable
 								accessibilityRole="button"
-								onPress={() => router.push("/connections" as Href)}
+								onPress={() => router.push("/daily-answers" as Href)}
 								style={({ pressed }) => [styles.linkRow, { opacity: pressed ? 0.6 : 1 }]}
 							>
 								<ThemedText style={[styles.linkText, { color: theme.tint }]}>

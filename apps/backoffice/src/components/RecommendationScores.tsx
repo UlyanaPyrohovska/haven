@@ -17,6 +17,8 @@ const COMPONENT_COLUMNS = [
 	{ key: "geo", label: "Geo" },
 	{ key: "prefUToV", label: "Pref u→v" },
 	{ key: "prefVToU", label: "Pref v→u" },
+	{ key: "mood", label: "Mood" },
+	{ key: "dailyAnswer", label: "Answer" },
 	{ key: "pUToV", label: "p u→v" },
 	{ key: "qVToU", label: "q v→u" },
 	{ key: "reciprocal", label: "Reciprocal" },
@@ -75,7 +77,7 @@ export function RecommendationScores({ profileId }: { profileId: number }) {
 					Every candidate shown to this user. Stored is the score saved when the batch was generated; the other columns
 					are recomputed from current profiles
 					{weights
-						? ` (weights bio ${weights.bio}, interest ${weights.interest}, geo ${weights.geo}, pref ${weights.pref}; bio dropped and the rest renormalized when missing)`
+						? ` (weights bio ${weights.bio}, interest ${weights.interest}, geo ${weights.geo}, pref ${weights.pref}, mood ${weights.mood}, answer ${weights.dailyAnswer}; bio, mood and answer dropped and the rest renormalized when missing)`
 						: null}
 					. Score = reciprocal × cross-paths boost.
 				</CardDescription>

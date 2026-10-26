@@ -165,6 +165,8 @@ export type StaffRecommendation = {
 	geo: number;
 	prefUToV: number;
 	prefVToU: number;
+	mood: number | null;
+	dailyAnswer: number | null;
 	pUToV: number;
 	qVToU: number;
 	reciprocal: number;
@@ -172,8 +174,17 @@ export type StaffRecommendation = {
 	score: number;
 };
 
+export type ScoreWeights = {
+	bio: number;
+	interest: number;
+	geo: number;
+	pref: number;
+	mood: number;
+	dailyAnswer: number;
+};
+
 export type StaffRecommendations = {
-	weights: { bio: number; interest: number; geo: number; pref: number };
+	weights: ScoreWeights;
 	recommendations: StaffRecommendation[];
 };
 
@@ -188,7 +199,7 @@ export function regenerateUserRecommendations(profileId: number) {
 export type MatchingConfig = {
 	batchSize: number;
 	cooldownHours: number;
-	weights: { bio: number; interest: number; geo: number; pref: number };
+	weights: ScoreWeights;
 	crossPathsLambda: number;
 };
 

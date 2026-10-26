@@ -22,6 +22,12 @@ recommendationsModule.openapi(routes.listMatchesRoute, async (c) => {
 	return c.json(await service.getMatches(ctx), 200);
 });
 
+// GET /matches/answers/today
+recommendationsModule.openapi(routes.listMatchAnswersTodayRoute, async (c) => {
+	const ctx = await service.requireViewer(c);
+	return c.json(await service.getMatchAnswersToday(ctx), 200);
+});
+
 // GET /recommendations/{candidateId}
 recommendationsModule.openapi(routes.getRecommendationRoute, async (c) => {
 	const ctx = await service.requireViewer(c);

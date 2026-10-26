@@ -99,37 +99,38 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 
 ---
 
-### `[ ]` T7 — feat(api): use mood and daily-question answers in recommendation scoring
+### `[x]` T7 — feat(api): use mood and daily-question answers in recommendation scoring
 
 - **Labels**: `type:feature` `area:api` `prio:P1`
 - **Description**: Mood check-ins and daily-question answers are only displayed on the candidate detail screen (`getRecommendationDetail` in `modules/recommendations/service.ts`). They have no effect on scoring or ranking. They should contribute to recommendations.
 
 **Acceptance criteria**
-- [ ] `scoring.ts` gets a mood component and a daily-answer component, kept pure (no DB imports)
-- [ ] Missing data is neutral: no check-in or no answer today gives a neutral score, and the weights renormalize like the null-bio case
-- [ ] Weights for the new components are in `MatchingConfig`, so staff can edit them
-- [ ] Only today's data counts (use the helpers in `mood.ts` / `daily-questions.ts`); synthetic profiles use `syntheticMoodForProfile` / `syntheticDailyAnswer`
-- [ ] Staff score breakdown shows the new components
-- [ ] Unit tests in `scoring.test.ts`; `docs/FEATURES.md` updated
+- [x] `scoring.ts` gets a mood component and a daily-answer component, kept pure (no DB imports)
+- [x] Missing data is neutral: no check-in or no answer today gives a neutral score, and the weights renormalize like the null-bio case
+- [x] Weights for the new components are in `MatchingConfig`, so staff can edit them
+- [x] Only today's data counts (use the helpers in `mood.ts` / `daily-questions.ts`); synthetic profiles use `syntheticMoodForProfile` / `syntheticDailyAnswer`
+- [x] Staff score breakdown shows the new components
+- [x] Unit tests in `scoring.test.ts`; `docs/FEATURES.md` updated
 
 **Notes**
 - Mood idea: a small compatibility matrix over `MoodSlugs` (e.g. calm↔stressed is fine, low↔low is weak), not plain equality.
 - Daily-answer idea: embed answers the same way as bios and use cosine similarity; drop the term when either side has no embedding.
+- Done with a lexical stand-in (word-overlap Jaccard) because embedding answers needs Workers AI, which T9 gates on DPO sign-off. Swap `dailyAnswerSimilarity` for embedding cosine once T9 lands.
 - Both change daily, so check how this fits the batch cadence in `recommendation-cadence.ts` (rescore at batch time is probably enough).
 
 ---
 
-### `[ ]` T7 — fix(mobile): "See today's answers" opens recommendations instead of answers
+### `[x]` T7 — fix(mobile): "See today's answers" opens recommendations instead of answers
 
 - **Labels**: `type:bug` `area:mobile` `area:api` `prio:P2`
 - **Description**: After answering the daily question, "See today's answers" on the home card navigates to `/connections` (recommendations). That is confusing, especially when no recommendations are left. It should show what the user's matches answered today.
 
 **Acceptance criteria**
-- [ ] Button opens a view of today's answers from the user's matches
-- [ ] Works when the user has no recommendations left
-- [ ] Empty state when no match has answered yet (or the user has no matches)
-- [ ] Only matches' answers are shown, never other users'; respects `lookingFor` pools
-- [ ] Copy in `locales/en.json`
+- [x] Button opens a view of today's answers from the user's matches
+- [x] Works when the user has no recommendations left
+- [x] Empty state when no match has answered yet (or the user has no matches)
+- [x] Only matches' answers are shown, never other users'; respects `lookingFor` pools
+- [x] Copy in `locales/en.json`
 
 **Notes**
 - Navigation is in `apps/mobile/components/home/daily-question-card.tsx` (`router.push("/connections")`).

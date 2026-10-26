@@ -32,3 +32,29 @@ export async function saveTodayDailyQuestion(answer: string): Promise<DailyQuest
 }
 
 export const todayDailyQuestionQueryKey = ["daily-question", "today"] as const;
+
+export type MatchAnswer = {
+	candidateId: number;
+	displayName: string;
+	photoUrl: string;
+	answer: string;
+};
+
+export type MatchAnswersToday = {
+	question: string;
+	/** True until the user answers today; `answers` is then empty. */
+	locked: boolean;
+	answers: MatchAnswer[];
+};
+
+export async function fetchMatchAnswersToday(): Promise<MatchAnswersToday> {
+	const response = await apiFetch("/matches/answers/today");
+
+	if (!response.ok) {
+		throw new Error(`Failed to load today's answers (${response.status})`);
+	}
+
+	return response.json();
+}
+
+export const matchAnswersTodayQueryKey = ["daily-question", "today", "matches"] as const;

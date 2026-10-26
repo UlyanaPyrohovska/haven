@@ -70,6 +70,12 @@
 			"three": "Keep it honest and brief."
 		}
 	},
+	"dailyAnswers": {
+		"subtitle": "What your matches answered today.",
+		"subtitle_friends": "What your friends answered today.",
+		"empty": "None of your matches have answered yet today.",
+		"empty_friends": "None of your friends have answered yet today."
+	},
 	"connections": {
 		"title": "Profile Details",
 		"aiAgentBadge": "AI agent",
