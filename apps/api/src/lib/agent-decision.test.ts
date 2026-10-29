@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AGENT, acceptProbability, agentAccepts, seededRandom } from "./agent-decision";
+import { AGENT, acceptProbability, agentAccepts, hiddenProfile, seededRandom } from "./agent-decision";
+import { DEFAULT_WEIGHTS, type ScoringProfile, unilateral } from "./scoring";
 
 describe("acceptProbability", () => {
 	it("is 0.5 at the threshold and monotonic in score", () => {
@@ -39,5 +40,31 @@ describe("agentAccepts", () => {
 	it("accepts roughly half the time at the threshold", () => {
 		expect(rate(AGENT.threshold)).toBeGreaterThan(0.4);
 		expect(rate(AGENT.threshold)).toBeLessThan(0.6);
+	});
+});
+
+describe("hiddenProfile", () => {
+	const agent: ScoringProfile = {
+		id: 7,
+		interests: [10, 1, 8, null, 3, 10, 1, 1, 5, 9, 2, 2, 7, 1, 1, 10, 4],
+		pref: [30, 20, 20, 10, 10, null],
+		self: [6, 7, 5, 8, 4, 6],
+		latitude: null,
+		longitude: null,
+		bioEmbedding: null,
+	};
+	const other: ScoringProfile = { ...agent, id: 8, interests: agent.interests.map((v) => (v ?? 5) % 7) };
+
+	it("is the stored profile at noise 0", () => {
+		const { profile, weights } = hiddenProfile(agent, 0);
+		expect(unilateral(profile, other, weights)).toBeCloseTo(unilateral(agent, other, DEFAULT_WEIGHTS));
+	});
+
+	it("is stable per agent and differs from what the recommender sees", () => {
+		const a = hiddenProfile(agent);
+		expect(hiddenProfile(agent)).toEqual(a);
+		expect(a.profile.pref).not.toEqual(agent.pref);
+		expect(a.weights).not.toEqual(DEFAULT_WEIGHTS);
+		expect(hiddenProfile({ ...agent, id: 9 }).profile.interests).not.toEqual(a.profile.interests);
 	});
 });

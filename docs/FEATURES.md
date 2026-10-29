@@ -661,7 +661,7 @@ vectors until it runs. Daily-question answers still use the lexical stand-in (T7
 ### Simulation engine and synthetic agents — partial
 The 2000 synthetic profiles act as agents. On each tick they:
 1. reply to likes they have received,
-2. get new batches and decide on them (accepting more often when their own score is higher),
+2. get new batches and decide on them, using a hidden taste the recommender cannot see,
 3. leave every real user with their daily drop when it is due.
 
 Real users can therefore match synthetic profiles.
@@ -670,6 +670,13 @@ Real users can therefore match synthetic profiles.
 - **Decision rule** (`src/lib/agent-decision.ts`, pure). An agent accepts with probability
   `σ((unilateral(agent→other) − 0.55) / 0.08)`. The random draw is seeded by
   `tickId:agentId:otherId`, so a tick is reproducible.
+- **Hidden preference profile** (`hiddenProfile` in `agent-decision.ts`). The agent scores with
+  `unilateral(hidden.profile → other, hidden.weights)`, not with its stored profile. The hidden
+  profile blends the stored interests, `pref*` vector and component weights with a random draw
+  seeded by the agent id: `(1 − hiddenNoise)·stored + hiddenNoise·random`, with `AGENT.hiddenNoise = 0.5`.
+  It is stable across ticks and never stored, so the recommender cannot see it. Without it, agents
+  would accept exactly what the recommender already ranks highly, and the evaluation would be
+  circular. `hiddenNoise = 0` gives the old behaviour.
 - **`runTick`** (`modules/simulation/engine.ts`):
   1. **Replies.** Agents answer `dec_b IS NULL` likes, but only likes that came from an acted-on
      recommendation, so historical dataset rows are left alone.
