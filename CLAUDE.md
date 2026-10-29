@@ -18,7 +18,7 @@ Reciprocal matching app (thesis project). Users create profiles (basics, self-ra
 pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - `apps/api` — Cloudflare Worker, Hono + Drizzle, Neon Postgres (pgvector), Better Auth.
   - `src/index.ts`, `src/app.ts` — entry and route wiring.
-  - `src/lib/` — pure domain logic, one concern per file: `scoring.ts` (compatibility, pure, no DB), `recommendation-cadence.ts`, `daily-questions.ts`, `candidate-daily-answer.ts`, `mood.ts`, `candidate-mood.ts`, `profile-view.ts` (haversine, view shaping), `candidate-display.ts`, `looking-for.ts`, `age.ts`, `avatar-url.ts`, `session.ts`, `auth.ts`, `errors.ts`.
+  - `src/lib/` — pure domain logic, one concern per file: `scoring.ts` (compatibility, pure, no DB), `fairness.ts` (exposure reranking, Gini), `recommendation-cadence.ts`, `daily-questions.ts`, `candidate-daily-answer.ts`, `mood.ts`, `candidate-mood.ts`, `profile-view.ts` (haversine, view shaping), `candidate-display.ts`, `looking-for.ts`, `age.ts`, `avatar-url.ts`, `session.ts`, `auth.ts`, `errors.ts`.
   - `src/db/schema.ts` (single source of schema), `src/db/index.ts`.
   - `drizzle/` — generated SQL migrations, numbered `0000`–`0011`.
   - `scripts/seed.ts`, `scripts/seed-staff-admin.ts`.

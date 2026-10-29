@@ -22,7 +22,10 @@ type FieldKey =
 	| "pref"
 	| "mood"
 	| "dailyAnswer"
-	| "crossPathsLambda";
+	| "crossPathsLambda"
+	| "fairnessMu"
+	| "exposureCap"
+	| "exposureWindowDays";
 type Form = Record<FieldKey, string>;
 
 const CADENCE_FIELDS = [
@@ -43,6 +46,22 @@ const WEIGHT_FIELDS = [
 	},
 ] as const;
 
+const FAIRNESS_FIELDS = [
+	{
+		key: "fairnessMu",
+		label: "Exposure penalty μ (0–1)",
+		hint: "Ranks by score × (1 − μ · e / (e + e₀)), e = times shown in the window. 0 turns it off.",
+	},
+	{
+		key: "exposureCap",
+		label: "Exposure cap",
+		hint: "Shown this often in the window → only fills leftover slots. Empty = no cap.",
+		step: "1",
+		optional: true,
+	},
+	{ key: "exposureWindowDays", label: "Window (days)", hint: "How far back impressions count (1–30).", step: "1" },
+] as const;
+
 function toForm(config: MatchingConfig): Form {
 	return {
 		batchSize: String(config.batchSize),
@@ -52,6 +71,9 @@ function toForm(config: MatchingConfig): Form {
 			string
 		>),
 		crossPathsLambda: String(config.crossPathsLambda),
+		fairnessMu: String(config.fairnessMu),
+		exposureCap: config.exposureCap === null ? "" : String(config.exposureCap),
+		exposureWindowDays: String(config.exposureWindowDays),
 	};
 }
 
@@ -68,6 +90,9 @@ function fromForm(form: Form): MatchingConfig {
 			dailyAnswer: Number(form.dailyAnswer),
 		},
 		crossPathsLambda: Number(form.crossPathsLambda),
+		fairnessMu: Number(form.fairnessMu),
+		exposureCap: form.exposureCap.trim() === "" ? null : Number(form.exposureCap),
+		exposureWindowDays: Number(form.exposureWindowDays),
 	};
 }
 
@@ -131,7 +156,10 @@ export function MatchingRulesPage() {
 		}
 	}
 
-	function renderField(field: { key: FieldKey; label: string; hint: string; step?: string }, defaultValue: number) {
+	function renderField(
+		field: { key: FieldKey; label: string; hint: string; step?: string; optional?: boolean },
+		defaultValue: number | null,
+	) {
 		return (
 			<div key={field.key} className="space-y-2">
 				<Label htmlFor={`rule-${field.key}`}>{field.label}</Label>
@@ -141,12 +169,12 @@ export function MatchingRulesPage() {
 					inputMode="decimal"
 					step={field.step ?? "0.01"}
 					min="0"
-					required
+					required={!field.optional}
 					value={form?.[field.key] ?? ""}
 					onChange={(event) => setField(field.key, event.target.value)}
 				/>
 				<p className="text-xs text-muted-foreground">
-					{field.hint} Default {defaultValue}.
+					{field.hint} Default {defaultValue ?? "none"}.
 				</p>
 			</div>
 		);
@@ -210,6 +238,18 @@ export function MatchingRulesPage() {
 							},
 							defaults.crossPathsLambda,
 						)}
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader>
+						<CardTitle>Exposure fairness</CardTitle>
+						<CardDescription>
+							Spreads impressions so the same popular profiles don't fill every feed. Pending likers are exempt.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="grid gap-4 sm:grid-cols-2">
+						{FAIRNESS_FIELDS.map((field) => renderField(field, defaults[field.key]))}
 					</CardContent>
 					<CardFooter className="justify-end gap-2 border-t">
 						{saved ? <span className="mr-auto text-sm text-muted-foreground">Saved.</span> : null}

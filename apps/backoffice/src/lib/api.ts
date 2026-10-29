@@ -208,6 +208,9 @@ export type MatchingConfig = {
 	cooldownHours: number;
 	weights: ScoreWeights;
 	crossPathsLambda: number;
+	fairnessMu: number;
+	exposureCap: number | null;
+	exposureWindowDays: number;
 };
 
 export type MatchingConfigResponse = {

@@ -25,6 +25,7 @@ import {
 	interactions,
 	matchingConfig,
 	moodCheckins,
+	recommendationExposures,
 	recommendations,
 	userEmbeddings,
 	userProfiles,
@@ -403,7 +404,32 @@ export async function replaceRecommendations(db: Db, viewerId: number, rows: Rec
 			},
 		});
 
-	await db.batch([deletePending, upsertPending]);
+	// A regenerate reuses `shownAt` and isn't a fresh impression, so only new batches are logged.
+	if (shownAt) {
+		await db.batch([deletePending, upsertPending]);
+		return;
+	}
+
+	const logExposures = db
+		.insert(recommendationExposures)
+		.values(rows.map((row) => ({ viewerId, candidateId: row.candidateId })));
+
+	await db.batch([deletePending, upsertPending, logExposures]);
+}
+
+/** Impressions per candidate since `since`, across all viewers (keyed by candidate id; absent = 0). */
+export async function listExposureCounts(db: Db, candidateIds: number[], since: Date): Promise<Map<number, number>> {
+	if (candidateIds.length === 0) {
+		return new Map();
+	}
+
+	const rows = await db
+		.select({ candidateId: recommendationExposures.candidateId, count: sql<number>`count(*)::int` })
+		.from(recommendationExposures)
+		.where(and(inArray(recommendationExposures.candidateId, candidateIds), gte(recommendationExposures.shownAt, since)))
+		.groupBy(recommendationExposures.candidateId);
+
+	return new Map(rows.map((row) => [row.candidateId, row.count]));
 }
 
 export type Crossing = { count: number; lastPlace: string | null; lastCrossedAt: Date | null };

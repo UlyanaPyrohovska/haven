@@ -1,3 +1,4 @@
+import { FAIRNESS } from "@/lib/fairness";
 import { resolveRecCooldownHours } from "@/lib/recommendation-cadence";
 import { CADENCE, CROSS_PATHS, DEFAULT_WEIGHTS, type ScoringWeights } from "@/lib/scoring";
 
@@ -6,6 +7,9 @@ export type MatchingConfig = {
 	cooldownHours: number;
 	weights: ScoringWeights;
 	crossPathsLambda: number;
+	fairnessMu: number;
+	exposureCap: number | null;
+	exposureWindowDays: number;
 };
 
 export type MatchingConfigRow = {
@@ -18,6 +22,9 @@ export type MatchingConfigRow = {
 	weightMood: number;
 	weightDailyAnswer: number;
 	crossPathsLambda: number;
+	fairnessMu: number;
+	exposureCap: number | null;
+	exposureWindowDays: number;
 };
 
 /** Saved row wins; otherwise code defaults, with the cooldown still overridable by `REC_COOLDOWN_HOURS`. */
@@ -28,6 +35,9 @@ export function resolveMatchingConfig(row: MatchingConfigRow | null | undefined,
 			cooldownHours: resolveRecCooldownHours(envCooldown),
 			weights: DEFAULT_WEIGHTS,
 			crossPathsLambda: CROSS_PATHS.lambda,
+			fairnessMu: FAIRNESS.mu,
+			exposureCap: FAIRNESS.cap,
+			exposureWindowDays: FAIRNESS.windowDays,
 		};
 	}
 
@@ -43,6 +53,9 @@ export function resolveMatchingConfig(row: MatchingConfigRow | null | undefined,
 			dailyAnswer: row.weightDailyAnswer,
 		},
 		crossPathsLambda: row.crossPathsLambda,
+		fairnessMu: row.fairnessMu,
+		exposureCap: row.exposureCap,
+		exposureWindowDays: row.exposureWindowDays,
 	};
 }
 
@@ -57,6 +70,9 @@ export function toMatchingConfigRow(config: MatchingConfig): MatchingConfigRow {
 		weightMood: config.weights.mood,
 		weightDailyAnswer: config.weights.dailyAnswer,
 		crossPathsLambda: config.crossPathsLambda,
+		fairnessMu: config.fairnessMu,
+		exposureCap: config.exposureCap,
+		exposureWindowDays: config.exposureWindowDays,
 	};
 }
 

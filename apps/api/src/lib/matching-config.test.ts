@@ -22,6 +22,9 @@ describe("resolveMatchingConfig", () => {
 			weightMood: 0.02,
 			weightDailyAnswer: 0.03,
 			crossPathsLambda: 0,
+			fairnessMu: 0.3,
+			exposureCap: 4,
+			exposureWindowDays: 7,
 		};
 		const config = resolveMatchingConfig(row, "6");
 

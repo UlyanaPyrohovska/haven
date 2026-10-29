@@ -176,6 +176,13 @@
       "when": 1793009731603,
       "tag": "0024_military_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793306990487,
+      "tag": "0025_productive_rhodey",
+      "breakpoints": true
     }
   ]
 }

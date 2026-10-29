@@ -262,8 +262,8 @@ decision.
   filters, same `lookingFor` pool, same batch size) but reuses the old batch's `shown_at`, so the
   cooldown doesn't move. `GET /recommendations` returns `canRegenerate` for the UI. Not capped: an
   untouched batch can be regenerated repeatedly, and the replaced pending rows are deleted.
-- **Audit log.** Acted-on recommendations are never deleted. They are the record used for the
-  exposure and fairness metrics.
+- **Audit log.** Acted-on recommendations are never deleted. Impressions are logged separately in
+  `recommendation_exposures` (see Exposure fairness), because pending rows are replaced on regenerate.
 - **Synthetic candidates.** Their mood and daily answer are generated deterministically from
   `hash(profileId, date)` (`candidate-mood.ts`, `candidate-daily-answer.ts`), so they stay
   consistent within a day.
@@ -774,11 +774,44 @@ Staff can:
 **Where:** pages `UsersPage`, `UserDetailPage` (`components/RecommendationScores.tsx`); API
 `/staff/users`, `/staff/users/{profileId}`, `/staff/users/{profileId}/recommendations` (+ `/regenerate`)
 
+### Exposure fairness reranking — live
+A post-hoc reranker spreads **candidate exposure**: the same popular profiles don't fill every
+feed, and profiles that rarely score top still get shown. Off by default for saved configs (μ = 0,
+no cap), so staff opt in from Matching rules. Fairness here is individual provider-side exposure,
+not group fairness (no gender/age parity).
+
+**How it works:**
+- **Impression log.** `replaceRecommendations` appends one `recommendation_exposures` row
+  (`viewer_id`, `candidate_id`, `shown_at`) per candidate in each new batch, in the same
+  `db.batch`. A user regenerate (`shownAt` passed) isn't logged: it's a swap, not a new drop.
+  Migration `0025`; index on `(candidate_id, shown_at)`.
+- **Rerank.** `generateRecommendations` ranks the whole pool with `rankCandidates` (reciprocal +
+  cross-paths boost, likers first), loads `listExposureCounts(pool, now − window)`, then
+  `rerankForExposure` (`lib/fairness.ts`, pure, tested) takes the batch:
+  - soft penalty: rank by `score · (1 − μ · e / (e + e₀))`, `e` = impressions in the window,
+    `e₀` = the cap, or 5 with no cap. Saturating, so a penalty never exceeds μ.
+  - hard cap: candidates with `e ≥ cap` only fill slots the uncapped ones leave empty, so a small
+    pool never yields an empty feed.
+  - pending likers stay first and are exempt, so a one-sided like can still become a match.
+  - the stored `recommendations.score` stays the unpenalized relevance.
+- **Ablation.** μ = 0 with no cap reproduces the previous ranking exactly (tested). Also overridable
+  per call via `fairnessMu` / `exposureCap` options.
+- **Metric.** `gini(values)` in `lib/fairness.ts` gives the exposure Gini for W3.2.
+- Config: `matching_config.fairness_mu`, `exposure_cap`, `exposure_window_days` (code defaults in
+  `FAIRNESS`: μ 0.3, no cap, 7 days; a row saved before `0025` gets μ 0).
+
+**Where:** `apps/api/src/lib/fairness.ts`, `modules/recommendations/{generator,repository}.ts`;
+backoffice "Exposure fairness" card on `MatchingRulesPage`.
+
+**Missing:** no Gini dashboard in the backoffice; simulation agents' impressions count toward
+exposure too (they're real impressions in the sim).
+
 ### Matching rules — live
 Staff can edit the recommendation rules from the "Matching rules" page:
 - batch size and cooldown (hours) between batches,
 - the six score weights (bio, interest, geo, pref, mood, daily answer), which must sum to 1,
-- the crossed-paths boost strength λ.
+- the crossed-paths boost strength λ,
+- exposure fairness: penalty μ, exposure cap and window (see Exposure fairness reranking).
 
 The page shows each default, has "Reset to defaults", and says when the rules were last saved.
 
@@ -794,7 +827,8 @@ The page shows each default, has "Reset to defaults", and says when the rules we
   `recommendations/service.ts`, the simulation tick (cron and staff), and the staff recommendation
   breakdown.
 - `GET /staff/matching-config` returns the config, the defaults and the last update.
-  `PUT` validates with zod (batch size 1–50, cooldown 0–720 h, weights 0–1 summing to 1, λ 0–1).
+  `PUT` validates with zod (batch size 1–50, cooldown 0–720 h, weights 0–1 summing to 1, λ 0–1,
+  μ 0–1, cap integer ≥ 1 or null, window 1–30 days). Fairness columns added in `0025`.
 - Changes apply to the next batch. Stored recommendation scores are not rewritten.
 
 **Where:** page `MatchingRulesPage` (`/matching`); API `/staff/matching-config`
