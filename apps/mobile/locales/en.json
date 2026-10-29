@@ -24,6 +24,8 @@
 			"edit": "Change",
 			"save": "Save mood",
 			"saveError": "Couldn't save your mood. Try again.",
+			"infoTitle": "Why share your mood?",
+			"infoBody": "Your mood helps us introduce you to people whose energy fits yours today. It shows on your card so others know how you're feeling, and it only counts for today. Skip it anytime.",
 			"options": {
 				"happy": "Happy",
 				"calm": "Calm",
@@ -44,6 +46,8 @@
 		"unlockHint": "Answer to see what others said today.",
 		"seeAnswers": "See today's answers",
 		"answered": "Answered",
+		"infoTitle": "Why answer the daily question?",
+		"infoBody": "Your answer shows a bit of who you are beyond your profile. People who answer in a similar way get a small boost in each other's recommendations. Your matches can read it, and it only counts for today.",
 		"editHint": "Tap your answer to edit.",
 		"modalSubtitle": "One short reflection — then you can see how today's connections answered too.",
 		"startersLabel": "Need a nudge?",
@@ -287,7 +291,8 @@
 		"retry": "Try again",
 		"signOut": "Sign out",
 		"skip": "Skip for now",
-		"cancel": "Cancel"
+		"cancel": "Cancel",
+		"gotIt": "Got it"
 	},
 	"auth": {
 		"login": {

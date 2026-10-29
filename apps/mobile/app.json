@@ -71,7 +71,16 @@
         {
           "locationWhenInUsePermission": "Haven uses your location to improve nearby matching and cross-path features."
         }
-      ]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
