@@ -189,7 +189,7 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 ### `[ ]` T10 — bonus: graph neural network (GNN) for better recommendations
 
 - **Labels**: `type:feature` `area:api` `area:research` `prio:P3` `bonus`
-- **Description**: Today, scoring uses only profile features: bio, interests, geo and preferences. It does not learn from behaviour. A GNN trained on the `interactions` graph (users as nodes, likes and passes as directed edges) could learn user embeddings that capture who actually likes whom, and add a collaborative term to the compatibility score.
+- **Description**: Today, scoring uses only profile features: bio, interests, geo and preferences. The only behaviour it learns from is the preference blend (W1.9, likes/passes shift `pref`). A GNN trained on the `interactions` graph (users as nodes, likes and passes as directed edges) could learn user embeddings that capture who actually likes whom, and add a collaborative term to the compatibility score.
 
 **Acceptance criteria**
 - [ ] Offline training in `research/` (for example LightGCN or GraphSAGE with PyTorch Geometric), run locally so data stays in the EU

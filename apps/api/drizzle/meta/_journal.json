@@ -183,6 +183,13 @@
       "when": 1793306990487,
       "tag": "0025_productive_rhodey",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793310588841,
+      "tag": "0026_acoustic_chimera",
+      "breakpoints": true
     }
   ]
 }

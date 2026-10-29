@@ -44,6 +44,7 @@ import { customInterestKey } from "@/lib/custom-interests";
 import { type MatchingConfig, resolveMatchingConfig, toMatchingConfigRow } from "@/lib/matching-config";
 import { moodSlug, utcToday } from "@/lib/mood";
 import { birthDateWindow, mutualFilterMatch, type PartnerFilterProfile } from "@/lib/partner-filters";
+import type { PreferenceDecision } from "@/lib/preference-learning";
 import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile-view";
 import { coerceLastShownAt } from "@/lib/recommendation-cadence";
 import type { ScoringProfile } from "@/lib/scoring";
@@ -535,6 +536,42 @@ export async function recordCrossings(db: Db, viewer: CrossingViewer, now = new 
 }
 
 /** Profile ids whose like on the viewer is still unanswered. */
+/** Each decider's likes and passes with the other profile's self-ratings, for learned preferences. */
+export async function listPreferenceDecisions(
+	db: Db,
+	deciderIds: number[],
+): Promise<Map<number, PreferenceDecision[]>> {
+	const decisions = new Map<number, PreferenceDecision[]>();
+
+	if (deciderIds.length === 0) {
+		return decisions;
+	}
+
+	const selfColumns = Object.fromEntries(SELF_KEYS.map((key) => [key, userProfiles[key]])) as {
+		[K in (typeof SELF_KEYS)[number]]: (typeof userProfiles)[K];
+	};
+	const [asA, asB] = await Promise.all([
+		db
+			.select({ deciderId: interactions.userA, decision: interactions.decA, ...selfColumns })
+			.from(interactions)
+			.innerJoin(userProfiles, eq(userProfiles.id, interactions.userB))
+			.where(and(inArray(interactions.userA, deciderIds), isNotNull(interactions.decA))),
+		db
+			.select({ deciderId: interactions.userB, decision: interactions.decB, ...selfColumns })
+			.from(interactions)
+			.innerJoin(userProfiles, eq(userProfiles.id, interactions.userA))
+			.where(and(inArray(interactions.userB, deciderIds), isNotNull(interactions.decB))),
+	]);
+
+	for (const row of [...asA, ...asB]) {
+		const list = decisions.get(row.deciderId) ?? [];
+		list.push({ self: SELF_KEYS.map((key) => row[key]), liked: row.decision === 1 });
+		decisions.set(row.deciderId, list);
+	}
+
+	return decisions;
+}
+
 export async function listPendingLikerIds(db: Db, viewerId: number): Promise<Set<number>> {
 	const rows = await db
 		.select({ id: interactions.userA })

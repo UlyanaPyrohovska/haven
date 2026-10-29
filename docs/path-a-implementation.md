@@ -378,6 +378,29 @@ provider-side; no group fairness).
 
 ---
 
+## [x] W1.9 — Learned preferences from decisions  ·  api/db/backoffice · P1  ·  feeds W3.2
+
+Partner preferences adapt to what a user actually likes, instead of staying fixed at the stated
+100-point split.
+
+- **Logic:** `apps/api/src/lib/preference-learning.ts` (pure, tested) —
+  `learnedPreference` = Rocchio `mean(liked self) − γ · mean(passed self)`, clamped positive and
+  rescaled to sum 100; `blendPreference` = `(1 − s) · stated + s · learned`, `s = λ · n / (n + n₀)`.
+  `PREFERENCE_LEARNING` defaults: λ 0.5, n₀ 10, γ 0.5.
+- **Data:** `listPreferenceDecisions(db, ids)` reads each decider's likes/passes from `interactions`
+  (both orientations) with the other profile's `self*`. No new table.
+- **Generator:** when λ > 0, viewer **and** pool get blended `pref` before `rankCandidates`
+  (both directions, since the score is reciprocal). Option `preferenceLambda` for ablation.
+  `scoreBreakdown` / match reasons keep stated preferences.
+- **Config:** `matching_config.preference_lambda` (default 0, migration `0026`); backoffice
+  "Learned preferences" card on Matching rules.
+
+**Thesis note:** with synthetic agents, compare cosine(effective pref, `hiddenProfile` pref) and
+match rate at λ = 0 vs λ = 0.5; check exposure Gini does not rise. λ = 0 reproduces the previous
+ranking exactly.
+
+---
+
 ## [x] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
 > Status: run on dev on 2026-10-24: 2002 bios, 21 s encode+write (32 s total). Re-run on prod and after participants onboard.
 > Superseded by T9 (2026-10-26): bios are embedded in the Worker with Workers AI `@cf/baai/bge-small-en-v1.5` on profile write, plus a staff backfill route (`POST /staff/embeddings/backfill`). The local MiniLM script below was removed; its vectors are replaced by the backfill. See `docs/FEATURES.md` → Bio embeddings.
@@ -651,7 +674,7 @@ relevant pairs; report, written to `research/results/baseline.json`:
   `recommendation_exposures` as the impression source; compare with W1.8 on and off.
 - A **random-recommender baseline** to beat.
 
-Run a small weight sweep over `DEFAULT_WEIGHTS` and record the best. These feed RQ1–RQ4.
+Run a small weight sweep over `DEFAULT_WEIGHTS` (and λ from W1.9) and record the best. These feed RQ1–RQ4.
 
 ---
 
@@ -674,6 +697,7 @@ one-page moderator script so every session is run identically. (These were draft
 - **W1.6:** new `crossings` table.
 - **W2.8:** new `push_tokens` table (`0018`).
 - **W1.8:** new `recommendation_exposures` table + `matching_config` fairness columns (`0025`).
+- **W1.9:** `matching_config.preference_lambda` (`0026`).
 - Everything else uses existing tables (`user_embeddings` already defined with the HNSW index).
 
 Run `pnpm db:generate && pnpm db:migrate` after the W1.5 / W1.6 schema edits.
