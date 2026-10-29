@@ -211,6 +211,7 @@ export type MatchingConfig = {
 	fairnessMu: number;
 	exposureCap: number | null;
 	exposureWindowDays: number;
+	preferenceLambda: number;
 };
 
 export type MatchingConfigResponse = {

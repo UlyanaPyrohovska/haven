@@ -25,6 +25,7 @@ describe("resolveMatchingConfig", () => {
 			fairnessMu: 0.3,
 			exposureCap: 4,
 			exposureWindowDays: 7,
+			preferenceLambda: 0.5,
 		};
 		const config = resolveMatchingConfig(row, "6");
 

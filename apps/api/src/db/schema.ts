@@ -514,6 +514,8 @@ export const matchingConfig = pgTable("matching_config", {
 	/** Impressions per window after which a candidate only fills leftover slots; null = no cap. */
 	exposureCap: smallint("exposure_cap"),
 	exposureWindowDays: smallint("exposure_window_days").notNull().default(7),
+	/** Share of partner preferences learned from likes/passes; default 0 keeps older rows on stated preferences. */
+	preferenceLambda: real("preference_lambda").notNull().default(0),
 	/** Better Auth user id of the staff member who last saved. */
 	updatedBy: text("updated_by"),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -1,5 +1,6 @@
 import type { Db } from "@/db";
 import { rerankForExposure } from "@/lib/fairness";
+import { blendPreference } from "@/lib/preference-learning";
 import {
 	applyCrossPathsBoost,
 	CROSS_PATHS,
@@ -29,6 +30,8 @@ export type GenerateRecommendationsOptions = {
 	fairnessMu?: number;
 	/** Impressions per window after which a candidate only fills leftover slots; null = no cap. */
 	exposureCap?: number | null;
+	/** Share of preferences learned from likes/passes; 0 reproduces the stated-only ranking (thesis ablation). */
+	preferenceLambda?: number;
 	/** Restrict the pool to synthetic profiles (simulation agents). */
 	syntheticOnly?: boolean;
 	/** Reuse this `shown_at` instead of now (user regenerate keeps the cooldown). */
@@ -73,6 +76,7 @@ export async function generateRecommendations(
 	const maxKm = opts.maxKm ?? null;
 	const weights = opts.weights ?? config.weights;
 	const crossPathsLambda = opts.crossPathsLambda ?? config.crossPathsLambda;
+	const preferenceLambda = opts.preferenceLambda ?? config.preferenceLambda;
 	const fairness = {
 		mu: opts.fairnessMu ?? config.fairnessMu,
 		cap: opts.exposureCap !== undefined ? opts.exposureCap : config.exposureCap,
@@ -93,13 +97,27 @@ export async function generateRecommendations(
 	});
 
 	const poolIds = pool.map((candidate) => candidate.id);
-	const [crossings, likerIds, exposures] = await Promise.all([
+	const [crossings, likerIds, exposures, decisions] = await Promise.all([
 		repository.listCrossings(db, viewerId, poolIds),
 		repository.listPendingLikerIds(db, viewerId),
 		repository.listExposureCounts(db, poolIds, exposureSince),
+		preferenceLambda > 0 ? repository.listPreferenceDecisions(db, [viewerId, ...poolIds]) : new Map(),
 	]);
+	// Both sides learn: the reciprocal score uses the candidate's preferences toward the viewer too.
+	const learn = <T extends ScoringProfile>(profile: T): T => ({
+		...profile,
+		pref: blendPreference(profile.pref, decisions.get(profile.id) ?? [], preferenceLambda),
+	});
 	const ranked = rerankForExposure(
-		rankCandidates(viewer, pool, crossings, Number.POSITIVE_INFINITY, weights, crossPathsLambda, likerIds),
+		rankCandidates(
+			learn(viewer),
+			pool.map(learn),
+			crossings,
+			Number.POSITIVE_INFINITY,
+			weights,
+			crossPathsLambda,
+			likerIds,
+		),
 		exposures,
 		k,
 		fairness,

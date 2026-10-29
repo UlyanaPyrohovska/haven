@@ -579,14 +579,16 @@ Builds one batch of recommendations for a viewer.
        A candidate's unanswered like on the viewer stays in the pool,
      - pass the mutual partner filters (gender and age, see Partner filters),
      - be inside an optional bounding box.
-  3. Scores and ranks the pool with `rankCandidates`. Pending likers (`listPendingLikerIds`) go
+  3. When learned preferences are on (λ > 0), replaces the viewer's and every candidate's `pref`
+     with the blended vector (see Learned preferences).
+  4. Scores and ranks the pool with `rankCandidates`. Pending likers (`listPendingLikerIds`) go
      first, so a one-sided like always reaches the other user and can become a match.
-  4. Writes the top k with `replaceRecommendations`. This deletes the pending rows and upserts on
+  5. Writes the top k with `replaceRecommendations`. This deletes the pending rows and upserts on
      `(user_id, candidate_id)` in one batch.
 - The pool is capped at 500. When the viewer has a bio embedding, an HNSW `bio <=> viewer`
   shortlist of 200 runs before exact rescoring. Pending likers are ordered first in both cases, so
   the cap never drops them.
-- Options: `k`, `maxKm`, `weights`, `crossPathsLambda`, `syntheticOnly`. When `k`, `weights` or
+- Options: `k`, `maxKm`, `weights`, `crossPathsLambda`, `preferenceLambda`, `syntheticOnly`. When `k`, `weights` or
   `crossPathsLambda` are not passed they come from the staff-editable matching config
   (`loadMatchingConfig`, see Matching rules), which falls back to the code constants.
 
@@ -806,12 +808,41 @@ backoffice "Exposure fairness" card on `MatchingRulesPage`.
 **Missing:** no Gini dashboard in the backoffice; simulation agents' impressions count toward
 exposure too (they're real impressions in the sim).
 
+### Learned preferences — live
+Partner preferences adapt to who a user actually likes and passes on, so ranking improves with
+use instead of relying only on the stated 100-point split. Off for saved configs until staff set
+λ > 0 (code default 0.5).
+
+**How it works:**
+- `learnedPreference(decisions)` (`lib/preference-learning.ts`, pure, tested): Rocchio-style
+  `mean(self of liked) − 0.5 · mean(self of passed)`, null self-ratings as 5, each dimension
+  clamped positive, rescaled to sum 100 like `pref`. Null until the user has liked someone.
+- `blendPreference(stated, decisions, λ)`: `(1 − s) · stated + s · learned`,
+  `s = λ · n / (n + 10)`, n = number of decisions. New users (n = 0) keep stated preferences.
+- `listPreferenceDecisions(db, ids)` reads decisions from `interactions` in both orientations
+  (`dec_a` by `user_a`, `dec_b` by `user_b`) joined to the other profile's `self*`. One call per
+  batch for the viewer and the whole pool; nothing is stored.
+- Both sides learn: the reciprocal score uses the candidate's preference toward the viewer too.
+- `scoring.ts` is unchanged: the blended vector goes into `pref`, so `preferenceMatch` applies.
+- Explanations (`scoreBreakdown`, match reasons) still use stated preferences.
+- **Ablation.** λ = 0 returns `pref` untouched (tested) and skips the query. Overridable per call
+  via the `preferenceLambda` option.
+- Config: `matching_config.preference_lambda` (migration `0026`, default 0).
+
+**Where:** `apps/api/src/lib/preference-learning.ts`,
+`modules/recommendations/{generator,repository}.ts`; backoffice "Learned preferences" card on
+`MatchingRulesPage`.
+
+**Missing:** only the preference term learns (interests and component weights don't); views are
+not a signal; no backoffice view of a user's learned vector.
+
 ### Matching rules — live
 Staff can edit the recommendation rules from the "Matching rules" page:
 - batch size and cooldown (hours) between batches,
 - the six score weights (bio, interest, geo, pref, mood, daily answer), which must sum to 1,
 - the crossed-paths boost strength λ,
-- exposure fairness: penalty μ, exposure cap and window (see Exposure fairness reranking).
+- exposure fairness: penalty μ, exposure cap and window (see Exposure fairness reranking),
+- learned-preference share λ (see Learned preferences).
 
 The page shows each default, has "Reset to defaults", and says when the rules were last saved.
 
@@ -828,7 +859,8 @@ The page shows each default, has "Reset to defaults", and says when the rules we
   breakdown.
 - `GET /staff/matching-config` returns the config, the defaults and the last update.
   `PUT` validates with zod (batch size 1–50, cooldown 0–720 h, weights 0–1 summing to 1, λ 0–1,
-  μ 0–1, cap integer ≥ 1 or null, window 1–30 days). Fairness columns added in `0025`.
+  μ 0–1, cap integer ≥ 1 or null, window 1–30 days, learned-preference λ 0–1). Fairness columns
+  added in `0025`, `preference_lambda` in `0026`.
 - Changes apply to the next batch. Stored recommendation scores are not rewritten.
 
 **Where:** page `MatchingRulesPage` (`/matching`); API `/staff/matching-config`

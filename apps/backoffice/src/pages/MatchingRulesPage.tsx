@@ -25,7 +25,8 @@ type FieldKey =
 	| "crossPathsLambda"
 	| "fairnessMu"
 	| "exposureCap"
-	| "exposureWindowDays";
+	| "exposureWindowDays"
+	| "preferenceLambda";
 type Form = Record<FieldKey, string>;
 
 const CADENCE_FIELDS = [
@@ -74,6 +75,7 @@ function toForm(config: MatchingConfig): Form {
 		fairnessMu: String(config.fairnessMu),
 		exposureCap: config.exposureCap === null ? "" : String(config.exposureCap),
 		exposureWindowDays: String(config.exposureWindowDays),
+		preferenceLambda: String(config.preferenceLambda),
 	};
 }
 
@@ -93,6 +95,7 @@ function fromForm(form: Form): MatchingConfig {
 		fairnessMu: Number(form.fairnessMu),
 		exposureCap: form.exposureCap.trim() === "" ? null : Number(form.exposureCap),
 		exposureWindowDays: Number(form.exposureWindowDays),
+		preferenceLambda: Number(form.preferenceLambda),
 	};
 }
 
@@ -237,6 +240,26 @@ export function MatchingRulesPage() {
 								hint: "Keep ≤ 0.25 so it doesn't double-count distance.",
 							},
 							defaults.crossPathsLambda,
+						)}
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader>
+						<CardTitle>Learned preferences</CardTitle>
+						<CardDescription>
+							Blends stated preferences with what a user liked and passed on: (1 − s) · stated + s · learned, s = λ · n
+							/ (n + 10). 0 turns it off.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						{renderField(
+							{
+								key: "preferenceLambda",
+								label: "Learning share λ (0–1)",
+								hint: "Max weight of learned preferences once a user has many decisions.",
+							},
+							defaults.preferenceLambda,
 						)}
 					</CardContent>
 				</Card>

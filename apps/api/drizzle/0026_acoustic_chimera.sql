@@ -1,0 +1,1 @@
+ALTER TABLE "matching_config" ADD COLUMN "preference_lambda" real DEFAULT 0 NOT NULL;
