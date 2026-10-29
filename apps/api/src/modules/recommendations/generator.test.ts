@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { rerankForExposure } from "@/lib/fairness";
 import { reciprocalScore, type ScoringProfile } from "@/lib/scoring";
 import { rankCandidates } from "./generator";
 
@@ -61,5 +62,19 @@ describe("rankCandidates", () => {
 		const pool = [makeProfile(2), makeProfile(3), makeProfile(4)];
 
 		expect(rankCandidates(viewer, pool, new Map(), 2)).toHaveLength(2);
+	});
+});
+
+describe("rankCandidates + rerankForExposure", () => {
+	const pool = [makeProfile(2), makeProfile(3, { latitude: 38.9, longitude: -9.3 })];
+	const full = rankCandidates(viewer, pool, new Map(), Number.POSITIVE_INFINITY);
+
+	it("swaps out the top candidate once it hits the exposure cap", () => {
+		expect(full[0].candidateId).toBe(2);
+		expect(rerankForExposure(full, new Map([[2, 5]]), 1, { mu: 0, cap: 5 })[0].candidateId).toBe(3);
+	});
+
+	it("reproduces the unfair ranking at mu 0 with no cap", () => {
+		expect(rerankForExposure(full, new Map([[2, 50]]), 2, { mu: 0, cap: null })).toEqual(full);
 	});
 });

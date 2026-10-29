@@ -358,6 +358,26 @@ their threshold, temperature and `hiddenNoise` with the results. Since the datas
 
 ---
 
+## [x] W1.8 — Fairness-aware exposure reranking  ·  api/db/backoffice · P1  ·  feeds W3.2
+
+Post-hoc reranker over the reciprocal ranking that spreads candidate exposure (individual,
+provider-side; no group fairness).
+
+- **Log:** new table `recommendation_exposures (viewer_id, candidate_id, shown_at)`, migration
+  `0025`. `replaceRecommendations` appends one row per candidate per new batch (not on regenerate).
+- **Logic:** `apps/api/src/lib/fairness.ts` — `exposurePenalty`, `rerankForExposure`, `gini`,
+  `FAIRNESS` defaults (μ 0.3, cap null, window 7 days, e₀ 5). Rank by
+  `score · (1 − μ · e / (e + e₀))`; `e ≥ cap` only fills leftover slots; pending likers exempt.
+- **Generator:** `rankCandidates(..., Infinity, ...)` → `listExposureCounts` →
+  `rerankForExposure(..., k)`. Options `fairnessMu`, `exposureCap` for ablation.
+- **Config:** `matching_config.fairness_mu` (default 0), `exposure_cap`, `exposure_window_days`;
+  editable in backoffice Matching rules.
+
+**Thesis note:** report Gini (from `recommendation_exposures`) and hit@k at μ = 0 / no cap vs
+μ = 0.3 / cap. μ = 0 with no cap reproduces the previous ranking exactly.
+
+---
+
 ## [x] W2.1 — Bio embeddings  ·  research · P1  ·  ↔ E1
 > Status: run on dev on 2026-10-24: 2002 bios, 21 s encode+write (32 s total). Re-run on prod and after participants onboard.
 > Superseded by T9 (2026-10-26): bios are embedded in the Worker with Workers AI `@cf/baai/bge-small-en-v1.5` on profile write, plus a staff backfill route (`POST /staff/embeddings/backfill`). The local MiniLM script below was removed; its vectors are replaced by the backfill. See `docs/FEATURES.md` → Bio embeddings.
@@ -627,7 +647,8 @@ relevant pairs; report, written to `research/results/baseline.json`:
   their top-k.
 - **Precision@k / recall@k** against the match labels.
 - **Gini index** of candidate exposure (how often each profile appears across everyone's
-  top-k) — the fairness number for §2.6.
+  top-k) — the fairness number for §2.6. Use `gini()` from `apps/api/src/lib/fairness.ts` and
+  `recommendation_exposures` as the impression source; compare with W1.8 on and off.
 - A **random-recommender baseline** to beat.
 
 Run a small weight sweep over `DEFAULT_WEIGHTS` and record the best. These feed RQ1–RQ4.
@@ -652,6 +673,7 @@ one-page moderator script so every session is run identically. (These were draft
 - **W1.5:** `display_name varchar(80)` on `user_profiles`.
 - **W1.6:** new `crossings` table.
 - **W2.8:** new `push_tokens` table (`0018`).
+- **W1.8:** new `recommendation_exposures` table + `matching_config` fairness columns (`0025`).
 - Everything else uses existing tables (`user_embeddings` already defined with the HNSW index).
 
 Run `pnpm db:generate && pnpm db:migrate` after the W1.5 / W1.6 schema edits.

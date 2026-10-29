@@ -418,6 +418,25 @@ export const recommendations = pgTable(
 );
 
 // ────────────────────────────────────────────────────────────────
+// recommendation_exposures — append-only impression log for exposure fairness and the Gini metric
+// (`recommendations` drops pending rows on regenerate, so it can't count impressions)
+// ────────────────────────────────────────────────────────────────
+export const recommendationExposures = pgTable(
+	"recommendation_exposures",
+	{
+		id: serial("id").primaryKey(),
+		viewerId: integer("viewer_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		candidateId: integer("candidate_id")
+			.notNull()
+			.references(() => userProfiles.id, { onDelete: "cascade" }),
+		shownAt: timestamp("shown_at").defaultNow().notNull(),
+	},
+	(t) => [index("recommendation_exposures_candidate_shown_idx").on(t.candidateId, t.shownAt)],
+);
+
+// ────────────────────────────────────────────────────────────────
 // reports — a user flagging another profile for staff review
 // ────────────────────────────────────────────────────────────────
 export const reports = pgTable(
@@ -490,6 +509,11 @@ export const matchingConfig = pgTable("matching_config", {
 	weightMood: real("weight_mood").notNull().default(0),
 	weightDailyAnswer: real("weight_daily_answer").notNull().default(0),
 	crossPathsLambda: real("cross_paths_lambda").notNull(),
+	// Defaults keep a row saved before fairness existed on the unfair baseline until staff opt in.
+	fairnessMu: real("fairness_mu").notNull().default(0),
+	/** Impressions per window after which a candidate only fills leftover slots; null = no cap. */
+	exposureCap: smallint("exposure_cap"),
+	exposureWindowDays: smallint("exposure_window_days").notNull().default(7),
 	/** Better Auth user id of the staff member who last saved. */
 	updatedBy: text("updated_by"),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),

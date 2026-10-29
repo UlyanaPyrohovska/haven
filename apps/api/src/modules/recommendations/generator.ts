@@ -1,4 +1,5 @@
 import type { Db } from "@/db";
+import { rerankForExposure } from "@/lib/fairness";
 import {
 	applyCrossPathsBoost,
 	CROSS_PATHS,
@@ -24,6 +25,10 @@ export type GenerateRecommendationsOptions = {
 	weights?: ScoringWeights;
 	/** Cross-paths boost strength; 0 reproduces the pure reciprocal ranking (thesis ablation). */
 	crossPathsLambda?: number;
+	/** Exposure penalty strength; 0 with no cap reproduces the unfair ranking (thesis ablation). */
+	fairnessMu?: number;
+	/** Impressions per window after which a candidate only fills leftover slots; null = no cap. */
+	exposureCap?: number | null;
 	/** Restrict the pool to synthetic profiles (simulation agents). */
 	syntheticOnly?: boolean;
 	/** Reuse this `shown_at` instead of now (user regenerate keeps the cooldown). */
@@ -35,6 +40,7 @@ export type RankedCandidate = { candidateId: number; score: number };
 /**
  * Reciprocal score with the cross-paths boost, best first. Missing counts (no row / opted out) mean 0.
  * Candidates in `likerIds` (pending likes on the viewer) go first so a one-sided like can become a match.
+ * Pass `k = Infinity` to keep the whole ranked pool (the exposure reranker takes the batch).
  */
 export function rankCandidates(
 	viewer: ScoringProfile,
@@ -67,6 +73,11 @@ export async function generateRecommendations(
 	const maxKm = opts.maxKm ?? null;
 	const weights = opts.weights ?? config.weights;
 	const crossPathsLambda = opts.crossPathsLambda ?? config.crossPathsLambda;
+	const fairness = {
+		mu: opts.fairnessMu ?? config.fairnessMu,
+		cap: opts.exposureCap !== undefined ? opts.exposureCap : config.exposureCap,
+	};
+	const exposureSince = new Date(Date.now() - config.exposureWindowDays * 24 * 60 * 60 * 1000);
 
 	const viewer = await repository.findScoringProfileById(db, viewerId);
 
@@ -81,15 +92,19 @@ export async function generateRecommendations(
 		syntheticOnly: opts.syntheticOnly,
 	});
 
-	const [crossings, likerIds] = await Promise.all([
-		repository.listCrossings(
-			db,
-			viewerId,
-			pool.map((candidate) => candidate.id),
-		),
+	const poolIds = pool.map((candidate) => candidate.id);
+	const [crossings, likerIds, exposures] = await Promise.all([
+		repository.listCrossings(db, viewerId, poolIds),
 		repository.listPendingLikerIds(db, viewerId),
+		repository.listExposureCounts(db, poolIds, exposureSince),
 	]);
-	const ranked = rankCandidates(viewer, pool, crossings, k, weights, crossPathsLambda, likerIds);
+	const ranked = rerankForExposure(
+		rankCandidates(viewer, pool, crossings, Number.POSITIVE_INFINITY, weights, crossPathsLambda, likerIds),
+		exposures,
+		k,
+		fairness,
+		likerIds,
+	);
 
 	await repository.replaceRecommendations(
 		db,

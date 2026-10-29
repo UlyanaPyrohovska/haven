@@ -203,6 +203,9 @@ export const MatchingConfigSchema = z
 			})
 			.refine(weightsSumToOne, { message: "Weights must sum to 1" }),
 		crossPathsLambda: z.number().min(0).max(1),
+		fairnessMu: z.number().min(0).max(1),
+		exposureCap: z.number().int().min(1).max(1000).nullable(),
+		exposureWindowDays: z.number().int().min(1).max(30),
 	})
 	.openapi("MatchingConfig");
 
