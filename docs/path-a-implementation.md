@@ -325,7 +325,11 @@ real user accepted a synthetic candidate, `interactions.dec_b` stayed null forev
 **Decision rule** (`src/lib/agent-decision.ts`, pure). An agent accepts with probability
 `σ((unilateral(agent→other) − threshold) / temperature)`. The draw is seeded by
 `tickId:agentId:otherId`, so a tick is reproducible. `AGENT = { threshold: 0.55, temperature: 0.08 }`
-are ablation knobs. Only the agent's own directional score is used.
+are ablation knobs. Only the agent's own directional score is used, computed from its **hidden
+preference profile** (`hiddenProfile`): the stored interests, `pref*` and component weights blended
+with a draw seeded by the agent id, `(1 − hiddenNoise)·stored + hiddenNoise·random`, with
+`AGENT.hiddenNoise = 0.5`. It is never stored, so the recommender cannot see the taste that drives
+the decisions. `hiddenNoise` is also an ablation knob; 0 gives the old behaviour.
 
 **Tick** (`src/modules/simulation/engine.ts > runTick`), one simulated day:
 1. Agents reply to likes waiting on them (`dec_b IS NULL`). Only likes that came from an acted-on
@@ -349,7 +353,7 @@ like. Node size is degree. The view can be filtered by pool, edge type and time 
 opens the user detail page. The endpoint returns only ids and display names, never coordinates.
 
 **Thesis note:** agents are synthetic and never count as participants in the evaluation. Report
-their threshold and temperature with the results. Since the dataset interactions keep their seed
+their threshold, temperature and `hiddenNoise` with the results. Since the dataset interactions keep their seed
 `created_at`, the `since` filter separates simulated activity from historical activity.
 
 ---
