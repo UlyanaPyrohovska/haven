@@ -1,6 +1,5 @@
-import { useIsFocused } from "@react-navigation/native";
 import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type Href, useRouter } from "expo-router";
+import { type Href, useIsFocused, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useTranslation } from "react-i18next";
 

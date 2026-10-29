@@ -416,6 +416,8 @@ One mood per day, shown as context on candidate cards.
 - A real candidate shows only today's check-in, or nothing if there isn't one. A synthetic
   candidate gets a deterministic mood.
 - Today's check-in also feeds the `mood` term of compatibility scoring (see Compatibility scoring).
+- Both home cards (mood and daily question) have an info icon (`components/ui/info-button.tsx`, a
+  `Dialog`) that explains in plain words why the data is collected and how it shapes recommendations.
 
 **Where:**
 - Code: `components/home/mood-card.tsx`, `lib/mood/`

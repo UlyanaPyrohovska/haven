@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
+import { InfoButton } from "@/components/ui/info-button";
 import { FontSize, Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
 import { fetchTodayDailyQuestion, todayDailyQuestionQueryKey } from "@/lib/api/daily-question";
@@ -34,6 +35,7 @@ export function DailyQuestionCard() {
 				<ThemedText type="caption" style={[styles.eyebrow, { color: theme.muted }]}>
 					{t("home.todaysQuestion")}
 				</ThemedText>
+				<InfoButton title={t("dailyQuestion.infoTitle")} message={t("dailyQuestion.infoBody")} />
 				{answered ? (
 					<View style={[styles.badge, { backgroundColor: theme.accentSoft }]}>
 						<Ionicons name="checkmark" size={12} color={theme.tint} />

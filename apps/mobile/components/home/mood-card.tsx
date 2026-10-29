@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { Button } from "@/components/ui/button";
+import { InfoButton } from "@/components/ui/info-button";
 import { Radius, Spacing } from "@/constants/app-config";
 import { useTheme } from "@/hooks/use-theme";
 import { fetchTodayMood, saveTodayMood, todayMoodQueryKey } from "@/lib/api/mood";
@@ -82,9 +83,12 @@ export function MoodCard() {
 					)}
 				</View>
 				<View style={styles.cardText}>
-					<ThemedText type="caption" style={[styles.eyebrow, { color: theme.muted }]}>
-						{t("home.mood.label")}
-					</ThemedText>
+					<View style={styles.eyebrowRow}>
+						<ThemedText type="caption" style={[styles.eyebrow, { color: theme.muted }]}>
+							{t("home.mood.label")}
+						</ThemedText>
+						<InfoButton title={t("home.mood.infoTitle")} message={t("home.mood.infoBody")} />
+					</View>
 					<ThemedText type="subtitle" numberOfLines={1}>
 						{selectedMood ? t(`home.mood.options.${selectedMood}`) : t("home.moodPrompt")}
 					</ThemedText>
@@ -195,6 +199,11 @@ const styles = StyleSheet.create({
 		flex: 1,
 		minWidth: 0,
 		gap: 2,
+	},
+	eyebrowRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: Spacing.xs,
 	},
 	eyebrow: {
 		textTransform: "uppercase",
