@@ -1,6 +1,7 @@
 import type { Db } from "@/db";
+import { seededRandom } from "@/lib/agent-decision";
 import { rerankForExposure } from "@/lib/fairness";
-import { blendPreference } from "@/lib/preference-learning";
+import { learnPreference } from "@/lib/preference-learning";
 import {
 	applyCrossPathsBoost,
 	CROSS_PATHS,
@@ -15,10 +16,13 @@ import * as repository from "./repository";
 export const POOL_LIMIT = 500;
 
 /**
- * When the viewer has a bio embedding, pre-rank with pgvector HNSW (`bio <=> viewer`) before
- * exact reciprocal rescoring. Keeps latency predictable as the corpus grows.
+ * When the viewer has a bio embedding, this many pool slots go to the closest bios; the rest of
+ * `POOL_LIMIT` is filled at random so profiles without an embedding still get scored.
  */
 export const ANN_SHORTLIST_LIMIT = 200;
+
+/** Pending likers that jump the queue per batch; the rest compete on score so a batch isn't all likers. */
+export const LIKER_SLOTS = 2;
 
 export type GenerateRecommendationsOptions = {
 	k?: number;
@@ -37,6 +41,28 @@ export type GenerateRecommendationsOptions = {
 	/** Reuse this `shown_at` instead of now (user regenerate keeps the cooldown). */
 	shownAt?: Date;
 };
+
+/** Attaches each profile's learned taste from its own likes and passes (both sides learn). */
+export async function withLearnedPreferences<T extends ScoringProfile>(
+	db: Db,
+	profiles: T[],
+	preferenceLambda: number,
+): Promise<T[]> {
+	if (preferenceLambda <= 0) {
+		return profiles;
+	}
+
+	const decisions = await repository.listPreferenceDecisions(
+		db,
+		profiles.map((profile) => profile.id),
+	);
+
+	return profiles.map((profile) => {
+		const learned = learnPreference(decisions.get(profile.id) ?? [], preferenceLambda);
+
+		return learned ? { ...profile, learnedPref: learned.direction, learnedShare: learned.share } : profile;
+	});
+}
 
 export type RankedCandidate = { candidateId: number; score: number };
 
@@ -63,6 +89,33 @@ export function rankCandidates(
 		})
 		.sort((a, b) => Number(likerIds.has(b.candidateId)) - Number(likerIds.has(a.candidateId)) || b.score - a.score)
 		.slice(0, k);
+}
+
+/** The best-scoring pending likers, up to `slots`; these skip the exposure reranker and lead the batch. */
+export function reserveLikerSlots(
+	ranked: readonly RankedCandidate[],
+	likerIds: ReadonlySet<number>,
+	slots: number = LIKER_SLOTS,
+): Set<number> {
+	return new Set(
+		ranked
+			.filter((row) => likerIds.has(row.candidateId))
+			.sort((a, b) => b.score - a.score)
+			.slice(0, slots)
+			.map((row) => row.candidateId),
+	);
+}
+
+/** Fisher–Yates driven by `seed`, so a batch keeps its order across reloads. */
+export function shuffleSeeded<T>(items: readonly T[], seed: string): T[] {
+	const out = [...items];
+
+	for (let i = out.length - 1; i > 0; i--) {
+		const j = Math.floor(seededRandom(`${seed}:${i}`) * (i + 1));
+		[out[i], out[j]] = [out[j], out[i]];
+	}
+
+	return out;
 }
 
 /** One exposure-limited batch for the daily drop; unset options come from the saved matching config. */
@@ -97,37 +150,30 @@ export async function generateRecommendations(
 	});
 
 	const poolIds = pool.map((candidate) => candidate.id);
-	const [crossings, likerIds, exposures, decisions] = await Promise.all([
+	const [crossings, likerIds, exposures, [learnedViewer, ...learnedPool]] = await Promise.all([
 		repository.listCrossings(db, viewerId, poolIds),
 		repository.listPendingLikerIds(db, viewerId),
 		repository.listExposureCounts(db, poolIds, exposureSince),
-		preferenceLambda > 0 ? repository.listPreferenceDecisions(db, [viewerId, ...poolIds]) : new Map(),
+		withLearnedPreferences(db, [viewer, ...pool], preferenceLambda),
 	]);
-	// Both sides learn: the reciprocal score uses the candidate's preferences toward the viewer too.
-	const learn = <T extends ScoringProfile>(profile: T): T => ({
-		...profile,
-		pref: blendPreference(profile.pref, decisions.get(profile.id) ?? [], preferenceLambda),
-	});
-	const ranked = rerankForExposure(
-		rankCandidates(
-			learn(viewer),
-			pool.map(learn),
-			crossings,
-			Number.POSITIVE_INFINITY,
-			weights,
-			crossPathsLambda,
-			likerIds,
-		),
-		exposures,
-		k,
-		fairness,
+	const scored = rankCandidates(
+		learnedViewer,
+		learnedPool,
+		crossings,
+		Number.POSITIVE_INFINITY,
+		weights,
+		crossPathsLambda,
 		likerIds,
 	);
+	const ranked = rerankForExposure(scored, exposures, k, fairness, reserveLikerSlots(scored, likerIds));
+	const shownAt = opts.shownAt ?? new Date();
+	// Display order is shuffled so reserved likers don't always sit on top and give away who liked you.
+	const displayed = shuffleSeeded(ranked, `${viewerId}:${shownAt.toISOString()}`);
 
 	await repository.replaceRecommendations(
 		db,
 		viewerId,
-		ranked.map((row, index) => ({
+		displayed.map((row, index) => ({
 			candidateId: row.candidateId,
 			score: row.score,
 			rank: index + 1,

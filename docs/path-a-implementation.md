@@ -267,13 +267,15 @@ to the reciprocal result. Keep `ScoringProfile` unchanged and pass the count in 
 export function crossPathsNorm(count: number, K = 3): number {
   return count > 0 ? 1 - Math.exp(-count / K) : 0;   // saturating in [0,1): norm(3)≈0.63
 }
-export function applyCrossPathsBoost(reciprocal: number, count: number, lambda = 0.2): number {
-  return reciprocal * (1 + lambda * crossPathsNorm(count));
+export function applyCrossPathsBoost(reciprocal: number, count: number, lambda = 0.5): number {
+  const boost = lambda * crossPathsNorm(count);  // in σ of standardized score
+  return boost > 0 ? sigmoid(logit(reciprocal) + boost) : reciprocal;
 }
 ```
 
 Add the constants to the config object next to `DEFAULT_WEIGHTS`:
-`export const CROSS_PATHS = { lambda: 0.2, K: 3 }`.
+`export const CROSS_PATHS = { lambda: 0.5, K: 3 }`. (Originally multiplicative with λ 0.2; moved to
+logit space so the lift is the same σ for every candidate on the squashed score.)
 
 **Generator integration** (W1.3). Add a repo fn
 `listCrossingCounts(db, viewerId, candidateIds) → Map<number, number>` that looks up the
@@ -307,7 +309,7 @@ candidate with no crossings. Generator test: a seeded crossing lifts that candid
 opted-out candidate is not boosted.
 
 **Thesis note:** trivially ablatable — report rankings and the Gini/exposure numbers at
-`λ = 0` (pure reciprocal baseline) vs `λ = 0.2`, and present it as a serendipity re-ranking layer
+`λ = 0` (pure reciprocal baseline) vs `λ = 0.5`, and present it as a serendipity re-ranking layer
 over the baseline. Acceptance: table migrated + seeded; helpers + tests pass; generator applies
 the boost with privacy gating; detail screen shows a real count; `λ = 0` reproduces the W1.2
 ranking exactly.
@@ -323,8 +325,10 @@ network grows and real participants can actually match a synthetic candidate. Pr
 real user accepted a synthetic candidate, `interactions.dec_b` stayed null forever.
 
 **Decision rule** (`src/lib/agent-decision.ts`, pure). An agent accepts with probability
-`σ((unilateral(agent→other) − threshold) / temperature)`. The draw is seeded by
-`tickId:agentId:otherId`, so a tick is reproducible. `AGENT = { threshold: 0.55, temperature: 0.08 }`
+`σ((agentUtility(agent→other) − threshold) / temperature)`. `agentUtility` (`src/lib/agent-utility.ts`)
+is a frozen copy of the scoring formula as of `a7ad2c3`, so later recommender changes don't move the
+ground truth. Never tune it with the recommender. The draw is seeded by
+`tickId:agentId:otherId`, so a tick is reproducible. `AGENT = { threshold: 0.71, temperature: 0.02 }` (tuned on dev to ~26% acceptance; the old 0.55 / 0.08 accepted ~80% and carried almost no taste signal)
 are ablation knobs. Only the agent's own directional score is used, computed from its **hidden
 preference profile** (`hiddenProfile`): the stored interests, `pref*` and component weights blended
 with a draw seeded by the agent id, `(1 − hiddenNoise)·stored + hiddenNoise·random`, with
@@ -366,15 +370,15 @@ provider-side; no group fairness).
 - **Log:** new table `recommendation_exposures (viewer_id, candidate_id, shown_at)`, migration
   `0025`. `replaceRecommendations` appends one row per candidate per new batch (not on regenerate).
 - **Logic:** `apps/api/src/lib/fairness.ts` — `exposurePenalty`, `rerankForExposure`, `gini`,
-  `FAIRNESS` defaults (μ 0.3, cap null, window 7 days, e₀ 5). Rank by
-  `score · (1 − μ · e / (e + e₀))`; `e ≥ cap` only fills leftover slots; pending likers exempt.
+  `FAIRNESS` defaults (μ 1 σ, cap null, window 7 days, e₀ 5). Rank by
+  `σ(logit(score) − μ · e / (e + e₀))` (logit space, so μ costs the same σ at any rank); `e ≥ cap` only fills leftover slots; pending likers exempt.
 - **Generator:** `rankCandidates(..., Infinity, ...)` → `listExposureCounts` →
   `rerankForExposure(..., k)`. Options `fairnessMu`, `exposureCap` for ablation.
 - **Config:** `matching_config.fairness_mu` (default 0), `exposure_cap`, `exposure_window_days`;
   editable in backoffice Matching rules.
 
 **Thesis note:** report Gini (from `recommendation_exposures`) and hit@k at μ = 0 / no cap vs
-μ = 0.3 / cap. μ = 0 with no cap reproduces the previous ranking exactly.
+μ = 1 / cap. μ = 0 with no cap reproduces the previous ranking exactly.
 
 ---
 
@@ -383,15 +387,19 @@ provider-side; no group fairness).
 Partner preferences adapt to what a user actually likes, instead of staying fixed at the stated
 100-point split.
 
-- **Logic:** `apps/api/src/lib/preference-learning.ts` (pure, tested) —
-  `learnedPreference` = Rocchio `mean(liked self) − γ · mean(passed self)`, clamped positive and
-  rescaled to sum 100; `blendPreference` = `(1 − s) · stated + s · learned`, `s = λ · n / (n + n₀)`.
-  `PREFERENCE_LEARNING` defaults: λ 0.5, n₀ 10, γ 0.5.
+- **Logic:** `apps/api/src/lib/preference-learning.ts` (pure, tested).
+  - `learnedPreference` = `mean(z liked self) − mean(z decided self)`, z-scored. Self-ratings are
+    centered per profile and contrasted against everything the user decided on, so neither the
+    population's self-rating shape nor the recommender's own selection is learned as taste.
+  - `learnPreference` returns the direction plus its share `s = λ · n / (n + n₀) · ‖c‖ / (‖c‖ + c₀)`, so
+    few or weak decisions barely count. It's blended in score space by `directedPreferenceMatch`
+    (`scoring.ts`), not in the `pref` vector.
+  - `PREFERENCE_LEARNING` defaults: λ 0.5, n₀ 10, c₀ 0.5.
 - **Data:** `listPreferenceDecisions(db, ids)` reads each decider's likes/passes from `interactions`
   (both orientations) with the other profile's `self*`. No new table.
 - **Generator:** when λ > 0, viewer **and** pool get blended `pref` before `rankCandidates`
   (both directions, since the score is reciprocal). Option `preferenceLambda` for ablation.
-  `scoreBreakdown` / match reasons keep stated preferences.
+  Match reasons and the staff breakdown use the same blended preferences (`withLearnedPreferences`).
 - **Config:** `matching_config.preference_lambda` (default 0, migration `0026`); backoffice
   "Learned preferences" card on Matching rules.
 
@@ -673,6 +681,9 @@ relevant pairs; report, written to `research/results/baseline.json`:
   top-k) — the fairness number for §2.6. Use `gini()` from `apps/api/src/lib/fairness.ts` and
   `recommendation_exposures` as the impression source; compare with W1.8 on and off.
 - A **random-recommender baseline** to beat.
+
+Include the component table from `pnpm --filter api db:component-stats` (mean, spread, effective
+share per component) and compare `unilateral` with calibration on vs off (`calibration = null`).
 
 Run a small weight sweep over `DEFAULT_WEIGHTS` (and λ from W1.9) and record the best. These feed RQ1–RQ4.
 

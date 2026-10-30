@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { exposurePenalty, gini, rerankForExposure } from "@/lib/fairness";
+import { logit, sigmoid } from "@/lib/scoring";
 
 const ranked = [
 	{ candidateId: 1, score: 0.9 },
@@ -12,7 +13,14 @@ describe("exposurePenalty", () => {
 		expect(exposurePenalty(0.8, 0, 0.3)).toBe(0.8);
 		expect(exposurePenalty(0.8, 2, 0.3)).toBeLessThan(0.8);
 		expect(exposurePenalty(0.8, 10, 0.3)).toBeLessThan(exposurePenalty(0.8, 2, 0.3));
-		expect(exposurePenalty(0.8, 1e9, 0.3)).toBeGreaterThanOrEqual(0.8 * 0.7);
+		expect(exposurePenalty(0.8, 1e9, 0.3)).toBeCloseTo(sigmoid(logit(0.8) - 0.3), 6);
+	});
+
+	it("costs the same standardized amount at the top as mid-pack", () => {
+		const drop = (score: number) => logit(score) - logit(exposurePenalty(score, 5, 1));
+
+		expect(drop(0.95)).toBeCloseTo(0.5, 6);
+		expect(drop(0.5)).toBeCloseTo(0.5, 6);
 	});
 });
 
@@ -24,7 +32,7 @@ describe("rerankForExposure", () => {
 	});
 
 	it("lets the penalty displace an over-exposed candidate", () => {
-		const [first] = rerankForExposure(ranked, exposures, 3, { mu: 0.5, cap: null });
+		const [first] = rerankForExposure(ranked, exposures, 3, { mu: 1.5, cap: null });
 
 		expect(first.candidateId).toBe(2);
 		expect(first.score).toBe(0.8);

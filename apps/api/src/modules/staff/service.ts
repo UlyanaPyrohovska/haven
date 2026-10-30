@@ -18,7 +18,7 @@ import { requireStaffAdmin } from "@/lib/session";
 import { notify } from "@/modules/notifications/service";
 import * as profileRepository from "@/modules/profile/repository";
 import type { ProfileUpdate } from "@/modules/profile/schemas";
-import { generateRecommendations } from "@/modules/recommendations/generator";
+import { generateRecommendations, withLearnedPreferences } from "@/modules/recommendations/generator";
 import * as recommendationsRepository from "@/modules/recommendations/repository";
 import { runTick } from "@/modules/simulation/engine";
 import * as simulationRepository from "@/modules/simulation/repository";
@@ -270,19 +270,24 @@ export async function userRecommendations(c: Context<{ Bindings: CloudflareBindi
 	await requireStaffAdmin(c);
 	const db = getDb(c.env.DATABASE_URL);
 
-	const viewer = await recommendationsRepository.findScoringProfileById(db, profileId);
+	const storedViewer = await recommendationsRepository.findScoringProfileById(db, profileId);
 
-	if (!viewer) {
+	if (!storedViewer) {
 		throw errors.not_found;
 	}
 
 	const rows = await repository.listRecommendationsForUser(db, profileId);
 	const candidateIds = rows.map((row) => row.candidateId);
-	const [candidates, crossings, config] = await Promise.all([
+	const [storedCandidates, crossings, config] = await Promise.all([
 		recommendationsRepository.listScoringProfilesByIds(db, candidateIds),
 		recommendationsRepository.listCrossings(db, profileId, candidateIds),
 		recommendationsRepository.loadMatchingConfig(db),
 	]);
+	const [viewer, ...candidates] = await withLearnedPreferences(
+		db,
+		[storedViewer, ...storedCandidates],
+		config.preferenceLambda,
+	);
 	const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
 
 	return {

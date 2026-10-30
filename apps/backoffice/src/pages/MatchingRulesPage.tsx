@@ -50,8 +50,8 @@ const WEIGHT_FIELDS = [
 const FAIRNESS_FIELDS = [
 	{
 		key: "fairnessMu",
-		label: "Exposure penalty μ (0–1)",
-		hint: "Ranks by score × (1 − μ · e / (e + e₀)), e = times shown in the window. 0 turns it off.",
+		label: "Exposure penalty μ (0–3σ)",
+		hint: "Ranks by σ(logit(score) − μ · e / (e + e₀)), e = times shown in the window: costs at most μ σ. 0 turns it off.",
 	},
 	{
 		key: "exposureCap",
@@ -230,14 +230,16 @@ export function MatchingRulesPage() {
 				<Card>
 					<CardHeader>
 						<CardTitle>Crossed-paths boost</CardTitle>
-						<CardDescription>score × (1 + λ · (1 − e^(−count / 3))). 0 turns the boost off.</CardDescription>
+						<CardDescription>
+							σ(logit(score) + λ · (1 − e^(−count / 3))): a lift of at most λ σ. 0 turns the boost off.
+						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{renderField(
 							{
 								key: "crossPathsLambda",
-								label: "Boost strength λ (0–1)",
-								hint: "Keep ≤ 0.25 so it doesn't double-count distance.",
+								label: "Boost strength λ (0–3σ)",
+								hint: "Keep ≤ 0.5 so it doesn't double-count distance.",
 							},
 							defaults.crossPathsLambda,
 						)}

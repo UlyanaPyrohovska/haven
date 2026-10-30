@@ -26,7 +26,7 @@ import * as chatRepository from "@/modules/chat/repository";
 import { ensureSyntheticOpener, toMessagePayload } from "@/modules/chat/service";
 import * as dailyQuestionRepository from "@/modules/daily-question/repository";
 import { notify } from "@/modules/notifications/service";
-import { generateRecommendations } from "./generator";
+import { generateRecommendations, withLearnedPreferences } from "./generator";
 import * as repository from "./repository";
 import type { DecisionBody } from "./schemas";
 
@@ -206,14 +206,19 @@ export async function getRecommendationDetail({ db, viewer }: ViewerContext, can
 	};
 }
 
-/** Why two matched profiles fit, from the same scoring the recommender used. */
+/** Why two matched profiles fit, from the same weights and learned preferences the recommender used. */
 async function describeMatch(
 	db: Db,
 	viewer: repository.ViewerProfile,
 	candidate: repository.ViewerProfile,
 	context: { matchedAt: Date; shareLocation: boolean; crossPathsCount: number | null },
 ) {
-	const profiles = await repository.listScoringProfilesByIds(db, [viewer.id, candidate.id]);
+	const config = await repository.loadMatchingConfig(db);
+	const profiles = await withLearnedPreferences(
+		db,
+		await repository.listScoringProfilesByIds(db, [viewer.id, candidate.id]),
+		config.preferenceLambda,
+	);
 	const viewerScoring = profiles.find((profile) => profile.id === viewer.id);
 	const candidateScoring = profiles.find((profile) => profile.id === candidate.id);
 
@@ -221,7 +226,7 @@ async function describeMatch(
 		return null;
 	}
 
-	const breakdown = scoreBreakdown(viewerScoring, candidateScoring);
+	const breakdown = scoreBreakdown(viewerScoring, candidateScoring, config.weights);
 	const sharedInterestCount = readPrivacySettings(candidate).showInterests
 		? sharedInterestLabels(viewer, candidate).length
 		: 0;
