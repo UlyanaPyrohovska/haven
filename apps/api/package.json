@@ -17,6 +17,7 @@
 		"db:seed": "tsx scripts/seed.ts",
 		"db:seed-demo": "tsx scripts/seed-demo-account.ts",
 		"db:seed-matches": "tsx scripts/seed-matches.ts",
+		"db:component-stats": "tsx scripts/component-stats.ts",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},

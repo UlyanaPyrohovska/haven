@@ -17,11 +17,12 @@ Reciprocal matching app (thesis project). Users create profiles (basics, self-ra
 ## Structure
 pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - `apps/api` — Cloudflare Worker, Hono + Drizzle, Neon Postgres (pgvector), Better Auth.
-  - `src/index.ts`, `src/app.ts` — entry and route wiring.
-  - `src/lib/` — pure domain logic, one concern per file: `scoring.ts` (compatibility, pure, no DB), `fairness.ts` (exposure reranking, Gini), `recommendation-cadence.ts`, `daily-questions.ts`, `candidate-daily-answer.ts`, `mood.ts`, `candidate-mood.ts`, `profile-view.ts` (haversine, view shaping), `candidate-display.ts`, `looking-for.ts`, `age.ts`, `avatar-url.ts`, `session.ts`, `auth.ts`, `errors.ts`.
+  - `src/index.ts` (entry, cron `scheduled`), `src/app.ts` (route wiring), `src/chat-room.ts` (chat Durable Object).
+  - `src/modules/<feature>/{routes,schemas,service,repository}.ts` — one folder per feature (auth, chat, daily-question, legal, links, mood, notifications, profile, recommendations, safety, simulation, staff).
+  - `src/lib/` — pure domain logic, one concern per file: `scoring.ts` (compatibility, pure, no DB), `fairness.ts` (exposure reranking, Gini), `preference-learning.ts`, `matching-config.ts`, `match-reasons.ts`, `partner-filters.ts`, `crossings.ts`, `agent-decision.ts` + `agent-utility.ts` (simulation agents, frozen scoring copy), `bio-embedding.ts`, `recommendation-cadence.ts`, `daily-questions.ts`, `candidate-daily-answer.ts`, `mood.ts`, `candidate-mood.ts`, `profile-view.ts` (haversine, view shaping), `candidate-display.ts`, `chat.ts`, `push.ts`, `looking-for.ts`, `age.ts`, `avatar-url.ts`, `session.ts`, `auth.ts`, `errors.ts`.
   - `src/db/schema.ts` (single source of schema), `src/db/index.ts`.
-  - `drizzle/` — generated SQL migrations, numbered `0000`–`0011`.
-  - `scripts/seed.ts`, `scripts/seed-staff-admin.ts`.
+  - `drizzle/` — generated SQL migrations, numbered `0000`–`0026`.
+  - `scripts/seed.ts`, `seed-demo-account.ts`, `seed-matches.ts`, `component-stats.ts` (read-only scoring calibration), `deploy.sh`.
   - Tests: `*.test.ts` next to the lib file, run with Vitest.
 - `apps/mobile` — Expo SDK 54, Expo Router, react-query, Better Auth client. Custom dev client, not Expo Go.
   - `app/` — routes. `(auth)/`, `(onboarding)/` (self, basics, interests, partner, bio, privacy), `(profile)/`, `index.tsx`, `home.tsx`, `matches.tsx`, `connections/`, `daily-question.tsx`.
@@ -59,7 +60,7 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - Preferences vs self-ratings: `pref*` (what the user wants, real) and `self*` (how they rate themselves, smallint). Both are 6-dim: attractiveness, sincerity, intelligence, fun, ambition, shared-interests (`attr, sinc, intel, fun, amb, shar`).
 - Missing values are neutral, not zero: null interests → 5; null preference vectors → midpoint; missing coordinates → geo score 0.5. Don't let missing data bury a user.
 - Location is approximate only. Never expose raw coordinates to other users; only coarse distance or area. Users can hide location in settings, so respect the privacy flags in `lib/profile/privacy.ts` and `user_profiles` privacy columns.
-- Scoring (`scoring.ts`): directional `unilateral(u→v)` combines bio, interest, geo, and preference components. Only the preference term is asymmetric. If the bio embedding is null, drop α and renormalize the rest to sum to 1.
+- Scoring (`scoring.ts`): directional `unilateral(u→v)` combines bio, interest, geo, preference, mood and daily-answer components, each z-scored against `COMPONENT_CALIBRATION` and squashed with a sigmoid. Only the preference term is asymmetric. A missing component (e.g. null bio embedding) is z = 0, i.e. neutral; mood and daily answer never go below 0. The uncalibrated formula (`calibration = null`, thesis ablation) drops a null bio and renormalizes instead. Don't tune `agent-utility.ts` together with `scoring.ts`.
 - Daily question and mood check-ins are one per user per day; use the helpers in `daily-questions.ts` and `mood.ts` rather than re-deriving dates.
 - Data protection: the database must be in the EU (Neon `aws-eu-central-1`). Don't add a region or third-party service that moves personal data outside the EU without asking.
 

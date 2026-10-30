@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AGENT, acceptProbability, agentAccepts, hiddenProfile, seededRandom } from "./agent-decision";
-import { DEFAULT_WEIGHTS, type ScoringProfile, unilateral } from "./scoring";
+import { AGENT_BASE_WEIGHTS, agentUtility } from "./agent-utility";
+import type { ScoringProfile } from "./scoring";
 
 describe("acceptProbability", () => {
 	it("is 0.5 at the threshold and monotonic in score", () => {
@@ -57,14 +58,14 @@ describe("hiddenProfile", () => {
 
 	it("is the stored profile at noise 0", () => {
 		const { profile, weights } = hiddenProfile(agent, 0);
-		expect(unilateral(profile, other, weights)).toBeCloseTo(unilateral(agent, other, DEFAULT_WEIGHTS));
+		expect(agentUtility(profile, other, weights)).toBeCloseTo(agentUtility(agent, other, AGENT_BASE_WEIGHTS));
 	});
 
 	it("is stable per agent and differs from what the recommender sees", () => {
 		const a = hiddenProfile(agent);
 		expect(hiddenProfile(agent)).toEqual(a);
 		expect(a.profile.pref).not.toEqual(agent.pref);
-		expect(a.weights).not.toEqual(DEFAULT_WEIGHTS);
+		expect(a.weights).not.toEqual(AGENT_BASE_WEIGHTS);
 		expect(hiddenProfile({ ...agent, id: 9 }).profile.interests).not.toEqual(a.profile.interests);
 	});
 });

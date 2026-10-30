@@ -13,6 +13,7 @@ import {
 	lte,
 	ne,
 	not,
+	notInArray,
 	or,
 	type SQL,
 	sql,
@@ -356,22 +357,32 @@ export async function listCandidatePool(
 	const maxKm = opts.maxKm ?? null;
 	const whereClause = poolConditions(viewer, maxKm, opts.syntheticOnly);
 	const date = utcToday();
-	const baseQuery = db
-		.select(scoringProfileSelect(date))
-		.from(userProfiles)
-		.leftJoin(userEmbeddings, eq(userEmbeddings.userProfileId, userProfiles.id))
-		.where(whereClause);
+	const query = (where: SQL | undefined) =>
+		db
+			.select(scoringProfileSelect(date))
+			.from(userProfiles)
+			.leftJoin(userEmbeddings, eq(userEmbeddings.userProfileId, userProfiles.id))
+			.where(where);
 
-	const useAnn = viewer.bioEmbedding != null && viewer.bioEmbedding.length > 0;
-	// Pending likes first, so the cap or the ANN shortlist never hides them.
+	// Pending likes first, so the cap or the bio shortlist never hides them.
 	const likedFirst = sql`${likesViewer(viewer.id)} DESC`;
-	const rows = useAnn
-		? await baseQuery
+	const useAnn = viewer.bioEmbedding != null && viewer.bioEmbedding.length > 0;
+	// Exact sort: the leading `likedFirst` key keeps the planner off HNSW, whose post-filtering would return too few rows.
+	const shortlist = useAnn
+		? await query(and(whereClause, isNotNull(userEmbeddings.bio)))
 				.orderBy(likedFirst, sql`${userEmbeddings.bio} <=> ${JSON.stringify(viewer.bioEmbedding)}::vector`)
 				.limit(Math.min(limit, annShortlistLimit))
-		: await baseQuery.orderBy(likedFirst).limit(limit);
+		: [];
+	// Random fill: profiles without an embedding (or far in bio space) still get scored, and over many
+	// batches nobody is stuck outside the limit.
+	const shortlistIds = shortlist.map((row) => row.id);
+	const fill = await query(
+		shortlistIds.length > 0 ? and(whereClause, notInArray(userProfiles.id, shortlistIds)) : whereClause,
+	)
+		.orderBy(likedFirst, sql`random()`)
+		.limit(limit - shortlist.length);
 
-	return rows.map((row) => mapCandidateScoringProfile(row as ScoringProfileRow, date));
+	return [...shortlist, ...fill].map((row) => mapCandidateScoringProfile(row as ScoringProfileRow, date));
 }
 
 /** `shownAt` set keeps the batch's original time, so a regenerated batch doesn't move the cooldown. */

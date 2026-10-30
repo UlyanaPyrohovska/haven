@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
 	applyCrossPathsBoost,
 	bioSimilarity,
+	type ComponentCalibration,
 	crossPathsNorm,
 	DEFAULT_WEIGHTS,
 	dailyAnswerSimilarity,
 	geoProximity,
 	interestSimilarity,
+	logit,
 	moodCompatibility,
 	preferenceMatch,
 	reciprocalScore,
@@ -45,11 +47,13 @@ describe("interestSimilarity", () => {
 		expect(interestSimilarity(a, b)).toBeLessThan(0.35);
 	});
 
-	it("treats null interests as neutral midpoint", () => {
-		const filled = uniformInterests();
+	it("scores an empty (all-null) profile as no signal, below a real partial overlap", () => {
+		const pick = (ids: number[]) => Array.from({ length: 17 }, (_, i) => (ids.includes(i) ? 10 : 1));
 		const withNulls = Array.from({ length: 17 }, () => null);
 
-		expect(interestSimilarity(filled, withNulls)).toBeCloseTo(1, 5);
+		expect(interestSimilarity(pick([0, 1, 2]), withNulls)).toBe(0.5);
+		expect(interestSimilarity(pick([0, 1, 2]), pick([0, 5, 6]))).toBeGreaterThan(0.5);
+		expect(interestSimilarity(pick([0, 1, 2]), pick([4, 5, 6]))).toBeLessThan(0.5);
 	});
 
 	it("raises the score for shared custom interests and lowers it for unshared ones", () => {
@@ -70,6 +74,14 @@ describe("preferenceMatch", () => {
 		const lowAttr = [1, 5, 5, 5, 5, 5];
 
 		expect(preferenceMatch(wantsAttr, highAttr)).toBeGreaterThan(preferenceMatch(wantsAttr, lowAttr));
+	});
+
+	it("rewards relative strengths, not inflated self-ratings", () => {
+		const pref = [40, 10, 10, 10, 10, 20];
+
+		expect(preferenceMatch(pref, [10, 10, 10, 10, 10, 10])).toBe(0.5);
+		expect(preferenceMatch(pref, [9, 4, 4, 4, 4, 6])).toBeGreaterThan(0.9);
+		expect(preferenceMatch(pref, [2, 9, 9, 9, 9, 5])).toBeLessThan(0.2);
 	});
 });
 
@@ -99,18 +111,19 @@ describe("unilateral and reciprocalScore", () => {
 		const embedding = Array.from({ length: 384 }, (_, i) => Math.sin(i * 0.1));
 		const profile = makeProfile({
 			id: 1,
-			interests: Array.from({ length: 17 }, () => 8),
+			interests: Array.from({ length: 17 }, (_, i) => (i % 3 === 0 ? 10 : 2)),
 			pref: [20, 20, 20, 20, 10, 10],
-			self: [8, 7, 7, 6, 5, 5],
+			self: [8, 8, 8, 8, 4, 4],
 			bioEmbedding: embedding,
 		});
 		const twin = { ...profile, id: 2 };
 
 		const { reciprocal, pUToV, qVToU } = reciprocalScore(profile, twin);
 
-		expect(pUToV).toBeCloseTo(1, 2);
-		expect(qVToU).toBeCloseTo(1, 2);
-		expect(reciprocal).toBeCloseTo(1, 2);
+		// Clipped z-scores cap the squashed score just under 1.
+		expect(pUToV).toBeGreaterThan(0.99);
+		expect(qVToU).toBeGreaterThan(0.99);
+		expect(reciprocal).toBeGreaterThan(0.99);
 	});
 
 	it("harmonic mean sits below arithmetic mean for one-sided preference fit", () => {
@@ -172,9 +185,9 @@ describe("unilateral and reciprocalScore", () => {
 			(w.interest * breakdown.interest + w.geo * breakdown.geo + w.pref * breakdown.prefUToV) /
 			(w.interest + w.geo + w.pref);
 
-		// Either side missing → same renormalized backbone, in both directions.
-		expect(unilateral(withEmb, withoutEmb)).toBeCloseTo(backbone, 10);
-		expect(unilateral({ ...withEmb, bioEmbedding: null }, otherWithEmb)).toBeCloseTo(backbone, 10);
+		// Uncalibrated: either side missing → same renormalized backbone, in both directions.
+		expect(unilateral(withEmb, withoutEmb, w, null)).toBeCloseTo(backbone, 10);
+		expect(unilateral({ ...withEmb, bioEmbedding: null }, otherWithEmb, w, null)).toBeCloseTo(backbone, 10);
 
 		// Both present → weighted sum including the bio term (mood and answer still missing, so renormalized).
 		const expected =
@@ -184,7 +197,7 @@ describe("unilateral and reciprocalScore", () => {
 				w.pref * breakdown.prefUToV) /
 			(w.bio + w.interest + w.geo + w.pref);
 		expect(breakdown.bio).toBeCloseTo(1, 10);
-		expect(unilateral(withEmb, otherWithEmb)).toBeCloseTo(expected, 10);
+		expect(unilateral(withEmb, otherWithEmb, w, null)).toBeCloseTo(expected, 10);
 	});
 });
 
@@ -215,6 +228,13 @@ describe("applyCrossPathsBoost", () => {
 
 	it("lifts a crossed candidate above an equal uncrossed one", () => {
 		expect(applyCrossPathsBoost(0.5, 2)).toBeGreaterThan(applyCrossPathsBoost(0.5, 0));
+	});
+
+	it("shifts by lambda · norm in standardized units and stays below 1", () => {
+		for (const score of [0.3, 0.5, 0.95]) {
+			expect(logit(applyCrossPathsBoost(score, 3, 0.5)) - logit(score)).toBeCloseTo(0.5 * crossPathsNorm(3), 6);
+		}
+		expect(applyCrossPathsBoost(0.99, 1000, 3)).toBeLessThan(1);
 	});
 });
 
@@ -263,7 +283,7 @@ describe("dailyAnswerSimilarity", () => {
 });
 
 describe("unilateral with mood and daily answer", () => {
-	it("drops missing mood and answer terms instead of scoring them as zero", () => {
+	it("treats missing mood and answer as neutral instead of scoring them as zero", () => {
 		const u = makeProfile({ id: 1 });
 		const v = makeProfile({ id: 2 });
 		const base = unilateral(u, v);
@@ -272,21 +292,89 @@ describe("unilateral with mood and daily answer", () => {
 		expect(unilateral(u, { ...v, dailyAnswer: "A long walk" })).toBeCloseTo(base, 10);
 	});
 
-	it("includes both terms when both sides have them", () => {
-		const u = makeProfile({ id: 1, mood: "low", dailyAnswer: "A long walk by the sea" });
-		const v = makeProfile({ id: 2, mood: "low", dailyAnswer: "Swimming in the sea" });
+	it("adds both terms as offsets from neutral when both sides have them", () => {
+		const u = makeProfile({ id: 1, mood: "happy", dailyAnswer: "A long walk by the sea" });
+		const v = makeProfile({ id: 2, mood: "excited", dailyAnswer: "Swimming in the sea" });
 		const b = scoreBreakdown(u, v);
 		const w = DEFAULT_WEIGHTS;
+		const profileWeight = w.interest + w.geo + w.pref;
 		const expected =
-			(w.interest * b.interest +
-				w.geo * b.geo +
-				w.pref * b.prefUToV +
-				w.mood * (b.mood as number) +
-				w.dailyAnswer * (b.dailyAnswer as number)) /
-			(w.interest + w.geo + w.pref + w.mood + w.dailyAnswer);
+			(w.interest * b.interest + w.geo * b.geo + w.pref * b.prefUToV) / profileWeight +
+			(w.mood * ((b.mood as number) - 0.5) + w.dailyAnswer * ((b.dailyAnswer as number) - 0.5)) /
+				(profileWeight + w.mood + w.dailyAnswer);
 
-		expect(b.mood).toBe(moodCompatibility("low", "low"));
 		expect(b.dailyAnswer).toBeGreaterThan(0.5);
-		expect(unilateral(u, v)).toBeCloseTo(expected, 10);
+		expect(unilateral(u, v, w, null)).toBeCloseTo(expected, 10);
+	});
+
+	it.each([
+		["calibrated", undefined],
+		["uncalibrated", null],
+	] as const)("never lowers a score for a low mood or an answer with no shared words (%s)", (_, calibration) => {
+		const u = makeProfile({ id: 1 });
+		const v = makeProfile({ id: 2 });
+		const score = (a: ScoringProfile, b: ScoringProfile) => unilateral(a, b, DEFAULT_WEIGHTS, calibration);
+		const base = score(u, v);
+
+		expect(score({ ...u, mood: "low" }, { ...v, mood: "low" })).toBeCloseTo(base, 10);
+		expect(score({ ...u, dailyAnswer: "Pizza night" }, { ...v, dailyAnswer: "Long mountain hike" })).toBeCloseTo(
+			base,
+			10,
+		);
+	});
+});
+
+describe("calibrated unilateral", () => {
+	const calibration: ComponentCalibration = {
+		interest: { mean: 0.5, sd: 0.1 },
+		geo: { mean: 0.5, sd: 0.4 },
+		pref: { mean: 0.5, sd: 0.2 },
+		bio: { mean: 0.6, sd: 0.1 },
+		mood: { mean: 0.5, sd: 0.2 },
+		dailyAnswer: { mean: 0.55, sd: 0.1 },
+	};
+	const pick = (ids: number[]) => Array.from({ length: 17 }, (_, i) => (ids.includes(i) ? 10 : 1));
+
+	it("scores a pair at every component mean as 0.5, and missing data the same", () => {
+		const u = makeProfile({ id: 1, latitude: null, longitude: null });
+		const v = makeProfile({ id: 2, latitude: null, longitude: null });
+
+		// Flat interests and preferences give 0.5, missing geo gives 0.5, bio is missing.
+		expect(unilateral(u, v, DEFAULT_WEIGHTS, calibration)).toBeCloseTo(0.5, 10);
+	});
+
+	it("gives the same raw gain more influence when the component's population spread is smaller", () => {
+		const u = makeProfile({ id: 1, interests: pick([0, 1, 2]) });
+		const v = makeProfile({ id: 2, interests: pick([0, 1, 3]) });
+		const narrow = unilateral(u, v, DEFAULT_WEIGHTS, calibration);
+		const wide = unilateral(u, v, DEFAULT_WEIGHTS, { ...calibration, interest: { mean: 0.5, sd: 0.4 } });
+
+		expect(scoreBreakdown(u, v).interest).toBeGreaterThan(0.5);
+		expect(narrow).toBeGreaterThan(wide);
+	});
+
+	it("keeps calibration = null as the uncalibrated ablation", () => {
+		const u = makeProfile({ id: 1, interests: pick([0, 1, 2]) });
+		const v = makeProfile({ id: 2, interests: pick([0, 1, 9]) });
+		const b = scoreBreakdown(u, v);
+		const w = DEFAULT_WEIGHTS;
+
+		expect(unilateral(u, v, w, null)).toBeCloseTo(
+			(w.interest * b.interest + w.geo * b.geo + w.pref * b.prefUToV) / (w.interest + w.geo + w.pref),
+			10,
+		);
+	});
+});
+
+describe("z clipping", () => {
+	it("caps how far one rare perfect component can lift the score", () => {
+		const u = makeProfile({ id: 1, dailyAnswer: "Coffee with a friend" });
+		const v = makeProfile({ id: 2, dailyAnswer: "coffee with a friend" });
+		const base = unilateral(makeProfile({ id: 1 }), makeProfile({ id: 2 }));
+		const norm = Math.sqrt(Object.values(DEFAULT_WEIGHTS).reduce((sum, w) => sum + w * w, 0));
+		const logit = (p: number) => Math.log(p / (1 - p));
+
+		// Identical answers sit ~7σ out; clipped, they add at most 3 · w / norm to the standardized sum.
+		expect(logit(unilateral(u, v)) - logit(base)).toBeCloseTo((3 * DEFAULT_WEIGHTS.dailyAnswer) / norm, 10);
 	});
 });

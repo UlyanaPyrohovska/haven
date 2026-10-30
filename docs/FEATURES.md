@@ -19,7 +19,7 @@ apps/mobile (Expo 54, Expo Router, react-query)      apps/backoffice (Vite + Rea
         │  Better Auth session cookie via apiFetch            │  cookie (credentials: include); Vite proxy in dev,
         │                                                     │  CORS from admin.pirogotter.dev when deployed
         ▼                                                     ▼
-apps/api — Cloudflare Worker (Hono + @hono/zod-openapi)  ── cron trigger (simulation tick)
+apps/api — Cloudflare Worker (Hono + @hono/zod-openapi)  ── cron triggers (simulation tick, walker step)
         │  modules/<feature>/{routes,schemas,service,repository}.ts
         │  src/lib/* = pure domain logic (scoring, cadence, view shaping)
         ├──────────────► ChatRoom Durable Object (EU jurisdiction, one per conversation, sockets only)
@@ -65,8 +65,8 @@ Neon Postgres (aws-eu-central-1, pgvector) via drizzle-orm/neon-http
 Users sign up and log in with email and password.
 
 **How it works:**
-- Better Auth runs on the Worker at `/auth`, with the `emailAndPassword`, `admin`, `expo` and
-  `openAPI` plugins. Its tables come from `modules/auth/auth-schema.ts`.
+- Better Auth runs on the Worker at `/auth`, with `emailAndPassword` enabled and the `admin`, `expo`
+  and `openAPI` plugins. Its tables come from `modules/auth/auth-schema.ts`.
 - On mobile, `createAuthClient` with `expoClient` stores the session in `expo-secure-store`.
 - React Native has no cookie jar, so `lib/api/client.ts > apiFetch` reads the cookie with
   `authClient.getCookie()` and sets the `Cookie` header itself.
@@ -219,7 +219,8 @@ users switch between them from Home.
 per user, so bio and interests are shared across modes.
 
 ### Recommendations feed ("connections") — live
-An exposure-limited **daily drop**: a small batch of 4 candidates. A new batch comes only after
+An exposure-limited **daily drop**: a small batch of candidates (4 by default; staff can change it in
+Matching rules). A new batch comes only after
 the current one is fully acted on **and** the cooldown has passed. When you're caught up, the
 screen shows when the next batch arrives.
 
@@ -245,7 +246,8 @@ decision.
   - `isCooldownElapsed` passes.
 
   The cooldown is counted from `max(recommendations.shown_at)`, so no extra column is needed.
-  `REC_COOLDOWN_HOURS` overrides the default 24 h for study sessions.
+  It is 24 h by default. A saved Matching rules row sets it; with no saved row, `REC_COOLDOWN_HOURS`
+  overrides the default for study sessions.
 - **Caught-up state.** The response then includes `nextRefreshAt`.
 - **Decisions.** `POST /recommendations/{id}/decision` calls `recordDecision`, which upserts one
   `interactions` row per pair:
@@ -305,9 +307,10 @@ match is not announced a second time.
   count over `messages`). `locationLabel` comes from `candidateLocationLabel`, the same helper the
   connection screen uses; coordinates and exact distances are never returned.
 - `GET /recommendations/{candidateId}` adds `match: { matchedAt, compatibility, reasons }` when the
-  pair is matched. `describeMatch` reloads both scoring profiles and calls `scoreBreakdown`
-  (`scoring.ts`, pure). That function splits `reciprocalScore` into interest, geo, bio and the two
-  directed preference terms. `matchReasons` (`src/lib/match-reasons.ts`) turns the components into
+  pair is matched. `describeMatch` reloads both scoring profiles, applies learned preferences
+  (`withLearnedPreferences`, config λ) and calls `scoreBreakdown` with the matching-config weights
+  (`scoring.ts`, pure), so the explanation uses the same inputs as the ranking. That function splits `reciprocalScore` into interest, geo, bio, mood, daily
+  answer and the two directed preference terms. `matchReasons` (`src/lib/match-reasons.ts`) turns the components into
   slugs with fixed thresholds:
   - `sharedInterests`: at least one shared active interest, or interest ≥ 0.75,
   - `theirType`: they fit your preferences (pref u→v ≥ 0.8),
@@ -431,7 +434,7 @@ One mood per day, shown as context on candidate cards.
 **How it works:**
 - `blockPair` runs one `db.batch` that does two things:
   1. Sets the blocker's decision to 0 (and `match = false`), or inserts a rejecting interaction if
-     there was none. Because the pool excludes any pair with an interaction, the two never
+     there was none. The pool excludes any pair where either side passed, so the two never
      reappear for each other.
   2. Deletes any pending recommendations between them.
 - Reports are stored in `reports`. `reporter_id` is set to null if the reporter deletes their
@@ -486,7 +489,7 @@ sandbox flag: production APNs is tried first, sandbox only after `BadDeviceToken
 Firebase project, then a native rebuild.
 
 **Missing:** an iOS device test (secrets are set; remaining steps in `docs/path-a-implementation.md` W2.8), an in-app on/off switch per kind (the OS setting is the only control), no push while
-the recipient is already in that chat, the in-app match modal (BACKLOG D5), and no APNs check
+the recipient is already in that chat, and no APNs check
 under local `wrangler dev` (APNs needs HTTP/2, which deployed Workers use).
 
 ---
@@ -539,26 +542,46 @@ age range. These are hard filters, unlike the 6 preference sliders, which only r
 Scores how well two profiles fit each other.
 
 **How it works:**
-- **One-way score.** `unilateral(u→v)` is a weighted mean, clamped to [0, 1]. The default weights are
+- **One-way score.** `unilateral(u→v)` is a calibrated weighted sum of six components (below). The default weights are
   `DEFAULT_WEIGHTS = { bio: 0.3, interest: 0.25, geo: 0.15, pref: 0.15, mood: 0.05, dailyAnswer: 0.1 }`
   (staff can change them in Matching rules):
-  - **interest:** cosine over the 17 interests plus one extra dimension per custom interest.
-  - **pref:** cosine between u's preferences and v's self-ratings. This is the only term where
-    u→v differs from v→u.
+  - **interest:** centered similarity (Pearson mapped to [0, 1]) over the 17 interests plus one
+    extra dimension per custom interest. An empty (all-neutral) profile scores 0.5 ("no signal"),
+    below a real partial overlap. Plain cosine scored it above one, because all-positive vectors
+    always look similar.
+  - **pref:** centered similarity between u's preference split and v's self-ratings: do v's
+    relative strengths line up with what u weights most? Centering makes rating yourself 10 on
+    everything score 0.5, so inflating self-ratings doesn't pay. This is the only term where u→v
+    differs from v→u.
   - **geo:** `exp(−km / 25)`, or 0.5 when coordinates are missing.
   - **bio:** cosine of the bio embeddings. When either side has no embedding, this term is dropped
-    and the other weights are rescaled to sum to 1.
+    and the other weights are rescaled to sum to 1 (uncalibrated formula).
   - **mood:** `moodCompatibility` looks up today's two check-ins in a symmetric 6×6 matrix over
     `MoodSlugs` (calm pairs well with anything; low↔low is weak), not plain equality.
   - **dailyAnswer:** `dailyAnswerSimilarity` is the word-overlap (Jaccard, stopwords removed) of
     today's two answers, mapped to [0.5, 1] so no overlap is neutral. This is a stand-in for
-    embedding cosine until bios/answers are embedded in the Worker (T9).
-  - Mood and dailyAnswer, like bio, are dropped and the rest renormalized when either side has no
-    data today. Only today's (UTC) check-in and answer count: `recommendations/repository.ts` loads
+    embedding cosine: bios are embedded in the Worker now (T9), answers are not yet.
+  - **Calibration** (`COMPONENT_CALIBRATION`). Each component becomes a z-score against its population
+    mean and spread over random same-pool pairs. The weighted sum is standardized by `sqrt(Σ w²)` and
+    squashed with a sigmoid to (0, 1). Without this, a component's real influence was weight × spread:
+    bio (0.3) barely varies and geo (0.15) swings 0→1, so the staff weights didn't mean what they said.
+    `pnpm --filter api db:component-stats` (read-only) prints the mean, spread and effective share
+    per component, plus the block to paste. Constants were measured on the dev DB on 2026-10-29. On
+    the uncalibrated scale the effective shares were interest 0.22, geo 0.17, pref 0.25, bio 0.24,
+    mood 0.07 and answer 0.06, against nominal weights of 0.25, 0.15, 0.15, 0.30, 0.05 and 0.10.
+  - z-scores are clipped to ±3. Calibration equalizes spread, not tails: identical daily answers sit
+    ~7σ out and would otherwise rival a perfect interest match despite a weight of 0.1.
+  - A missing component is z = 0, so missing data is exactly neutral. Mood and dailyAnswer are
+    floored at z = 0: checking in or answering never costs a score that skipping would keep, and a
+    low mood is never a penalty.
+  - `unilateral(u, v, w, null)` is the uncalibrated formula (thesis ablation): a weighted mean of
+    interest, geo, pref and bio, plus mood and answer as offsets above 0.5.
+    Only today's (UTC) check-in and answer count: `recommendations/repository.ts` loads
     them with the scoring profile for `utcToday()`; synthetic profiles use `syntheticMoodForProfile`
     and `syntheticDailyAnswer`. They are read when a batch is generated, so the daily-drop cadence
     picks up each day's data without extra rescoring.
-- **Missing data** counts as neutral: interests default to 5 and preferences to the midpoint.
+- **Missing data** counts as neutral. Interests default to 5 and preferences to the midpoint (both
+  give 0.5 after centering), and any missing component scores z = 0 under calibration.
 - **Two-way score.** `reciprocalScore` is the harmonic mean `2pq / (p + q)`, so a one-sided fit
   scores low.
 - The code is pure (no database imports) so the offline evaluation can reuse it.
@@ -581,16 +604,28 @@ Builds one batch of recommendations for a viewer.
      - be inside an optional bounding box.
   3. When learned preferences are on (λ > 0), replaces the viewer's and every candidate's `pref`
      with the blended vector (see Learned preferences).
-  4. Scores and ranks the pool with `rankCandidates`. Pending likers (`listPendingLikerIds`) go
-     first, so a one-sided like always reaches the other user and can become a match.
-  5. Writes the top k with `replaceRecommendations`. This deletes the pending rows and upserts on
-     `(user_id, candidate_id)` in one batch.
-- The pool is capped at 500. When the viewer has a bio embedding, an HNSW `bio <=> viewer`
-  shortlist of 200 runs before exact rescoring. Pending likers are ordered first in both cases, so
-  the cap never drops them.
-- Options: `k`, `maxKm`, `weights`, `crossPathsLambda`, `preferenceLambda`, `syntheticOnly`. When `k`, `weights` or
-  `crossPathsLambda` are not passed they come from the staff-editable matching config
-  (`loadMatchingConfig`, see Matching rules), which falls back to the code constants.
+  4. Scores and ranks the whole pool with `rankCandidates` (reciprocal score plus the crossed-paths
+     boost). `reserveLikerSlots` reserves up to `LIKER_SLOTS = 2` slots for the best-scoring pending
+     likers (`listPendingLikerIds`). These go first, so a one-sided like reaches the other user and
+     can become a match. Further likers compete on score, so a popular user's batch isn't only likers.
+  5. `rerankForExposure` takes the batch of `k`, penalizing over-exposed candidates (see Exposure
+     fairness reranking). The reserved likers are exempt.
+  6. Shuffles the batch with `shuffleSeeded` (seed `viewerId:shownAt`, so the order is stable
+     across reloads). The reserved likers then don't always sit on top and give away who liked
+     you. The stored `score` keeps the quality order for staff.
+  7. Writes the batch with `replaceRecommendations`. This deletes the pending rows, upserts on
+     `(user_id, candidate_id)` and logs the impressions in one batch.
+- The pool is capped at 500. When the viewer has a bio embedding, up to 200 slots go to the closest
+  bios (`bio <=> viewer`, exact sort, embedded candidates only). The rest of the 500 is a random
+  fill (`ORDER BY random()`) over the remaining eligible candidates. This way profiles without an
+  embedding are still scored, and nobody stays outside the cap across batches. HNSW isn't used
+  for this query: with these filters its post-filtering would return too few rows. Pending likers
+  are ordered first in both queries, so the cap never drops them.
+- Options: `k`, `maxKm`, `weights`, `crossPathsLambda`, `fairnessMu`, `exposureCap`, `preferenceLambda`,
+  `syntheticOnly`, `shownAt`. When `k`, `weights`, `crossPathsLambda`, `fairnessMu`, `exposureCap` or
+  `preferenceLambda` are not passed they come from the staff-editable matching config
+  (`loadMatchingConfig`, see Matching rules), which falls back to the code constants. The exposure
+  window always comes from the config. `shownAt` reuses an old batch time (user regenerate).
 
 **Where:** `src/modules/recommendations/generator.ts`, `repository.ts`,
 `src/lib/recommendation-cadence.ts`
@@ -613,8 +648,10 @@ small ranking boost.
   viewer's city-level label as the place. A pair counts again only after 6 h, so staying near each
   other is one crossing. No location history and no coordinates of the other person are stored or
   returned.
-- After the two-way score, the boost is applied:
-  `score × (1 + λ · (1 − e^(−count / K)))`, with `λ = 0.2` and `K = 3`.
+- After the two-way score, the boost is applied in standardized (logit) units:
+  `σ(logit(score) + λ · (1 − e^(−count / K)))`, with `λ = 0.5` and `K = 3`. The score is a squashed
+  z-sum, so a multiplicative boost would lift a mid-pack candidate far less than a top one; shifting
+  the logit lifts every candidate by the same number of σ (at most λ), and the score stays below 1.
 - The boost and the count count only when both users have `shareCrossPaths` on
   (`shouldShowCrossPaths`, and `listCrossings` filters both sides).
 - Setting `λ = 0` reproduces the plain ranking, which is the thesis ablation.
@@ -651,9 +688,11 @@ column with an HNSW cosine index.
   `all-MiniLM-L6-v2` vectors are both 384-d but not comparable, so the backfill re-embeds every row and
   the local script (`research/embeddings/generate_embeddings.py`) is removed.
 - **Scoring.** The recommendation repository left-joins `user_embeddings`, so `bioEmbedding` is
-  populated with no API change. `unilateral` uses the bio term only when both sides have a vector;
-  otherwise it drops the term and renormalizes the other weights (tested in `scoring.test.ts`). When
-  the viewer has a vector, the candidate pool is an HNSW `bio <=> viewer` shortlist (200).
+  populated with no API change. `unilateral` uses the bio term only when both sides have a vector.
+  Otherwise the term is neutral: z = 0 under calibration, or dropped with the other weights
+  renormalized in the uncalibrated formula (tested in `scoring.test.ts`). When
+  the viewer has a vector, 200 pool slots go to the closest bios and the rest is a random fill (see
+  Recommendation generator).
 
 Tests: `src/lib/bio-embedding.test.ts` (mocked `env.AI`: upsert, delete, AI failure, wrong dimension).
 
@@ -670,21 +709,31 @@ Real users can therefore match synthetic profiles.
 
 **How it works:**
 - **Decision rule** (`src/lib/agent-decision.ts`, pure). An agent accepts with probability
-  `σ((unilateral(agent→other) − 0.55) / 0.08)`. The random draw is seeded by
+  `σ((agentUtility(agent→other) − 0.71) / 0.02)`. Tuned on the dev DB: utility over random synthetic
+  pairs has p50 0.67 and sd 0.05, so this gives ~26% acceptance, with the top utility quartile accepting
+  ~71% and the bottom ~1%. The old 0.55 / 0.08 accepted ~80% of everything (91% vs 66%), so decisions
+  carried almost no taste signal. `agentUtility` (`lib/agent-utility.ts`) is a
+  **frozen copy** of the scoring formula as of commit `a7ad2c3`, with its own base weights
+  (`AGENT_BASE_WEIGHTS`). Changing the recommender therefore no longer changes what agents want, and
+  simulation runs stay comparable. Never tune it together with the recommender. The random draw is seeded by
   `tickId:agentId:otherId`, so a tick is reproducible.
 - **Hidden preference profile** (`hiddenProfile` in `agent-decision.ts`). The agent scores with
-  `unilateral(hidden.profile → other, hidden.weights)`, not with its stored profile. The hidden
+  `agentUtility(hidden.profile → other, hidden.weights)`, not with its stored profile. The hidden
   profile blends the stored interests, `pref*` vector and component weights with a random draw
   seeded by the agent id: `(1 − hiddenNoise)·stored + hiddenNoise·random`, with `AGENT.hiddenNoise = 0.5`.
   It is stable across ticks and never stored, so the recommender cannot see it. Without it, agents
   would accept exactly what the recommender already ranks highly, and the evaluation would be
   circular. `hiddenNoise = 0` gives the old behaviour.
 - **`runTick`** (`modules/simulation/engine.ts`):
-  1. **Replies.** Agents answer `dec_b IS NULL` likes, but only likes that came from an acted-on
-     recommendation, so historical dataset rows are left alone.
-  2. **Acting.** About 50 random agents get a batch with `syntheticOnly: true` and decide on it.
-     Agents only see other agents. Otherwise an agent liking a real user first would remove itself
-     from that user's pool for good.
+  1. **Replies.** Agents answer `dec_b IS NULL` likes (up to `AGENT.inboundLimit = 200` per tick,
+     oldest first), but only likes that came from an acted-on recommendation, so historical dataset
+     rows are left alone. This is the only way an agent likes a real user: the real user likes first,
+     the agent replies.
+  2. **Acting.** About 50 random agents (`AGENT.defaultTickLimit`) get a batch with
+     `syntheticOnly: true` and decide on it. Agents only see other agents. Otherwise an agent that
+     passed on a real user first would remove itself from that user's pool for good (`noInteractionWith`
+     drops any pair where the candidate passed). An agent's like first would be harmless: a pending like
+     stays in the pool and is sorted first.
   3. **Real users.** `ensureBatch` runs for every real user.
 - **Shared code.** `recordDecision` is the same write the mobile decision endpoint uses.
 - **Limits.** A tick is a bounded sample of about 20 Neon requests per agent, which keeps it
@@ -763,13 +812,13 @@ Staff can:
 - Recommendation scores: `GET /staff/users/{profileId}/recommendations` lists every
   `recommendations` row for the user (pending and acted on, newest batch first) with the stored
   `score` and `rank`. For each candidate it reruns `scoreBreakdown` and `reciprocalScore` from
-  `scoring.ts` with the current matching-config weights and applies `applyCrossPathsBoost` (config λ) with the crossing count
+  `scoring.ts` with the current matching-config weights and learned preferences, and applies `applyCrossPathsBoost` (config λ) with the crossing count
   from `listCrossings`. The row shows bio, interest, geo, pref u→v, pref v→u, mood, answer, p u→v, q v→u,
   reciprocal, crossings and the final score. These components use current profile data, so they can
   differ from the stored score if either profile changed after the batch was generated. Only ids,
   names and scores are returned; no coordinates.
 - A "Regenerate" button (with a confirm) calls `POST /staff/users/{profileId}/recommendations/regenerate`,
-  which runs `generateRecommendations` with `CADENCE.batchSize`, the same batch the feed builds. It
+  which runs `generateRecommendations` with the matching-config batch size, the same batch the feed builds. It
   replaces pending rows and keeps acted-on ones. The new rows get a fresh `shown_at`, so the user's
   feed cooldown restarts. The response is the updated list.
 
@@ -790,17 +839,21 @@ not group fairness (no gender/age parity).
 - **Rerank.** `generateRecommendations` ranks the whole pool with `rankCandidates` (reciprocal +
   cross-paths boost, likers first), loads `listExposureCounts(pool, now − window)`, then
   `rerankForExposure` (`lib/fairness.ts`, pure, tested) takes the batch:
-  - soft penalty: rank by `score · (1 − μ · e / (e + e₀))`, `e` = impressions in the window,
-    `e₀` = the cap, or 5 with no cap. Saturating, so a penalty never exceeds μ.
+  - soft penalty: rank by `σ(logit(score) − μ · e / (e + e₀))`, `e` = impressions in the window,
+    `e₀` = the cap, or 5 with no cap. Saturating, so a penalty never exceeds μ σ. Applied in logit
+    units so it costs a top candidate the same relevance as an average one; a multiplicative
+    penalty on the squashed score cost the top about 5× more.
   - hard cap: candidates with `e ≥ cap` only fill slots the uncapped ones leave empty, so a small
     pool never yields an empty feed.
-  - pending likers stay first and are exempt, so a one-sided like can still become a match.
+  - the reserved pending likers (`reserveLikerSlots`, at most 2) stay first and are exempt, so a
+    one-sided like can still become a match. Other likers are penalized like anyone else.
   - the stored `recommendations.score` stays the unpenalized relevance.
 - **Ablation.** μ = 0 with no cap reproduces the previous ranking exactly (tested). Also overridable
   per call via `fairnessMu` / `exposureCap` options.
 - **Metric.** `gini(values)` in `lib/fairness.ts` gives the exposure Gini for W3.2.
 - Config: `matching_config.fairness_mu`, `exposure_cap`, `exposure_window_days` (code defaults in
-  `FAIRNESS`: μ 0.3, no cap, 7 days; a row saved before `0025` gets μ 0).
+  `FAIRNESS`: μ 1 (σ), no cap, 7 days; a row saved before `0025` gets μ 0). μ and λ were
+  multiplicative before; rows saved earlier keep their old numbers, which now mean that many σ.
 
 **Where:** `apps/api/src/lib/fairness.ts`, `modules/recommendations/{generator,repository}.ts`;
 backoffice "Exposure fairness" card on `MatchingRulesPage`.
@@ -814,17 +867,25 @@ use instead of relying only on the stated 100-point split. Off for saved configs
 λ > 0 (code default 0.5).
 
 **How it works:**
-- `learnedPreference(decisions)` (`lib/preference-learning.ts`, pure, tested): Rocchio-style
-  `mean(self of liked) − 0.5 · mean(self of passed)`, null self-ratings as 5, each dimension
-  clamped positive, rescaled to sum 100 like `pref`. Null until the user has liked someone.
-- `blendPreference(stated, decisions, λ)`: `(1 − s) · stated + s · learned`,
-  `s = λ · n / (n + 10)`, n = number of decisions. New users (n = 0) keep stated preferences.
+- `learnedPreference(decisions)` (`lib/preference-learning.ts`, pure, tested) is a contrast:
+  `mean(z liked) − mean(z all decided)`, then z-scored. Null without a like or without any contrast.
+  - Each decided profile's self-ratings are z-scored first (nulls as 5). This cancels "everyone
+    rates themselves high on sincerity", and inflated self-ratings don't count.
+  - Subtracting the whole decided set (what the recommender showed) cancels its own selection
+    bias. If every decision was a like, nothing is learned.
+- `learnPreference(decisions, λ)` returns the direction and its share
+  `s = λ · n / (n + 10) · ‖c‖ / (‖c‖ + 0.5)`, with n = number of decisions and ‖c‖ = contrast
+  strength. Few decisions or a weak contrast barely count. New users (n = 0) keep stated preferences.
 - `listPreferenceDecisions(db, ids)` reads decisions from `interactions` in both orientations
   (`dec_a` by `user_a`, `dec_b` by `user_b`) joined to the other profile's `self*`. One call per
   batch for the viewer and the whole pool; nothing is stored.
 - Both sides learn: the reciprocal score uses the candidate's preference toward the viewer too.
-- `scoring.ts` is unchanged: the blended vector goes into `pref`, so `preferenceMatch` applies.
-- Explanations (`scoreBreakdown`, match reasons) still use stated preferences.
+- The blend happens in **score space**: `directedPreferenceMatch` (`scoring.ts`) is
+  `(1 − s) · preferenceMatch(stated, self) + s · preferenceMatch(learned, self)`. Blending the
+  vectors instead let any nonzero learned direction take over a flat stated split, because
+  correlation ignores scale. That made 2 decisions as strong as 100.
+- Explanations (match reasons, the staff score breakdown) use the same blended preferences via
+  `withLearnedPreferences` (`generator.ts`).
 - **Ablation.** λ = 0 returns `pref` untouched (tested) and skips the query. Overridable per call
   via the `preferenceLambda` option.
 - Config: `matching_config.preference_lambda` (migration `0026`, default 0).
@@ -849,17 +910,19 @@ The page shows each default, has "Reset to defaults", and says when the rules we
 **How it works:**
 - One-row table `matching_config` (`id = 1`, migration `0020`; `weight_mood` and
   `weight_daily_answer` added in `0024` with default 0, so a row saved earlier keeps summing to 1). No row means code defaults:
-  `CADENCE`, `DEFAULT_WEIGHTS` and `CROSS_PATHS.lambda` from `scoring.ts`, with the cooldown still
+  `CADENCE`, `DEFAULT_WEIGHTS` and `CROSS_PATHS.lambda` from `scoring.ts`, `FAIRNESS` from
+  `fairness.ts` and `PREFERENCE_LEARNING.lambda` from `preference-learning.ts`, with the cooldown still
   overridable by `REC_COOLDOWN_HOURS`. A saved row wins over the env var.
 - `lib/matching-config.ts` (pure, tested): `resolveMatchingConfig`, `toMatchingConfigRow`,
   `weightsSumToOne`. `recommendations/repository.ts` has `loadMatchingConfig` and
   `saveMatchingConfig` (upsert, stores the staff auth id in `updated_by`).
-- Readers: `generateRecommendations` (batch size, weights, λ), the feed cooldown in
+- Readers: `generateRecommendations` (batch size, weights, crossed-paths λ, fairness, learned-preference
+  λ), the feed cooldown in
   `recommendations/service.ts`, the simulation tick (cron and staff), and the staff recommendation
   breakdown.
 - `GET /staff/matching-config` returns the config, the defaults and the last update.
-  `PUT` validates with zod (batch size 1–50, cooldown 0–720 h, weights 0–1 summing to 1, λ 0–1,
-  μ 0–1, cap integer ≥ 1 or null, window 1–30 days, learned-preference λ 0–1). Fairness columns
+  `PUT` validates with zod (batch size 1–50, cooldown 0–720 h, weights 0–1 summing to 1, λ 0–3 σ,
+  μ 0–3 σ, cap integer 1–1000 or null, window 1–30 days, learned-preference λ 0–1). Fairness columns
   added in `0025`, `preference_lambda` in `0026`.
 - Changes apply to the next batch. Stored recommendation scores are not rewritten.
 
@@ -951,6 +1014,8 @@ window. A "Run tick" button runs the simulation and shows the tick's stats.
   - `pnpm db:seed` loads the synthetic dataset from CSV: 2000 users and their historical
     interactions, inserted in batches of 500.
   - `db:seed-demo` creates the demo account.
+  - `db:seed-matches -- <email> [count=5]` gives one account ready-made matches with synthetic
+    profiles from its pool, each with an unread opener.
 - **Schema changes.** Edit `src/db/schema.ts`, then run `pnpm db:generate` and `pnpm db:migrate`.
   Never hand-edit an applied migration.
 - **Data residency.** The Neon database is in `aws-eu-central-1`. Two exceptions send data to

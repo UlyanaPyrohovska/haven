@@ -1,7 +1,7 @@
 import type { Db } from "@/db";
 import { AGENT, agentAccepts, hiddenProfile } from "@/lib/agent-decision";
+import { agentUtility } from "@/lib/agent-utility";
 import type { PushNotice } from "@/lib/push";
-import { unilateral } from "@/lib/scoring";
 import { generateRecommendations } from "@/modules/recommendations/generator";
 import * as recommendationsRepository from "@/modules/recommendations/repository";
 import { ensureBatch, recordDecision } from "@/modules/recommendations/service";
@@ -52,7 +52,10 @@ export async function runTick(db: Db, opts: TickOptions): Promise<TickStats> {
 
 	const decide = async (agent: Agent, other: Agent, notifyOnMatch = false) => {
 		const hidden = hiddenProfile(agent);
-		const accept = agentAccepts(unilateral(hidden.profile, other, hidden.weights), `${tickId}:${agent.id}:${other.id}`);
+		const accept = agentAccepts(
+			agentUtility(hidden.profile, other, hidden.weights),
+			`${tickId}:${agent.id}:${other.id}`,
+		);
 		const { matched } = await recordDecision(db, agent, other.id, accept ? 1 : 0);
 
 		stats.decisions++;

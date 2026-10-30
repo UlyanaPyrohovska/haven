@@ -1,6 +1,11 @@
-/** Exposure fairness defaults; `mu = 0` and `cap = null` reproduce the unfair baseline (thesis ablation). */
+import { logit, sigmoid } from "@/lib/scoring";
+
+/**
+ * Exposure fairness defaults; `mu = 0` and `cap = null` reproduce the unfair baseline (thesis ablation).
+ * `mu` is in σ of standardized score: the most a heavily shown candidate can lose.
+ */
 export const FAIRNESS = {
-	mu: 0.3,
+	mu: 1,
 	cap: null as number | null,
 	windowDays: 7,
 	/** Half-saturation of the penalty when no cap is set: 5 impressions → half of `mu`. */
@@ -11,9 +16,14 @@ export type FairnessOptions = { mu: number; cap: number | null };
 
 type Ranked = { candidateId: number; score: number };
 
-/** Saturating penalty: `score * (1 - mu * e / (e + e0))`, so it lies in `[score * (1 - mu), score]`. */
+/**
+ * Saturating penalty in standardized units: `sigmoid(logit(score) − mu · e / (e + e0))`, so it costs at most `mu` σ,
+ * the same for a top candidate as for an average one.
+ */
 export function exposurePenalty(score: number, exposures: number, mu: number, e0: number = FAIRNESS.e0): number {
-	return exposures > 0 ? score * (1 - (mu * exposures) / (exposures + e0)) : score;
+	const penalty = exposures > 0 ? (mu * exposures) / (exposures + e0) : 0;
+
+	return penalty > 0 ? sigmoid(logit(score) - penalty) : score;
 }
 
 /**

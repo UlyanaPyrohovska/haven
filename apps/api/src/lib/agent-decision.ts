@@ -1,4 +1,5 @@
-import { DEFAULT_WEIGHTS, type ScoringProfile, type ScoringWeights } from "@/lib/scoring";
+import { AGENT_BASE_WEIGHTS } from "@/lib/agent-utility";
+import type { ScoringProfile, ScoringWeights } from "@/lib/scoring";
 
 /**
  * Decision rule for synthetic agents in the simulation engine. Pure and seeded, so a tick is
@@ -10,10 +11,17 @@ export const AGENT = {
 	 * recommender sees, 1 = stored profile ignored). Thesis ablation knob.
 	 */
 	hiddenNoise: 0.5,
-	/** Directional score at which an agent accepts half the time. Thesis ablation knob. */
-	threshold: 0.55,
-	/** Softness of the sigmoid; smaller is pickier around the threshold. */
-	temperature: 0.08,
+	/**
+	 * Directional score at which an agent accepts half the time. Thesis ablation knob. Tuned on the dev DB
+	 * (2026-10-29): `agentUtility` over random synthetic pairs has p50 0.67, sd 0.05; 0.71 gives ~26% acceptance.
+	 */
+	threshold: 0.71,
+	/**
+	 * Softness of the sigmoid; smaller is pickier around the threshold. Must be small next to the utility's
+	 * spread (sd 0.05) or decisions are mostly noise: at 0.02 the top utility quartile accepts ~71% and the
+	 * bottom ~1% (at the old 0.55 / 0.08: 91% vs 66%).
+	 */
+	temperature: 0.02,
 	/** Agents sampled per tick (keeps a cron run inside the Worker subrequest budget). */
 	defaultTickLimit: 50,
 	/** Inbound likes answered per tick. */
@@ -61,9 +69,9 @@ export function hiddenProfile(
 
 	const interests = agent.interests.map((value, i) => blend(value ?? 5, 1 + 9 * draw(`interest:${i}`)));
 	const pref = agent.pref.map((value, i) => blend(value ?? 100 / 6, PREF_RANDOM_MAX * draw(`pref:${i}`)));
-	// unilateral renormalizes by the weights in play, so these need not sum to 1.
+	// agentUtility renormalizes by the weights in play, so these need not sum to 1.
 	const weights = Object.fromEntries(
-		Object.entries(DEFAULT_WEIGHTS).map(([key, weight]) => [key, blend(weight, 2 * weight * draw(`weight:${key}`))]),
+		Object.entries(AGENT_BASE_WEIGHTS).map(([key, weight]) => [key, blend(weight, 2 * weight * draw(`weight:${key}`))]),
 	) as ScoringWeights;
 
 	return { profile: { ...agent, interests, pref }, weights };

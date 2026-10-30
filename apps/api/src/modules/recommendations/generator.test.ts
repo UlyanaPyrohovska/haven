@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rerankForExposure } from "@/lib/fairness";
 import { reciprocalScore, type ScoringProfile } from "@/lib/scoring";
-import { rankCandidates } from "./generator";
+import { LIKER_SLOTS, rankCandidates, reserveLikerSlots, shuffleSeeded } from "./generator";
 
 function makeProfile(id: number, overrides: Partial<ScoringProfile> = {}): ScoringProfile {
 	return {
@@ -76,5 +76,37 @@ describe("rankCandidates + rerankForExposure", () => {
 
 	it("reproduces the unfair ranking at mu 0 with no cap", () => {
 		expect(rerankForExposure(full, new Map([[2, 50]]), 2, { mu: 0, cap: null })).toEqual(full);
+	});
+});
+
+describe("reserveLikerSlots", () => {
+	it("reserves the best-scoring likers; extra likers compete on score", () => {
+		const far = { latitude: 40.0, longitude: -3.7 };
+		const pool = [makeProfile(2), makeProfile(3, far), makeProfile(4, far), makeProfile(5, far)];
+		const likers = new Set([3, 4, 5]);
+		const scored = rankCandidates(viewer, pool, new Map(), Number.POSITIVE_INFINITY, undefined, undefined, likers);
+		const reserved = reserveLikerSlots(scored, likers);
+		const batch = rerankForExposure(scored, new Map(), LIKER_SLOTS + 1, { mu: 0, cap: null }, reserved);
+
+		expect(reserved.size).toBe(LIKER_SLOTS);
+		expect(batch.slice(0, LIKER_SLOTS).every((row) => reserved.has(row.candidateId))).toBe(true);
+		expect(batch[LIKER_SLOTS].candidateId).toBe(2);
+	});
+});
+
+describe("shuffleSeeded", () => {
+	const items = [1, 2, 3, 4, 5, 6, 7, 8];
+
+	it("is a permutation and stable for the same seed", () => {
+		const a = shuffleSeeded(items, "7:2026-10-29T08:00:00.000Z");
+
+		expect([...a].sort((x, y) => x - y)).toEqual(items);
+		expect(shuffleSeeded(items, "7:2026-10-29T08:00:00.000Z")).toEqual(a);
+	});
+
+	it("changes with the seed", () => {
+		const orders = new Set(["a", "b", "c", "d"].map((seed) => shuffleSeeded(items, seed).join(",")));
+
+		expect(orders.size).toBeGreaterThan(1);
 	});
 });
