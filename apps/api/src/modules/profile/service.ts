@@ -1,11 +1,11 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
-import { syncBioEmbedding } from "@/lib/bio-embedding";
-import { displayNameFromAuthName } from "@/lib/candidate-display";
-import { cleanCustomInterestLabel, customInterestError, dedupeCustomInterests } from "@/lib/custom-interests";
-import { errors, type ServiceError } from "@/lib/errors";
-import { isProfileComplete, type ProfileRow } from "@/lib/profile-view";
-import { getSessionUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/auth/session";
+import { errors, type ServiceError } from "@/lib/http/service-errors";
+import { syncBioEmbedding } from "@/lib/matching/bio-embedding";
+import { displayNameFromAuthName } from "@/lib/profile/candidate-display";
+import { cleanCustomInterestLabel, customInterestError, dedupeCustomInterests } from "@/lib/profile/custom-interests";
+import { isProfileComplete, type ProfileRow } from "@/lib/profile/profile-view";
 import * as recommendationService from "@/modules/recommendations/service";
 import * as repository from "./repository";
 import type { ProfileUpdate } from "./schemas";

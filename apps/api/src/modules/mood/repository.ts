@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Db } from "@/db";
 import { moodCheckins } from "@/db/schema";
-import type { MoodValue } from "@/lib/mood";
+import type { MoodValue } from "@/lib/daily/mood";
 
 export async function findCheckinForDate(db: Db, profileId: number, checkinDate: string) {
 	const [row] = await db

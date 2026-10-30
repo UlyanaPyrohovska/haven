@@ -32,7 +32,7 @@ Neon Postgres (aws-eu-central-1, pgvector) via drizzle-orm/neon-http
   separate static-assets Worker (`apps/backoffice/wrangler.jsonc`, SPA fallback) on
   `admin.pirogotter.dev`, built with `VITE_API_URL` pointing at the API. Both hosts share the site
   `pirogotter.dev`, so the `SameSite=Lax` session cookie travels on credentialed requests; the API allows
-  that one origin through Hono `cors` and Better Auth `trustedOrigins` (`BACKOFFICE_ORIGIN` in `lib/auth.ts`).
+  that one origin through Hono `cors` and Better Auth `trustedOrigins` (`BACKOFFICE_ORIGIN` in `lib/auth/auth.ts`).
 - **API layering.** Each module has four files:
   - `routes.ts`: OpenAPI route definitions.
   - `schemas.ts`: zod request and response shapes, which are validated at the edge.
@@ -53,7 +53,7 @@ Neon Postgres (aws-eu-central-1, pgvector) via drizzle-orm/neon-http
   text lives in `locales/en.json`.
 - **Realtime.** Chat sockets go to the `ChatRoom` Durable Object (`CHAT` binding), always created
   with `jurisdiction("eu")`. It holds no data: Neon stays the only store.
-- **Push.** The Worker sends straight to FCM/APNs (`src/lib/push.ts`), with generic copy only.
+- **Push.** The Worker sends straight to FCM/APNs (`src/lib/messaging/push.ts`), with generic copy only.
 - **Synthetic vs real.** The `is_synthetic` flag marks the 2000 dataset profiles. They get a
   deterministic mood, daily answer, name and avatar so that every card looks complete.
 
@@ -76,7 +76,7 @@ Users sign up and log in with email and password.
 
 **Where:**
 - Screens: `app/(auth)/login.tsx`, `app/(auth)/register.tsx`
-- Code: `lib/auth/`; API `src/lib/auth.ts`, `src/lib/session.ts`
+- Code: `lib/auth/`; API `src/lib/auth/auth.ts`, `src/lib/auth/session.ts`
 
 ### Email verification and password reset — partial
 New users must confirm their email before they can sign in. Opening the link on the phone signs
@@ -89,7 +89,7 @@ them in. Users who forget their password can reset it by email.
 - Emails go through the Cloudflare Email Sending Worker binding `EMAIL` (`send_email` in
   `wrangler.jsonc`), from the `EMAIL_FROM` var (`no-reply@pirogotter.dev`). No API key is involved.
   A failed send logs the binding's `E_*` code, never the link.
-- Templates live in code (`src/lib/email-templates.ts`), not in the DB. They are pure functions
+- Templates live in code (`src/lib/messaging/email-templates.ts`), not in the DB. They are pure functions
   that return `{ subject, html, text }`, and they HTML-escape the user's name. Keeping them in code
   makes them versioned and typed, and sending needs no DB read.
 - **Verify link:** email clients need https links, so the email points to `GET /links/verify-email`
@@ -114,7 +114,7 @@ does nothing. Not yet tested end to end on a device.
 - Screens: `app/(auth)/login.tsx` (forgot-password link, create-account button),
   `register.tsx`, `verify-email.tsx`, `forgot-password.tsx`, `reset-password.tsx`
 - Code: `lib/auth/client.ts` (`RESET_PASSWORD_REDIRECT_URL`), `lib/auth/errors.ts`; API
-  `src/lib/auth.ts`, `src/lib/email-templates.ts`, `src/modules/links/index.ts`,
+  `src/lib/auth/auth.ts`, `src/lib/messaging/email-templates.ts`, `src/modules/links/index.ts`,
   `drizzle/0016_verify_existing_users.sql`
 
 ### Onboarding — live
@@ -140,7 +140,7 @@ A step-by-step profile setup:
 - On the server, `profile/service.ts > patchProfile` does three things:
   1. Takes the display name from the first word of the Better Auth name.
   2. Cleans up and de-duplicates custom interests, and checks them against a blocked-words list
-     (`src/lib/custom-interests.ts`).
+     (`src/lib/profile/custom-interests.ts`).
   3. Calls `maybeGenerateOnProfileComplete` when the profile has just become complete, so the
      first recommendation batch is ready right away.
 
@@ -168,7 +168,7 @@ Users can view and edit their profile, including a preview of how others see it.
     nothing if `shareLocation` is off.
 - **Photo:** resized on the device to at most 512 px (`expo-image-manipulator`) and stored on the
   Better Auth `user.image`. When there is no photo, the API serves a deterministic portrait from a
-  hash of the profile id (`src/lib/avatar-url.ts`), drawn from a gender-matched pool (gender 1 →
+  hash of the profile id (`src/lib/profile/avatar-url.ts`), drawn from a gender-matched pool (gender 1 →
   male pool, otherwise female pool) of hand-checked Unsplash slugs. If an image fails to load, the
   mobile app shows a placeholder: initials in `UserAvatar`, a person icon on the candidate card.
 - **Theme:** a device-only preference (`lib/theme/preference.tsx`).
@@ -310,7 +310,7 @@ match is not announced a second time.
   pair is matched. `describeMatch` reloads both scoring profiles, applies learned preferences
   (`withLearnedPreferences`, config λ) and calls `scoreBreakdown` with the matching-config weights
   (`scoring.ts`, pure), so the explanation uses the same inputs as the ranking. That function splits `reciprocalScore` into interest, geo, bio, mood, daily
-  answer and the two directed preference terms. `matchReasons` (`src/lib/match-reasons.ts`) turns the components into
+  answer and the two directed preference terms. `matchReasons` (`src/lib/matching/match-reasons.ts`) turns the components into
   slugs with fixed thresholds:
   - `sharedInterests`: at least one shared active interest, or interest ≥ 0.75,
   - `theirType`: they fit your preferences (pref u→v ≥ 0.8),
@@ -368,7 +368,7 @@ one opener and then shows a "demo profile, can't reply" notice.
 - **Reading.** `GET /matches/{candidateId}/messages?before=<id>` returns 50 messages per page,
   newest first. `POST /matches/{candidateId}/read` sets `read_at` on the other side's messages.
 - **Synthetic opener.** The first time a synthetic match is listed or opened with no messages, it
-  inserts `syntheticOpener(sharedInterests, interactionId)` (`src/lib/chat.ts`, deterministic).
+  inserts `syntheticOpener(sharedInterests, interactionId)` (`src/lib/messaging/chat.ts`, deterministic).
   This is a check-then-insert, so two concurrent first opens could double-post (marked as a
   shortcut).
 - **Mobile.** `useChatSocket` (`lib/chat/use-chat-socket.ts`) opens the RN WebSocket with the
@@ -380,7 +380,7 @@ one opener and then shows a "demo profile, can't reply" notice.
 **Where:**
 - Screens: `app/matches/[candidateId].tsx`
 - Code: `components/chat/`, `lib/api/chat.ts`, `lib/chat/`
-- API: `modules/chat/`, `src/chat-room.ts`, `src/lib/chat.ts`
+- API: `modules/chat/`, `src/chat-room.ts`, `src/lib/messaging/chat.ts`
 
 **Missing:** attachments, edit/delete, read receipts shown
 to the sender, unmatch without blocking.
@@ -408,14 +408,14 @@ on your card for other users.
 
 **Where:**
 - Screens: `app/daily-question.tsx`, `app/daily-answers.tsx`, `components/home/daily-question-card.tsx`
-- API: `GET/PUT /daily-question/today`, `GET /matches/answers/today`; code `src/lib/daily-questions.ts`
+- API: `GET/PUT /daily-question/today`, `GET /matches/answers/today`; code `src/lib/daily/daily-questions.ts`
 
 ### Mood check-in — live
 One mood per day, shown as context on candidate cards.
 
 **How it works:**
 - Moods are stored as smallint codes in `mood_checkins`, one per user per day (unique index), and
-  upserted. `src/lib/mood.ts` maps codes to slugs.
+  upserted. `src/lib/daily/mood.ts` maps codes to slugs.
 - A real candidate shows only today's check-in, or nothing if there isn't one. A synthetic
   candidate gets a deterministic mood.
 - Today's check-in also feeds the `mood` term of compatibility scoring (see Compatibility scoring).
@@ -450,7 +450,7 @@ reminder for the daily question and mood check-in.
 
 **How it works:**
 - **Delivery.** The Worker calls Google FCM (Android) and Apple APNs (iOS) directly; no relay such as
-  Expo Push sits in between. `src/lib/push.ts` signs the provider tokens with WebCrypto (RS256
+  Expo Push sits in between. `src/lib/messaging/push.ts` signs the provider tokens with WebCrypto (RS256
   service-account JWT exchanged for a Google OAuth token; ES256 APNs provider JWT) and caches them
   per isolate. With the secrets unset, `sendPush` returns `skipped`, so local dev runs without push.
 - **Privacy.** Copy is generic ("One of your matches wrote to you"): no names, message text or
@@ -478,7 +478,7 @@ reminder for the daily question and mood check-in.
   stays away gets one nudge, not a daily stream.
 
 **Where:**
-- API: `src/lib/push.ts`, `modules/notifications/`, hooks in `modules/chat/service.ts`,
+- API: `src/lib/messaging/push.ts`, `modules/notifications/`, hooks in `modules/chat/service.ts`,
   `modules/recommendations/service.ts`, `modules/simulation/engine.ts`
 - Mobile: `lib/notifications/index.ts`, `lib/api/notifications.ts`, `app.json` (`expo-notifications`
   plugin, `googleServicesFile`)
@@ -507,7 +507,7 @@ age range. These are hard filters, unlike the 6 preference sliders, which only r
   must fit the viewer's filters and the viewer must fit the candidate's. Age is checked against
   `birth_date` through a date window from `birthDateWindow`, computed in TS so the SQL is
   deterministic.
-- `src/lib/partner-filters.ts > mutualFilterMatch` is the pure version of the same rule, covered
+- `src/lib/matching/partner-filters.ts > mutualFilterMatch` is the pure version of the same rule, covered
   by `partner-filters.test.ts`.
 - Missing data passes: a candidate with no gender or birth date is not hidden. This follows the
   same "missing is neutral" rule as scoring.
@@ -534,7 +534,7 @@ age range. These are hard filters, unlike the 6 preference sliders, which only r
   `components/ui/range-slider.tsx`
 - App code: `lib/api/profile.ts > buildPartnerFiltersPayload`,
   `lib/profile/draft-from-record.ts > readInterestedIn, readAgeRange`
-- API: `src/lib/partner-filters.ts`, `recommendations/repository.ts > partnerFilterConditions,
+- API: `src/lib/matching/partner-filters.ts`, `recommendations/repository.ts > partnerFilterConditions,
   dismissPendingFilterMisfits`, `profile/service.ts > patchProfile`,
   `profile/schemas.ts` (validation, min ≤ max)
 
@@ -586,7 +586,7 @@ Scores how well two profiles fit each other.
   scores low.
 - The code is pure (no database imports) so the offline evaluation can reuse it.
 
-**Where:** `src/lib/scoring.ts` (+ tests)
+**Where:** `src/lib/matching/scoring.ts` (+ tests)
 
 ### Recommendation generator — live
 Builds one batch of recommendations for a viewer.
@@ -628,7 +628,7 @@ Builds one batch of recommendations for a viewer.
   window always comes from the config. `shownAt` reuses an old batch time (user regenerate).
 
 **Where:** `src/modules/recommendations/generator.ts`, `repository.ts`,
-`src/lib/recommendation-cadence.ts`
+`src/lib/matching/recommendation-cadence.ts`
 
 ### "You've crossed paths" — partial
 Counts how often two people were near each other, shows it on the connection screen and gives a
@@ -643,11 +643,17 @@ small ranking boost.
 - `patchProfile` stamps `user_profiles.location_updated_at` on new coordinates (cleared with them)
   and calls `recordCrossingsOnLocationUpdate`. `recordCrossings` finds people in the same
   `looking_for` pool with `share_cross_paths` on, location not hidden, a location update in the last
-  30 min, and within 1 km (`src/lib/crossings.ts`: bounding-box prefilter, then haversine).
-- The `crossings` table stores each pair once (`user_a < user_b`): count, last time and the
-  viewer's city-level label as the place. A pair counts again only after 6 h, so staying near each
-  other is one crossing. No location history and no coordinates of the other person are stored or
-  returned.
+  30 min, and within 1 km (`src/lib/location/crossings.ts`: bounding-box prefilter, then haversine).
+- The `crossings` table stores each pair once (`user_a < user_b`): count, last time and a place
+  label. A pair counts again only after 6 h, so staying near each other is one crossing. No location
+  history and no coordinates of the other person are stored or returned.
+- The place is the pair's midpoint, reverse-geocoded by Photon (`photon.komoot.io`, hosted in
+  Germany, so the data stays in the EU; only a coordinate is sent, no user id). `placeLabel` in
+  `src/lib/location/place-label.ts` keeps only public places: a square or park name, a non-residential street,
+  or the square or street a landmark stands on. Residential streets, buildings and businesses become
+  the neighbourhood (`locality`, then `district`, then `city`), so a label can't point at a home,
+  workplace or clinic. A failed lookup or one slower than 1.5 s falls back to the viewer's city label,
+  so a location update is never blocked. This applies only to users who turned cross paths on.
 - After the two-way score, the boost is applied in standardized (logit) units:
   `σ(logit(score) + λ · (1 − e^(−count / K)))`, with `λ = 0.5` and `K = 3`. The score is a squashed
   z-sum, so a multiplicative boost would lift a mid-pack candidate far less than a top one; shifting
@@ -657,7 +663,7 @@ small ranking boost.
 - Setting `λ = 0` reproduces the plain ranking, which is the thesis ablation.
 - Migration `0022` drops the previously seeded (simulated) rows.
 
-**Where:** `src/lib/crossings.ts`, `recordCrossings` / `listCrossings` in
+**Where:** `src/lib/location/crossings.ts`, `src/lib/location/place-label.ts`, `recordCrossings` / `listCrossings` in
 `src/modules/recommendations/repository.ts`, `applyCrossPathsBoost` in `scoring.ts`,
 `apps/mobile/hooks/use-crossings-location.ts`, `components/connections/cross-paths-card.tsx`
 
@@ -673,7 +679,7 @@ Bios are embedded so that similar bios raise the compatibility score (the `bio` 
 column with an HNSW cosine index.
 - **On write.** `patchProfile` (`modules/profile/service.ts`) covers both profile create and edit;
   staff bio edits in the backoffice (`updateUser` in `modules/staff/service.ts`) do the same. When
-  the request changes `bio`, it schedules `syncBioEmbedding` (`src/lib/bio-embedding.ts`) in
+  the request changes `bio`, it schedules `syncBioEmbedding` (`src/lib/matching/bio-embedding.ts`) in
   `executionCtx.waitUntil`, so the response does not wait. A non-blank bio is embedded and upserted
   (`upsertBioEmbeddings`); a cleared bio deletes the row (`deleteBioEmbedding`). Failures are logged and
   never fail the save: the scorer already treats a missing vector as neutral.
@@ -694,7 +700,7 @@ column with an HNSW cosine index.
   the viewer has a vector, 200 pool slots go to the closest bios and the rest is a random fill (see
   Recommendation generator).
 
-Tests: `src/lib/bio-embedding.test.ts` (mocked `env.AI`: upsert, delete, AI failure, wrong dimension).
+Tests: `src/lib/matching/bio-embedding.test.ts` (mocked `env.AI`: upsert, delete, AI failure, wrong dimension).
 
 **Missing:** the backfill has not been run on dev or prod yet, so existing rows still hold MiniLM
 vectors until it runs. Daily-question answers still use the lexical stand-in (T7), not embeddings.
@@ -708,11 +714,11 @@ The 2000 synthetic profiles act as agents. On each tick they:
 Real users can therefore match synthetic profiles.
 
 **How it works:**
-- **Decision rule** (`src/lib/agent-decision.ts`, pure). An agent accepts with probability
+- **Decision rule** (`src/lib/simulation/agent-decision.ts`, pure). An agent accepts with probability
   `σ((agentUtility(agent→other) − 0.71) / 0.02)`. Tuned on the dev DB: utility over random synthetic
   pairs has p50 0.67 and sd 0.05, so this gives ~26% acceptance, with the top utility quartile accepting
   ~71% and the bottom ~1%. The old 0.55 / 0.08 accepted ~80% of everything (91% vs 66%), so decisions
-  carried almost no taste signal. `agentUtility` (`lib/agent-utility.ts`) is a
+  carried almost no taste signal. `agentUtility` (`lib/simulation/agent-utility.ts`) is a
   **frozen copy** of the scoring formula as of commit `a7ad2c3`, with its own base weights
   (`AGENT_BASE_WEIGHTS`). Changing the recommender therefore no longer changes what agents want, and
   simulation runs stay comparable. Never tune it together with the recommender. The random draw is seeded by
@@ -783,8 +789,8 @@ The landing page after sign-in (`/` and unknown routes redirect here). Shows:
 - `GET /staff/stats` (`modules/staff`, `requireStaffAdmin`) returns aggregates only, never per-user
   rows. The repository runs the counts in parallel (`profileTotals`, `activityTotals`,
   `realSignupsByDay`, `matchesByDay`, `moodCounts`), grouping by `to_char(created_at, 'YYYY-MM-DD')`.
-- `lib/daily-series.ts` (`fillDailySeries`, tested) fills days with no rows as 0 so the charts have
-  one bar per day. "Today" is `utcToday()` from `lib/mood.ts`.
+- `lib/daily/daily-series.ts` (`fillDailySeries`, tested) fills days with no rows as 0 so the charts have
+  one bar per day. "Today" is `utcToday()` from `lib/daily/mood.ts`.
 - Sign-ups count only real profiles, because synthetic agents are created in bulk by the seed.
   Matches count all pools and both real and synthetic participants.
 - Charts are plain divs styled with the theme tokens (no chart library). Friends/dating use the same
@@ -838,7 +844,7 @@ not group fairness (no gender/age parity).
   Migration `0025`; index on `(candidate_id, shown_at)`.
 - **Rerank.** `generateRecommendations` ranks the whole pool with `rankCandidates` (reciprocal +
   cross-paths boost, likers first), loads `listExposureCounts(pool, now − window)`, then
-  `rerankForExposure` (`lib/fairness.ts`, pure, tested) takes the batch:
+  `rerankForExposure` (`lib/matching/fairness.ts`, pure, tested) takes the batch:
   - soft penalty: rank by `σ(logit(score) − μ · e / (e + e₀))`, `e` = impressions in the window,
     `e₀` = the cap, or 5 with no cap. Saturating, so a penalty never exceeds μ σ. Applied in logit
     units so it costs a top candidate the same relevance as an average one; a multiplicative
@@ -850,12 +856,12 @@ not group fairness (no gender/age parity).
   - the stored `recommendations.score` stays the unpenalized relevance.
 - **Ablation.** μ = 0 with no cap reproduces the previous ranking exactly (tested). Also overridable
   per call via `fairnessMu` / `exposureCap` options.
-- **Metric.** `gini(values)` in `lib/fairness.ts` gives the exposure Gini for W3.2.
+- **Metric.** `gini(values)` in `lib/matching/fairness.ts` gives the exposure Gini for W3.2.
 - Config: `matching_config.fairness_mu`, `exposure_cap`, `exposure_window_days` (code defaults in
   `FAIRNESS`: μ 1 (σ), no cap, 7 days; a row saved before `0025` gets μ 0). μ and λ were
   multiplicative before; rows saved earlier keep their old numbers, which now mean that many σ.
 
-**Where:** `apps/api/src/lib/fairness.ts`, `modules/recommendations/{generator,repository}.ts`;
+**Where:** `apps/api/src/lib/matching/fairness.ts`, `modules/recommendations/{generator,repository}.ts`;
 backoffice "Exposure fairness" card on `MatchingRulesPage`.
 
 **Missing:** no Gini dashboard in the backoffice; simulation agents' impressions count toward
@@ -867,7 +873,7 @@ use instead of relying only on the stated 100-point split. Off for saved configs
 λ > 0 (code default 0.5).
 
 **How it works:**
-- `learnedPreference(decisions)` (`lib/preference-learning.ts`, pure, tested) is a contrast:
+- `learnedPreference(decisions)` (`lib/matching/preference-learning.ts`, pure, tested) is a contrast:
   `mean(z liked) − mean(z all decided)`, then z-scored. Null without a like or without any contrast.
   - Each decided profile's self-ratings are z-scored first (nulls as 5). This cancels "everyone
     rates themselves high on sincerity", and inflated self-ratings don't count.
@@ -890,7 +896,7 @@ use instead of relying only on the stated 100-point split. Off for saved configs
   via the `preferenceLambda` option.
 - Config: `matching_config.preference_lambda` (migration `0026`, default 0).
 
-**Where:** `apps/api/src/lib/preference-learning.ts`,
+**Where:** `apps/api/src/lib/matching/preference-learning.ts`,
 `modules/recommendations/{generator,repository}.ts`; backoffice "Learned preferences" card on
 `MatchingRulesPage`.
 
@@ -913,7 +919,7 @@ The page shows each default, has "Reset to defaults", and says when the rules we
   `CADENCE`, `DEFAULT_WEIGHTS` and `CROSS_PATHS.lambda` from `scoring.ts`, `FAIRNESS` from
   `fairness.ts` and `PREFERENCE_LEARNING.lambda` from `preference-learning.ts`, with the cooldown still
   overridable by `REC_COOLDOWN_HOURS`. A saved row wins over the env var.
-- `lib/matching-config.ts` (pure, tested): `resolveMatchingConfig`, `toMatchingConfigRow`,
+- `lib/matching/matching-config.ts` (pure, tested): `resolveMatchingConfig`, `toMatchingConfigRow`,
   `weightsSumToOne`. `recommendations/repository.ts` has `loadMatchingConfig` and
   `saveMatchingConfig` (upsert, stores the staff auth id in `updated_by`).
 - Readers: `generateRecommendations` (batch size, weights, crossed-paths λ, fairness, learned-preference
@@ -943,9 +949,9 @@ tested with one phone. Shown as the **Location simulation** card on user detail.
   profiles that are discoverable, in the target's pool, have cross paths on and location visible. Only
   synthetic profiles can walk, so a real user's location is never overwritten. The center defaults to
   the target's location. Each walker starts at a random point in the circle and takes the target's area
-  label, which becomes the crossing's place.
+  label, which becomes the crossing's place if reverse geocoding fails.
 - A step (`stepWalkers` in `src/modules/simulation/walkers.ts`) moves each active walker one step of a
-  random walk that stays in the circle (`src/lib/location-walk.ts`, pure, tested). It stamps
+  random walk that stays in the circle (`src/lib/simulation/location-walk.ts`, pure, tested). It stamps
   `location_updated_at` and calls the same `recordCrossingsOnLocationUpdate` the app uses, so the
   pool, privacy, 1 km / 30 min and 6 h cooldown rules are identical.
 - Steps run on a `*/10 * * * *` cron (`WALKER_CRON` in `src/index.ts`, gated by
@@ -953,7 +959,7 @@ tested with one phone. Shown as the **Location simulation** card on user detail.
   **Mark target present** first stamps the target's `location_updated_at` (coordinates unchanged),
   as if their app had just reported, so a crossing doesn't need the app open.
 - `GET /staff/users/{id}/walkers` returns the target's location and freshness, each walker's
-  position, distance to the target, `blockers` (`crossingBlockers` in `src/lib/crossings.ts`: why a
+  position, distance to the target, `blockers` (`crossingBlockers` in `src/lib/location/crossings.ts`: why a
   step can't cross right now), its crossing with the target, and every crossing of the user. If the
   profile is itself a walker, it says for whom. The card refreshes every 30 s.
 - The card draws an SVG plot in meters around the target (crossing radius, walk areas, walkers). There

@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { DAILY_ANSWER_MAX_LENGTH } from "@/lib/daily-questions";
+import { DAILY_ANSWER_MAX_LENGTH } from "@/lib/daily/daily-questions";
 
 export const ErrorSchema = z
 	.object({

@@ -8,7 +8,7 @@
 
 ### `[x]` T1 — fix(mobile): push notifications not delivered on iOS
 
-Root cause found: the phone build has a production APNs token, but `APNS_SANDBOX=true` sent it to sandbox. Apple answered `BadDeviceToken` and the token was pruned. Fix: the `APNS_SANDBOX` flag is gone; the API always tries production APNs first and retries sandbox once on `BadDeviceToken` (`apps/api/src/lib/push.ts`). Verified on a physical iPhone. Also: the Android notification icon was the Expo template logo; replaced with the Haven glyph (`apps/mobile/assets/images/notification-icon.png`).
+Root cause found: the phone build has a production APNs token, but `APNS_SANDBOX=true` sent it to sandbox. Apple answered `BadDeviceToken` and the token was pruned. Fix: the `APNS_SANDBOX` flag is gone; the API always tries production APNs first and retries sandbox once on `BadDeviceToken` (`apps/api/src/lib/messaging/push.ts`). Verified on a physical iPhone. Also: the Android notification icon was the Expo template logo; replaced with the Haven glyph (`apps/mobile/assets/images/notification-icon.png`).
 
 - **Labels**: `type:bug` `area:mobile` `prio:P1`
 - **Description**: Daily reminders and new-match pushes arrive on Android but not on iOS. Cause unknown.
@@ -94,7 +94,7 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 **Root cause**: the fallback was applied everywhere, but 7 of 24 curated Unsplash slugs in `avatar-url.ts` returned 404 (blank picture) and one slug in the male pool (`photo-1573496359142`) was a woman (mismatch). Replaced them with checked slugs; mobile now shows a placeholder when an image fails to load.
 
 **Notes**
-- Fallback avatars come from `apps/api/src/lib/avatar-url.ts` (curated Unsplash portraits picked by profile id and gender, used when `user_profiles.photo_url` is null). Check that recommendation responses actually apply this fallback, that the portrait lists are correctly split by gender, and that every Unsplash URL still resolves.
+- Fallback avatars come from `apps/api/src/lib/profile/avatar-url.ts` (curated Unsplash portraits picked by profile id and gender, used when `user_profiles.photo_url` is null). Check that recommendation responses actually apply this fallback, that the portrait lists are correctly split by gender, and that every Unsplash URL still resolves.
 - Check the mobile candidate card handles a failed image load (placeholder instead of blank).
 
 ---
@@ -155,7 +155,7 @@ Root cause: the matches screen fetched `GET /matches` only on focus (home polls 
 **Notes**
 - `POST /recommendations/regenerate` already exists (`regenerate()` in `apps/api/src/modules/recommendations/service.ts`), but it's a study knob that ignores the cooldown and has no guard. Add the "no action taken in current batch" check there, or add a separate user-facing route.
 - Changing filters currently only calls `dismissPendingFilterMisfits()`, which drops misfits without refilling. Offering regenerate right after a filter change is a natural entry point.
-- Cooldown helpers are in `apps/api/src/lib/recommendation-cadence.ts`.
+- Cooldown helpers are in `apps/api/src/lib/matching/recommendation-cadence.ts`.
 - Open question: should regenerating be capped (e.g. once per day) even without actions? Not capped yet: while untouched, a user can regenerate repeatedly.
 
 ---

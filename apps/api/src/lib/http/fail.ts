@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import type { ServiceError } from "@/lib/errors";
+import type { ServiceError } from "@/lib/http/service-errors";
 
 export function fail(c: Context, error: ServiceError) {
 	const status = error.status as ContentfulStatusCode;

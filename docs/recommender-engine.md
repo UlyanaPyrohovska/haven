@@ -41,7 +41,7 @@ relative to the repository root. Most paths are under `apps/api/src/`, written h
 ## 1. The idea in one paragraph
 
 Haven shows each user a small **daily drop** of 4 people (`CADENCE.batchSize`,
-`apps/api/src/lib/scoring.ts:43`), refreshed at most every 24 hours. For a viewer *u* the engine
+`apps/api/src/lib/matching/scoring.ts:43`), refreshed at most every 24 hours. For a viewer *u* the engine
 builds a pool of up to 500 eligible people, scores each candidate *v* in **both directions**
 (how good *v* is for *u*, and how good *u* is for *v*), combines the two with a **harmonic mean**
 so that a pair only ranks high when it works for both sides, gives a small boost to people *u* has
@@ -55,22 +55,22 @@ shuffled before display so the order doesn't reveal who liked you.
 
 | Concern | File |
 |---|---|
-| Score terms, calibration, one-way and reciprocal score, cross-paths boost | `apps/api/src/lib/scoring.ts` |
+| Score terms, calibration, one-way and reciprocal score, cross-paths boost | `apps/api/src/lib/matching/scoring.ts` |
 | Generation pipeline (pool, ranking, reranking, write) | `apps/api/src/modules/recommendations/generator.ts` |
 | SQL: pool, filters, exposures, crossings, decisions | `apps/api/src/modules/recommendations/repository.ts` |
 | Daily-drop rule, decisions, match explanation | `apps/api/src/modules/recommendations/service.ts` |
-| Exposure fairness and Gini | `apps/api/src/lib/fairness.ts` |
-| Learned preferences | `apps/api/src/lib/preference-learning.ts` |
-| Mutual gender and age filters | `apps/api/src/lib/partner-filters.ts` |
-| Crossing constants and helpers | `apps/api/src/lib/crossings.ts` |
-| Bio embeddings | `apps/api/src/lib/bio-embedding.ts` |
-| Staff-editable config | `apps/api/src/lib/matching-config.ts`, table `matching_config` |
-| Agent decision rule and hidden profile | `apps/api/src/lib/agent-decision.ts` |
-| Agent ground-truth utility (frozen) | `apps/api/src/lib/agent-utility.ts` |
+| Exposure fairness and Gini | `apps/api/src/lib/matching/fairness.ts` |
+| Learned preferences | `apps/api/src/lib/matching/preference-learning.ts` |
+| Mutual gender and age filters | `apps/api/src/lib/matching/partner-filters.ts` |
+| Crossing constants and helpers | `apps/api/src/lib/location/crossings.ts` |
+| Bio embeddings | `apps/api/src/lib/matching/bio-embedding.ts` |
+| Staff-editable config | `apps/api/src/lib/matching/matching-config.ts`, table `matching_config` |
+| Agent decision rule and hidden profile | `apps/api/src/lib/simulation/agent-decision.ts` |
+| Agent ground-truth utility (frozen) | `apps/api/src/lib/simulation/agent-utility.ts` |
 | Simulation tick | `apps/api/src/modules/simulation/engine.ts` |
 | Location walkers (crossings test tool) | `apps/api/src/modules/simulation/walkers.ts` |
 | Calibration statistics script | `apps/api/scripts/component-stats.ts` |
-| "Why you matched" reasons | `apps/api/src/lib/match-reasons.ts` |
+| "Why you matched" reasons | `apps/api/src/lib/matching/match-reasons.ts` |
 
 All of `lib/` is pure (no database imports), so an offline evaluation script can import exactly the
 functions production uses.
@@ -85,7 +85,7 @@ only when **all three** hold:
 1. the viewer has **no pending** (not yet acted-on) recommendations,
 2. the profile is **complete** (`isProfileComplete`),
 3. the **cooldown** has elapsed since the latest `shown_at` (`isCooldownElapsed`,
-   `apps/api/src/lib/recommendation-cadence.ts:48`). Default 24 h, overridable by the
+   `apps/api/src/lib/matching/recommendation-cadence.ts:48`). Default 24 h, overridable by the
    `REC_COOLDOWN_HOURS` env var (`recommendation-cadence.ts:5`) or by the saved matching config.
 
 Triggers:
@@ -146,7 +146,7 @@ from `poolConditions` (`repository.ts:303`):
 | Discoverable | `repository.ts:306` | `discoverable = true` |
 | Same pool | `repository.ts:307` | same `looking_for` (dating and friendship never mix) |
 | No prior interaction | `noInteractionWith`, `repository.ts:236` | drops anyone you already decided on, and anyone who passed on you; a pending like **on** you stays so you can answer it |
-| Mutual gender and age | `partnerFilterConditions`, `repository.ts:269` | both directions: the candidate fits your `interested_in` and age range, and you fit theirs. Unknown data passes (same rule in TS: `apps/api/src/lib/partner-filters.ts:22` and `:41`) |
+| Mutual gender and age | `partnerFilterConditions`, `repository.ts:269` | both directions: the candidate fits your `interested_in` and age range, and you fit theirs. Unknown data passes (same rule in TS: `apps/api/src/lib/matching/partner-filters.ts:22` and `:41`) |
 | Synthetic only | `repository.ts:312` | only for simulation agents |
 | Max distance | `repository.ts:316` | bounding box, **but no caller passes `maxKm`**, so distance is never a hard filter today; it only acts through the geo score |
 
@@ -168,8 +168,8 @@ the whole eligible population, so this is effectively a full scan.
 17 interest columns, custom interests, the 6 `pref_*` values (a 100-point split over attractive,
 sincere, intelligent, fun, ambitious, shared interests), the 6 `self_*` ratings (1 to 10),
 coordinates, bio embedding, today's mood and today's daily-question answer. **Synthetic profiles**
-get a deterministic mood (`syntheticMoodForProfile`, `apps/api/src/lib/candidate-mood.ts:6`) and a
-deterministic answer from a fixed list (`apps/api/src/lib/candidate-daily-answer.ts:6`), seeded by
+get a deterministic mood (`syntheticMoodForProfile`, `apps/api/src/lib/daily/candidate-mood.ts:6`) and a
+deterministic answer from a fixed list (`apps/api/src/lib/daily/candidate-daily-answer.ts:6`), seeded by
 profile id and date.
 
 ---
@@ -177,7 +177,7 @@ profile id and date.
 ## 6. The six score terms
 
 Each term is a number in [0, 1], or `null` when the data is missing. Default weights
-(`DEFAULT_WEIGHTS`, `apps/api/src/lib/scoring.ts:33`):
+(`DEFAULT_WEIGHTS`, `apps/api/src/lib/matching/scoring.ts:33`):
 
 | Term | Weight | Function | Line |
 |---|---|---|---|
@@ -285,7 +285,7 @@ Points worth knowing:
   it never punishes.
 - **Weights are scale-free.** Multiplying all weights by a constant changes nothing (the norm divides
   it out). Only ratios matter. The backoffice still requires them to sum to 1 for readability
-  (`weightsSumToOne`, `apps/api/src/lib/matching-config.ts:86`).
+  (`weightsSumToOne`, `apps/api/src/lib/matching/matching-config.ts:86`).
 - **Effective influence.** After calibration each profile term's influence is proportional to its
   weight. Mood and daily answer are one-sided (`max(0, z)`), so their effective spread is roughly
   half of a two-sided term's. Note that the "effectiveShare" column printed by `component-stats.ts`
@@ -325,7 +325,7 @@ Both sides' learned preferences are attached before scoring (`generator.ts:157`)
 
 `scoreBreakdown` (`scoring.ts:443`) returns every term separately (with `prefUToV` and `prefVToU`)
 for explanations. It feeds the "why you matched" reasons (`describeMatch`, `service.ts:210`;
-thresholds at `apps/api/src/lib/match-reasons.ts:14`) and the staff breakdown view.
+thresholds at `apps/api/src/lib/matching/match-reasons.ts:14`) and the staff breakdown view.
 
 ---
 
@@ -356,7 +356,7 @@ People who liked the viewer and are still waiting:
   penalty and the cap and lead the batch. Any other likers compete on fair score like everyone else,
   so a batch is never all likers.
 
-### 9.3 Exposure fairness (`apps/api/src/lib/fairness.ts`)
+### 9.3 Exposure fairness (`apps/api/src/lib/matching/fairness.ts`)
 
 Goal: spread impressions so a few attractive profiles don't appear in everyone's drop
 (individual, provider-side fairness).
@@ -398,7 +398,7 @@ decisions are stored identically.
 
 ---
 
-## 10. Learned preferences (`apps/api/src/lib/preference-learning.ts`)
+## 10. Learned preferences (`apps/api/src/lib/matching/preference-learning.ts`)
 
 The stated 100-point split is what people *say* they want. This module learns what they *actually*
 like from their decisions.
@@ -429,7 +429,7 @@ like from their decisions.
 
 ## 11. Bio embeddings (Cloudflare Workers AI)
 
-`apps/api/src/lib/bio-embedding.ts`
+`apps/api/src/lib/matching/bio-embedding.ts`
 
 - **Model**: `@cf/baai/bge-small-en-v1.5` (`bio-embedding.ts:3`), 384 dimensions
   (`bio-embedding.ts:5`), at most 100 texts per call (`bio-embedding.ts:7`). Bound as `AI` in
@@ -453,7 +453,7 @@ like from their decisions.
 
 ## 12. Crossed-paths detection
 
-Constants in `apps/api/src/lib/crossings.ts`: radius **1 km** (`:4`), window **30 min** (`:6`),
+Constants in `apps/api/src/lib/location/crossings.ts`: radius **1 km** (`:4`), window **30 min** (`:6`),
 cooldown **6 h** (`:8`).
 
 1. When a device sends a fresh location (profile update), `recordCrossingsOnLocationUpdate`
@@ -508,13 +508,13 @@ P(accept) = sigmoid( (u − 0.71) / 0.02 )                         agent-decisio
 accept  = seededRandom(tickId:agentId:otherId) < P(accept)       agent-decision.ts:80
 ```
 
-- **Hidden profile** (`hiddenProfile`, `apps/api/src/lib/agent-decision.ts:63`): the agent's stored
+- **Hidden profile** (`hiddenProfile`, `apps/api/src/lib/simulation/agent-decision.ts:63`): the agent's stored
   interests, `pref` split and component weights, each blended with a random draw seeded by the agent
   id: `(1 − hiddenNoise) · stored + hiddenNoise · random`, `hiddenNoise = 0.5`
   (`agent-decision.ts:13`). Stable across ticks and never stored, so the recommender **cannot see**
   what the agent really wants, but its stored profile is a noisy signal of it. That is the realistic
   situation the recommender is in with real users.
-- **Frozen utility** (`apps/api/src/lib/agent-utility.ts`): a copy of the scoring formula **as of
+- **Frozen utility** (`apps/api/src/lib/simulation/agent-utility.ts`): a copy of the scoring formula **as of
   commit `a7ad2c3`**: plain (uncentered) cosine for interests and preference, a renormalized weighted
   mean of all six terms, its own base weights `AGENT_BASE_WEIGHTS` (`agent-utility.ts:18`). The point
   (header comment, `agent-utility.ts:10-15`): changing the recommender must not change what agents
@@ -557,7 +557,7 @@ its original location; the crossings stay.
 ## 14. Configuration and ablation switches
 
 The effective config is the **saved `matching_config` row (id 1) if one exists, otherwise the code
-defaults** (`resolveMatchingConfig`, `apps/api/src/lib/matching-config.ts:34`). Staff edit it on the
+defaults** (`resolveMatchingConfig`, `apps/api/src/lib/matching/matching-config.ts:34`). Staff edit it on the
 backoffice **Matching rules** page (`GET`/`PUT /staff/matching-config`).
 
 | Setting | Code default | DB column default | Ablation value |
@@ -684,7 +684,7 @@ GROUP BY v.is_synthetic;
 
 The planned script (`research/eval/run.ts`, task W3.2 in `docs/path-a-implementation.md`) **does not
 exist yet**. This section is the recipe for it. Write it in TypeScript and import
-`apps/api/src/lib/scoring.ts`, `fairness.ts` and `preference-learning.ts` directly, so the thesis
+`apps/api/src/lib/matching/scoring.ts`, `fairness.ts` and `preference-learning.ts` directly, so the thesis
 reports the deployed engine, not a re-implementation.
 
 ### 17.1 What to evaluate

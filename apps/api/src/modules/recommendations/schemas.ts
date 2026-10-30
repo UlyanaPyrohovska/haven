@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { MatchReasons } from "@/lib/match-reasons";
+import { MatchReasons } from "@/lib/matching/match-reasons";
 
 const moodSlugValues = ["happy", "calm", "excited", "tired", "low", "stressed"] as const;
 

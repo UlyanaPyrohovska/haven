@@ -17,7 +17,7 @@ import {
 	vector,
 } from "drizzle-orm/pg-core";
 
-import { LookingFor } from "@/lib/looking-for";
+import { LookingFor } from "@/lib/matching/looking-for";
 
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),

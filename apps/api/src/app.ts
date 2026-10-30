@@ -1,5 +1,5 @@
 import { cors } from "hono/cors";
-import { BACKOFFICE_ORIGIN } from "./lib/auth";
+import { BACKOFFICE_ORIGIN } from "./lib/auth/auth";
 import { notFoundHandler } from "./lib/http/errors";
 import { createOpenAPIApp, withOpenApiDoc } from "./lib/openapi";
 import auth from "./modules/auth";

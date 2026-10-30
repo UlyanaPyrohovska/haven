@@ -31,24 +31,25 @@ import {
 	userEmbeddings,
 	userProfiles,
 } from "@/db/schema";
-import { ageFromBirthDate, parseIsoDate } from "@/lib/age";
-import { syntheticDailyAnswer } from "@/lib/candidate-daily-answer";
-import { syntheticMoodForProfile } from "@/lib/candidate-mood";
+import { syntheticDailyAnswer } from "@/lib/daily/candidate-daily-answer";
+import { syntheticMoodForProfile } from "@/lib/daily/candidate-mood";
+import { moodSlug, utcToday } from "@/lib/daily/mood";
 import {
 	boundingBox,
 	CROSSING_COOLDOWN_HOURS,
 	CROSSING_WINDOW_MINUTES,
 	crossedIds,
 	crossingPair,
-} from "@/lib/crossings";
-import { customInterestKey } from "@/lib/custom-interests";
-import { type MatchingConfig, resolveMatchingConfig, toMatchingConfigRow } from "@/lib/matching-config";
-import { moodSlug, utcToday } from "@/lib/mood";
-import { birthDateWindow, mutualFilterMatch, type PartnerFilterProfile } from "@/lib/partner-filters";
-import type { PreferenceDecision } from "@/lib/preference-learning";
-import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile-view";
-import { coerceLastShownAt } from "@/lib/recommendation-cadence";
-import type { ScoringProfile } from "@/lib/scoring";
+} from "@/lib/location/crossings";
+import { midpoint, reverseGeocodePlace } from "@/lib/location/place-label";
+import { type MatchingConfig, resolveMatchingConfig, toMatchingConfigRow } from "@/lib/matching/matching-config";
+import { birthDateWindow, mutualFilterMatch, type PartnerFilterProfile } from "@/lib/matching/partner-filters";
+import type { PreferenceDecision } from "@/lib/matching/preference-learning";
+import { coerceLastShownAt } from "@/lib/matching/recommendation-cadence";
+import type { ScoringProfile } from "@/lib/matching/scoring";
+import { ageFromBirthDate, parseIsoDate } from "@/lib/profile/age";
+import { customInterestKey } from "@/lib/profile/custom-interests";
+import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile/profile-view";
 
 const { email: _email, passwordHash: _passwordHash, ...publicProfileColumns } = getTableColumns(userProfiles);
 
@@ -494,14 +495,15 @@ type CrossingViewer = {
 	lookingFor: number;
 	latitude: number;
 	longitude: number;
-	/** Area label of the viewer (city level), stored as the crossing's place. */
+	/** Area label of the viewer (city level), the crossing's place when reverse geocoding fails. */
 	displayLocation: string | null;
 };
 
 /**
  * Records a crossing with every same-pool user who reported a location within the crossing radius in the
  * last `CROSSING_WINDOW_MINUTES`. Both sides must share cross paths and not hide their location. A pair
- * counts again only after `CROSSING_COOLDOWN_HOURS`. Only the count, time and area label are stored.
+ * counts again only after `CROSSING_COOLDOWN_HOURS`. Only the count, time and a place label (public square or
+ * street near the pair's midpoint, else neighbourhood or the viewer's city) are stored.
  */
 export async function recordCrossings(db: Db, viewer: CrossingViewer, now = new Date()): Promise<number> {
 	const box = boundingBox(viewer.latitude, viewer.longitude);
@@ -528,17 +530,30 @@ export async function recordCrossings(db: Db, viewer: CrossingViewer, now = new 
 	}
 
 	const cooldownStart = new Date(now.getTime() - CROSSING_COOLDOWN_HOURS * 3_600_000);
-	const place = viewer.displayLocation?.trim() || null;
+	const fallbackPlace = viewer.displayLocation?.trim() || null;
+	// Named from the pair's midpoint so it describes the encounter, not either person's exact position.
+	const rows = await Promise.all(
+		ids.map(async (id) => {
+			const other = nearby.find((row) => row.id === id);
+			const point =
+				other?.latitude != null && other.longitude != null
+					? midpoint(viewer, { latitude: other.latitude, longitude: other.longitude })
+					: viewer;
+			const place = (await reverseGeocodePlace(point.latitude, point.longitude))?.slice(0, 200) ?? fallbackPlace;
+
+			return { ...crossingPair(viewer.id, id), count: 1, lastCrossedAt: now, lastPlace: place };
+		}),
+	);
 
 	await db
 		.insert(crossings)
-		.values(ids.map((id) => ({ ...crossingPair(viewer.id, id), count: 1, lastCrossedAt: now, lastPlace: place })))
+		.values(rows)
 		.onConflictDoUpdate({
 			target: [crossings.userA, crossings.userB],
 			set: {
 				count: sql`least(${crossings.count} + 1, 32767)`,
 				lastCrossedAt: now,
-				lastPlace: place,
+				lastPlace: sql`excluded.last_place`,
 			},
 			setWhere: or(isNull(crossings.lastCrossedAt), lt(crossings.lastCrossedAt, cooldownStart)),
 		});

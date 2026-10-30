@@ -38,7 +38,7 @@ in the same plain-Portuguese/English register as the rest of the document.
 
 ## [x] W1.2 — Compatibility scoring module  ·  api · P0  ·  ↔ E2
 
-**File:** `apps/api/src/lib/scoring.ts` (pure, no DB imports). Putting it in `lib/` lets both
+**File:** `apps/api/src/lib/matching/scoring.ts` (pure, no DB imports). Putting it in `lib/` lets both
 the Worker and the offline eval script (W3.2) import the *same* function, so thesis numbers
 match the deployed engine.
 
@@ -64,7 +64,7 @@ export type ScoringProfile = {
 - `preferenceMatch(fromPref, toSelf)` — **directional.** Normalize both 6-dim vectors to unit
   length and take the dot product (cosine). This is "does the candidate actually have the
   qualities the viewer weights highly." Null → neutral midpoint.
-- `geoProximity(a, b)` — `d = haversineKm(...)` (reuse `lib/profile-view.ts`). Decay
+- `geoProximity(a, b)` — `d = haversineKm(...)` (reuse `lib/profile/profile-view.ts`). Decay
   `exp(-d / TAU)`, `TAU ≈ 25` km (config). Missing coordinates → neutral `0.5`, never 0, so a
   user who hid location isn't buried.
 - `bioSimilarity(a, b)` — cosine of the two 384-d embeddings, or `null` when either is absent.
@@ -97,7 +97,7 @@ export function reciprocalScore(u, v, w = DEFAULT_WEIGHTS) {
 **Weights:** `export const DEFAULT_WEIGHTS = { bio: 0.35, interest: 0.30, geo: 0.20, pref: 0.15 }`.
 Keep them in one config object so W3.2 can sweep them.
 
-**Tests:** `apps/api/src/lib/scoring.test.ts` (match the repo's runner — check
+**Tests:** `apps/api/src/lib/matching/scoring.test.ts` (match the repo's runner — check
 `apps/api/package.json`; likely `vitest` or `bun test`). Hand-computed cases: identical
 profiles → ~1.0; orthogonal interests → low; one-sided preference (u wants what v lacks, v
 wants what u has) → harmonic mean well below the arithmetic mean; missing-embedding path
@@ -258,7 +258,7 @@ export const crossings = pgTable("crossings", {
 
 Undirected — always store with `user_a < user_b`.
 
-**Scoring extension** (`apps/api/src/lib/scoring.ts`, on top of the W1.2 functions). Crossings
+**Scoring extension** (`apps/api/src/lib/matching/scoring.ts`, on top of the W1.2 functions). Crossings
 are symmetric, so this does **not** go inside the directional `unilateral()` — it's applied once
 to the reciprocal result. Keep `ScoringProfile` unchanged and pass the count in separately, so
 `scoring.ts` stays pure and DB-agnostic:
@@ -324,8 +324,8 @@ The 2000 synthetic profiles become **agents** that act on their own recommendati
 network grows and real participants can actually match a synthetic candidate. Previously, when a
 real user accepted a synthetic candidate, `interactions.dec_b` stayed null forever.
 
-**Decision rule** (`src/lib/agent-decision.ts`, pure). An agent accepts with probability
-`σ((agentUtility(agent→other) − threshold) / temperature)`. `agentUtility` (`src/lib/agent-utility.ts`)
+**Decision rule** (`src/lib/simulation/agent-decision.ts`, pure). An agent accepts with probability
+`σ((agentUtility(agent→other) − threshold) / temperature)`. `agentUtility` (`src/lib/simulation/agent-utility.ts`)
 is a frozen copy of the scoring formula as of `a7ad2c3`, so later recommender changes don't move the
 ground truth. Never tune it with the recommender. The draw is seeded by
 `tickId:agentId:otherId`, so a tick is reproducible. `AGENT = { threshold: 0.71, temperature: 0.02 }` (tuned on dev to ~26% acceptance; the old 0.55 / 0.08 accepted ~80% and carried almost no taste signal)
@@ -369,7 +369,7 @@ provider-side; no group fairness).
 
 - **Log:** new table `recommendation_exposures (viewer_id, candidate_id, shown_at)`, migration
   `0025`. `replaceRecommendations` appends one row per candidate per new batch (not on regenerate).
-- **Logic:** `apps/api/src/lib/fairness.ts` — `exposurePenalty`, `rerankForExposure`, `gini`,
+- **Logic:** `apps/api/src/lib/matching/fairness.ts` — `exposurePenalty`, `rerankForExposure`, `gini`,
   `FAIRNESS` defaults (μ 1 σ, cap null, window 7 days, e₀ 5). Rank by
   `σ(logit(score) − μ · e / (e + e₀))` (logit space, so μ costs the same σ at any rank); `e ≥ cap` only fills leftover slots; pending likers exempt.
 - **Generator:** `rankCandidates(..., Infinity, ...)` → `listExposureCounts` →
@@ -387,7 +387,7 @@ provider-side; no group fairness).
 Partner preferences adapt to what a user actually likes, instead of staying fixed at the stated
 100-point split.
 
-- **Logic:** `apps/api/src/lib/preference-learning.ts` (pure, tested).
+- **Logic:** `apps/api/src/lib/matching/preference-learning.ts` (pure, tested).
   - `learnedPreference` = `mean(z liked self) − mean(z decided self)`, z-scored. Self-ratings are
     centered per profile and contrasted against everything the user decided on, so neither the
     population's self-rating shape nor the recommender's own selection is learned as taste.
@@ -493,11 +493,11 @@ list (`fetchMatches`). Queue multiple matches in one session.
 **Problem.** Today the daily question is a lonely multiline `TextInput` embedded in the home feed
 (`apps/mobile/components/home/daily-question-card.tsx`) with 800ms debounced autosave. It has no
 purpose or reward, and the inline text box on the busy home screen is one source of the
-keyboard-overlap bug (W2.7). The **backend is good and stays**: `lib/daily-questions.ts`'s
+keyboard-overlap bug (W2.7). The **backend is good and stays**: `lib/daily/daily-questions.ts`'s
 `dailyQuestion(date)` rotates `DAILY_QUESTIONS` (same for everyone per UTC day);
 `GET`/`PUT /daily-question/today` persist one answer per profile per day in `daily_question_answers`;
 and every candidate already exposes a `questionAnswer` for today via `resolveCandidateDailyAnswer`
-(`lib/candidate-daily-answer.ts`).
+(`lib/daily/candidate-daily-answer.ts`).
 
 **Goal.** A calm, purposeful daily moment with a *reciprocal* reward: you answer today's question,
 and in return you unlock seeing how the people in today's batch answered the same question; your
@@ -608,7 +608,7 @@ this earlier if W2.4's on-device onboarding run hits the bug first.
 Code, Android setup and APNs secrets are done. iOS still needs a rebuild and a device test.
 
 Remote push for a new message, a new match and a fresh recommendations batch, plus one local daily
-reminder. The Worker sends straight to FCM/APNs (`src/lib/push.ts`), with no relay service; details
+reminder. The Worker sends straight to FCM/APNs (`src/lib/messaging/push.ts`), with no relay service; details
 are in `docs/FEATURES.md` → Notifications. iOS needs no Firebase SDK or `GoogleService-Info.plist`.
 
 ### iOS setup (todo)
@@ -670,7 +670,7 @@ before each session; a documented deletion path for a participant's data on requ
 ## [ ] W3.2 — Offline baseline evaluation  ·  research · P1  ·  ↔ E3
 
 **File:** `research/eval/run.ts` (TypeScript, so it imports the *production*
-`apps/api/src/lib/scoring.ts` — the thesis then reports the deployed engine, not a re-implementation).
+`apps/api/src/lib/matching/scoring.ts` — the thesis then reports the deployed engine, not a re-implementation).
 
 Pull profiles + `user_embeddings` + `interactions` from Neon; compute `reciprocalScore` for the
 relevant pairs; report, written to `research/results/baseline.json`:
@@ -678,7 +678,7 @@ relevant pairs; report, written to `research/results/baseline.json`:
   their top-k.
 - **Precision@k / recall@k** against the match labels.
 - **Gini index** of candidate exposure (how often each profile appears across everyone's
-  top-k) — the fairness number for §2.6. Use `gini()` from `apps/api/src/lib/fairness.ts` and
+  top-k) — the fairness number for §2.6. Use `gini()` from `apps/api/src/lib/matching/fairness.ts` and
   `recommendation_exposures` as the impression source; compare with W1.8 on and off.
 - A **random-recommender baseline** to beat.
 

@@ -1,6 +1,4 @@
 import { z } from "@hono/zod-openapi";
-import { ageFromBirthDate, MAX_AGE, MIN_AGE, parseIsoDate } from "@/lib/age";
-import { CUSTOM_INTEREST_MAX_LENGTH, customInterestError, MAX_CUSTOM_INTERESTS } from "@/lib/custom-interests";
 import {
 	DatingGoals,
 	FriendsGoals,
@@ -8,8 +6,10 @@ import {
 	LookingFor,
 	type LookingForValue,
 	ProfileGoals,
-} from "@/lib/looking-for";
-import { GENDER_MAX, isValidAgeRange, PREF_AGE_MAX } from "@/lib/partner-filters";
+} from "@/lib/matching/looking-for";
+import { GENDER_MAX, isValidAgeRange, PREF_AGE_MAX } from "@/lib/matching/partner-filters";
+import { ageFromBirthDate, MAX_AGE, MIN_AGE, parseIsoDate } from "@/lib/profile/age";
+import { CUSTOM_INTEREST_MAX_LENGTH, customInterestError, MAX_CUSTOM_INTERESTS } from "@/lib/profile/custom-interests";
 
 /** `interest_*` and `self_*` columns are 1–10 Likert values; null means "not answered". */
 const likert = z.number().int().min(1).max(10).nullable().optional();

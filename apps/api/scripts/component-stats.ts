@@ -20,7 +20,7 @@ import {
 	moodCompatibility,
 	type ScoringProfile,
 	type ScoringWeights,
-} from "../src/lib/scoring";
+} from "../src/lib/matching/scoring";
 import { listScoringProfilesByIds } from "../src/modules/recommendations/repository";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
@@ -110,7 +110,7 @@ async function main() {
 			effectiveShare: totalInfluence > 0 ? (influence[i] / totalInfluence).toFixed(3) : "n/a",
 		})),
 	);
-	console.log("\nCOMPONENT_CALIBRATION (paste into src/lib/scoring.ts):");
+	console.log("\nCOMPONENT_CALIBRATION (paste into src/lib/matching/scoring.ts):");
 	console.log(
 		JSON.stringify(
 			Object.fromEntries(table.map((row) => [row.component, { mean: +row.mean.toFixed(4), sd: +row.sd.toFixed(4) }])),

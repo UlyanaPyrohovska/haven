@@ -1,7 +1,7 @@
 import type { Db } from "@/db";
-import { AGENT, agentAccepts, hiddenProfile } from "@/lib/agent-decision";
-import { agentUtility } from "@/lib/agent-utility";
-import type { PushNotice } from "@/lib/push";
+import type { PushNotice } from "@/lib/messaging/push";
+import { AGENT, agentAccepts, hiddenProfile } from "@/lib/simulation/agent-decision";
+import { agentUtility } from "@/lib/simulation/agent-utility";
 import { generateRecommendations } from "@/modules/recommendations/generator";
 import * as recommendationsRepository from "@/modules/recommendations/repository";
 import { ensureBatch, recordDecision } from "@/modules/recommendations/service";

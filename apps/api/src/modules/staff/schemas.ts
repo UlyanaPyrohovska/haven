@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { weightsSumToOne } from "@/lib/matching-config";
+import { weightsSumToOne } from "@/lib/matching/matching-config";
 import { ProfileUpdateSchema } from "@/modules/profile/schemas";
 
 export const StaffUserListQuerySchema = z

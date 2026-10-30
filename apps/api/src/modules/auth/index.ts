@@ -1,4 +1,4 @@
-import { createAuth } from "@/lib/auth";
+import { createAuth } from "@/lib/auth/auth";
 import { createOpenAPIApp } from "@/lib/openapi";
 
 export const auth = createOpenAPIApp();

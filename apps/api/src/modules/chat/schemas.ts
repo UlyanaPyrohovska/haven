@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { MESSAGE_MAX_LENGTH } from "@/lib/chat";
+import { MESSAGE_MAX_LENGTH } from "@/lib/messaging/chat";
 
 export { ErrorSchema } from "@/modules/recommendations/schemas";
 
