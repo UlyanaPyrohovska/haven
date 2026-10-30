@@ -124,13 +124,18 @@ export async function stepWalkers(db: Db, opts: { targetId?: number; now?: Date 
 				? { latitude: profile.latitude, longitude: profile.longitude }
 				: randomPointInRadius(center, walk.radiusM);
 
-		crossingsRecorded += await placeWalker(
-			db,
-			walk.walkerId,
-			nextWalkPosition(current, center, walk.radiusM, walk.stepM),
-			now,
-		);
-		await repository.updateWalk(db, walk.walkerId, { lastStepAt: now });
+		// One failed walker must not stop the rest; Drizzle hides the driver error in `cause`.
+		try {
+			crossingsRecorded += await placeWalker(
+				db,
+				walk.walkerId,
+				nextWalkPosition(current, center, walk.radiusM, walk.stepM),
+				now,
+			);
+			await repository.updateWalk(db, walk.walkerId, { lastStepAt: now });
+		} catch (err) {
+			console.error("walker step failed", walk.walkerId, err, (err as Error)?.cause);
+		}
 	}
 
 	return { stepped: rows.length, crossingsRecorded };

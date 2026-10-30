@@ -22,7 +22,11 @@ export default {
 		const db = getDb(env.DATABASE_URL);
 
 		if (controller.cron === WALKER_CRON) {
-			ctx.waitUntil(stepWalkers(db).then((stats) => console.log("walker step", stats)));
+			ctx.waitUntil(
+				stepWalkers(db)
+					.then((stats) => console.log("walker step", stats))
+					.catch((err) => console.error("walker step failed", err, err?.cause)),
+			);
 			return;
 		}
 
