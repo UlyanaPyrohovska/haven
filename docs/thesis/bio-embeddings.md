@@ -26,7 +26,7 @@ script was removed. All vectors come from bge-small; the two models are never mi
 **Pipeline (current).**
 1. **On profile write.** When a profile is created or edited and the request changes the bio,
    `patchProfile` (`apps/api/src/modules/profile/service.ts`) schedules `syncBioEmbedding`
-   (`apps/api/src/lib/bio-embedding.ts`) with `executionCtx.waitUntil`. The save returns at once;
+   (`apps/api/src/lib/matching/bio-embedding.ts`) with `executionCtx.waitUntil`. The save returns at once;
    the embedding runs after the response.
 2. `syncBioEmbedding` sends the bio text to bge-small (`embedTexts`), checks that the result is a
    384-d vector, and upserts `(user_profile_id, bio vector, updated_at)` into `user_embeddings`.
@@ -48,7 +48,7 @@ from their first bio save (see §5).
 
 ## 2. How the vector is used in matching
 
-- `bioSimilarity(a, b)` in `apps/api/src/lib/scoring.ts` returns the cosine of the two
+- `bioSimilarity(a, b)` in `apps/api/src/lib/matching/scoring.ts` returns the cosine of the two
   embeddings, clamped to [0, 1]. It returns `null` if either side has no embedding.
 - The directional score is
   `unilateral(u→v) = α·bio + w_interest·interest + w_geo·geo + w_pref·pref + w_mood·mood +

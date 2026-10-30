@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
-import { errors } from "@/lib/errors";
-import { moodCode, moodSlug, utcToday } from "@/lib/mood";
+import { moodCode, moodSlug, utcToday } from "@/lib/daily/mood";
+import { errors } from "@/lib/http/service-errors";
 import * as profileRepository from "@/modules/profile/repository";
 import { requireUserId } from "@/modules/profile/service";
 import * as repository from "./repository";

@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { pushTokens } from "@/db/schema";
-import type { PushPlatform } from "@/lib/push";
+import type { PushPlatform } from "@/lib/messaging/push";
 
 /** A device signing into another account moves its token there. */
 export async function upsertToken(db: Db, profileId: number, token: string, platform: PushPlatform) {

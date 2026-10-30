@@ -1,7 +1,7 @@
 import { desc, eq, getTableColumns, inArray, like, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { customInterests, user, userEmbeddings, userProfiles } from "@/db/schema";
-import { customInterestKey } from "@/lib/custom-interests";
+import { customInterestKey } from "@/lib/profile/custom-interests";
 import type { ProfileUpdate } from "./schemas";
 
 const { email: _email, passwordHash: _passwordHash, ...publicProfileColumns } = getTableColumns(userProfiles);

@@ -1,7 +1,6 @@
 import type { Db } from "@/db";
-import { seededRandom } from "@/lib/agent-decision";
-import { rerankForExposure } from "@/lib/fairness";
-import { learnPreference } from "@/lib/preference-learning";
+import { rerankForExposure } from "@/lib/matching/fairness";
+import { learnPreference } from "@/lib/matching/preference-learning";
 import {
 	applyCrossPathsBoost,
 	CROSS_PATHS,
@@ -9,7 +8,8 @@ import {
 	reciprocalScore,
 	type ScoringProfile,
 	type ScoringWeights,
-} from "@/lib/scoring";
+} from "@/lib/matching/scoring";
+import { seededRandom } from "@/lib/simulation/agent-decision";
 import * as repository from "./repository";
 
 /** Max candidates scored per generation pass (full scan at ~2k users). */

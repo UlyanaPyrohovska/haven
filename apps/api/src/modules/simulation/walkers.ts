@@ -1,6 +1,6 @@
 import type { Db } from "@/db";
-import type { ServiceError } from "@/lib/errors";
-import { nextWalkPosition, randomPointInRadius } from "@/lib/location-walk";
+import type { ServiceError } from "@/lib/http/service-errors";
+import { nextWalkPosition, randomPointInRadius } from "@/lib/simulation/location-walk";
 import { recordCrossingsOnLocationUpdate } from "@/modules/recommendations/service";
 import * as repository from "./repository";
 
@@ -98,7 +98,7 @@ export async function assignWalkers(db: Db, targetId: number, input: AssignWalke
 			originalDisplayLocation: profile.displayLocation,
 			createdBy: input.createdBy,
 		});
-		// The crossing's place label comes from the walker, so it borrows the target's area name.
+		// Fallback place label if reverse geocoding fails, so the walker borrows the target's area name.
 		crossingsRecorded += await placeWalker(
 			db,
 			profile.id,

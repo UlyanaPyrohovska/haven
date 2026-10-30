@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
-import { dailyQuestion } from "@/lib/daily-questions";
-import { errors } from "@/lib/errors";
-import { utcToday } from "@/lib/mood";
+import { dailyQuestion } from "@/lib/daily/daily-questions";
+import { utcToday } from "@/lib/daily/mood";
+import { errors } from "@/lib/http/service-errors";
 import * as profileRepository from "@/modules/profile/repository";
 import { requireUserId } from "@/modules/profile/service";
 import * as repository from "./repository";

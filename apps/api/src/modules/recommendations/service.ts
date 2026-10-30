@@ -1,13 +1,17 @@
 import type { Context } from "hono";
 import { type Db, getDb } from "@/db";
-import { resolveProfilePhotoUrl } from "@/lib/avatar-url";
-import { resolveCandidateDailyAnswer } from "@/lib/candidate-daily-answer";
-import { displayNameForCandidate } from "@/lib/candidate-display";
-import { resolveCandidateMood } from "@/lib/candidate-mood";
-import { dailyQuestion } from "@/lib/daily-questions";
-import { errors } from "@/lib/errors";
-import { matchReasons } from "@/lib/match-reasons";
-import { utcToday } from "@/lib/mood";
+import { getSessionUserId } from "@/lib/auth/session";
+import { resolveCandidateDailyAnswer } from "@/lib/daily/candidate-daily-answer";
+import { resolveCandidateMood } from "@/lib/daily/candidate-mood";
+import { dailyQuestion } from "@/lib/daily/daily-questions";
+import { utcToday } from "@/lib/daily/mood";
+import { errors } from "@/lib/http/service-errors";
+import { matchReasons } from "@/lib/matching/match-reasons";
+import { isCooldownElapsed, nextRefreshAtIso } from "@/lib/matching/recommendation-cadence";
+import { scoreBreakdown } from "@/lib/matching/scoring";
+import type { PushEnv } from "@/lib/messaging/push";
+import { resolveProfilePhotoUrl } from "@/lib/profile/avatar-url";
+import { displayNameForCandidate } from "@/lib/profile/candidate-display";
 import {
 	candidateLocationLabel,
 	haversineKm,
@@ -17,11 +21,7 @@ import {
 	readPrivacySettings,
 	sharedInterestLabels,
 	shouldShowCrossPaths,
-} from "@/lib/profile-view";
-import type { PushEnv } from "@/lib/push";
-import { isCooldownElapsed, nextRefreshAtIso } from "@/lib/recommendation-cadence";
-import { scoreBreakdown } from "@/lib/scoring";
-import { getSessionUserId } from "@/lib/session";
+} from "@/lib/profile/profile-view";
 import * as chatRepository from "@/modules/chat/repository";
 import { ensureSyntheticOpener, toMessagePayload } from "@/modules/chat/service";
 import * as dailyQuestionRepository from "@/modules/daily-question/repository";

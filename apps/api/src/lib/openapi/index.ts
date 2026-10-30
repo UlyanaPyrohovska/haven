@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
-import { createAuth } from "@/lib/auth";
+import { createAuth } from "@/lib/auth/auth";
 import { errorHandler } from "@/lib/http/errors";
 import { validationErrorHook } from "./validation";
 

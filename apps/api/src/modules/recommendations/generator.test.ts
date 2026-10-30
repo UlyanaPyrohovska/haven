@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { rerankForExposure } from "@/lib/fairness";
-import { reciprocalScore, type ScoringProfile } from "@/lib/scoring";
+import { rerankForExposure } from "@/lib/matching/fairness";
+import { reciprocalScore, type ScoringProfile } from "@/lib/matching/scoring";
 import { LIKER_SLOTS, rankCandidates, reserveLikerSlots, shuffleSeeded } from "./generator";
 
 function makeProfile(id: number, overrides: Partial<ScoringProfile> = {}): ScoringProfile {

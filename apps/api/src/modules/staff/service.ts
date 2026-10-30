@@ -1,20 +1,20 @@
 import type { Context } from "hono";
 import { getDb } from "@/db";
-import { BIO_EMBEDDING_BATCH, embedTexts, syncBioEmbedding } from "@/lib/bio-embedding";
-import { displayNameForCandidate } from "@/lib/candidate-display";
+import { requireStaffAdmin } from "@/lib/auth/session";
+import { fillDailySeries, lastUtcDays } from "@/lib/daily/daily-series";
+import { MoodSlugs, moodSlug, utcToday } from "@/lib/daily/mood";
+import { errors } from "@/lib/http/service-errors";
 import {
 	CROSSING_COOLDOWN_HOURS,
 	CROSSING_RADIUS_KM,
 	CROSSING_WINDOW_MINUTES,
 	crossingBlockers,
-} from "@/lib/crossings";
-import { fillDailySeries, lastUtcDays } from "@/lib/daily-series";
-import { errors } from "@/lib/errors";
-import { type MatchingConfig, resolveMatchingConfig } from "@/lib/matching-config";
-import { MoodSlugs, moodSlug, utcToday } from "@/lib/mood";
-import { haversineKm } from "@/lib/profile-view";
-import { applyCrossPathsBoost, reciprocalScore, scoreBreakdown } from "@/lib/scoring";
-import { requireStaffAdmin } from "@/lib/session";
+} from "@/lib/location/crossings";
+import { BIO_EMBEDDING_BATCH, embedTexts, syncBioEmbedding } from "@/lib/matching/bio-embedding";
+import { type MatchingConfig, resolveMatchingConfig } from "@/lib/matching/matching-config";
+import { applyCrossPathsBoost, reciprocalScore, scoreBreakdown } from "@/lib/matching/scoring";
+import { displayNameForCandidate } from "@/lib/profile/candidate-display";
+import { haversineKm } from "@/lib/profile/profile-view";
 import { notify } from "@/modules/notifications/service";
 import * as profileRepository from "@/modules/profile/repository";
 import type { ProfileUpdate } from "@/modules/profile/schemas";

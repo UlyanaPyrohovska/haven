@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { CHAT_PROFILE_HEADER, type ChatMessagePayload } from "@/lib/chat";
+import { CHAT_PROFILE_HEADER, type ChatMessagePayload } from "@/lib/messaging/chat";
 
 type Attachment = { profileId: number };
 

@@ -19,7 +19,15 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - `apps/api` — Cloudflare Worker, Hono + Drizzle, Neon Postgres (pgvector), Better Auth.
   - `src/index.ts` (entry, cron `scheduled`), `src/app.ts` (route wiring), `src/chat-room.ts` (chat Durable Object).
   - `src/modules/<feature>/{routes,schemas,service,repository}.ts` — one folder per feature (auth, chat, daily-question, legal, links, mood, notifications, profile, recommendations, safety, simulation, staff).
-  - `src/lib/` — pure domain logic, one concern per file: `scoring.ts` (compatibility, pure, no DB), `fairness.ts` (exposure reranking, Gini), `preference-learning.ts`, `matching-config.ts`, `match-reasons.ts`, `partner-filters.ts`, `crossings.ts`, `agent-decision.ts` + `agent-utility.ts` (simulation agents, frozen scoring copy), `bio-embedding.ts`, `recommendation-cadence.ts`, `daily-questions.ts`, `candidate-daily-answer.ts`, `mood.ts`, `candidate-mood.ts`, `profile-view.ts` (haversine, view shaping), `candidate-display.ts`, `chat.ts`, `push.ts`, `looking-for.ts`, `age.ts`, `avatar-url.ts`, `session.ts`, `auth.ts`, `errors.ts`.
+  - `src/lib/` — pure domain logic, one concern per file, grouped by domain:
+    - `matching/` — `scoring.ts` (compatibility, pure, no DB), `fairness.ts` (exposure reranking, Gini), `preference-learning.ts`, `matching-config.ts`, `match-reasons.ts`, `partner-filters.ts`, `recommendation-cadence.ts`, `bio-embedding.ts`, `looking-for.ts`.
+    - `location/` — `crossings.ts`, `place-label.ts` (Photon reverse geocoding for crossing places).
+    - `simulation/` — `agent-decision.ts` + `agent-utility.ts` (simulation agents, frozen scoring copy), `location-walk.ts`.
+    - `daily/` — `daily-questions.ts`, `mood.ts`, `daily-series.ts`, `candidate-daily-answer.ts`, `candidate-mood.ts`.
+    - `profile/` — `profile-view.ts` (haversine, view shaping), `candidate-display.ts`, `avatar-url.ts`, `age.ts`, `custom-interests.ts`.
+    - `messaging/` — `chat.ts`, `push.ts`, `email-templates.ts`.
+    - `auth/` — `auth.ts`, `session.ts`.
+    - `http/` — `service-errors.ts` (`ServiceError`, `errors`), `errors.ts` (Hono handlers), `fail.ts`. `openapi/` — route doc helpers.
   - `src/db/schema.ts` (single source of schema), `src/db/index.ts`.
   - `drizzle/` — generated SQL migrations, numbered `0000`–`0026`.
   - `scripts/seed.ts`, `seed-demo-account.ts`, `seed-matches.ts`, `component-stats.ts` (read-only scoring calibration), `deploy.sh`.
@@ -40,7 +48,7 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - `pnpm db:generate | db:migrate | db:studio | db:seed`
 - Deploy API: `pnpm --filter api deploy:dev | deploy:prod` — migrates that env file's DB, then deploys the Worker with only its `DATABASE_URL` (`db:migrate:dev|prod` to migrate alone).
 - Deploy backoffice: `pnpm deploy:backoffice` — builds with `VITE_API_URL=https://haven.pirogotter.dev`, deploys static assets to `admin.pirogotter.dev`.
-- Tests: `pnpm --filter api test` (Vitest). Single file: `pnpm --filter api exec vitest run src/lib/scoring.test.ts`.
+- Tests: `pnpm --filter api test` (Vitest). Single file: `pnpm --filter api exec vitest run src/lib/matching/scoring.test.ts`.
 - Lint/format: `pnpm check` (Biome, writes fixes). Prefer running it on changed files only.
 - Mobile native rebuild: `cd apps/mobile && pnpm ios|android` (needed after native dep changes; `prebuild` regenerates native folders).
 

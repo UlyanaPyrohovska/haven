@@ -1,4 +1,4 @@
-import { errors } from "@/lib/errors";
+import { errors } from "@/lib/http/service-errors";
 import * as recommendationRepository from "@/modules/recommendations/repository";
 import type { ViewerContext } from "@/modules/recommendations/service";
 import * as repository from "./repository";

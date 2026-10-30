@@ -1,5 +1,5 @@
 import type { Db } from "@/db";
-import { type PushEnv, type PushNotice, sendPush } from "@/lib/push";
+import { type PushEnv, type PushNotice, sendPush } from "@/lib/messaging/push";
 import type { ViewerContext } from "@/modules/recommendations/service";
 import * as repository from "./repository";
 import type { PutPushTokenBody } from "./schemas";

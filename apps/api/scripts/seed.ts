@@ -7,9 +7,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import Papa from "papaparse";
 import pg from "pg";
 import { interactions, userProfiles } from "../src/db/schema";
-import { MIN_AGE } from "../src/lib/age";
-import { syntheticDisplayName } from "../src/lib/candidate-display";
-import { LookingFor, lookingForFromGoal } from "../src/lib/looking-for";
+import { LookingFor, lookingForFromGoal } from "../src/lib/matching/looking-for";
+import { MIN_AGE } from "../src/lib/profile/age";
+import { syntheticDisplayName } from "../src/lib/profile/candidate-display";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const apiRoot = resolve(scriptDir, "..");

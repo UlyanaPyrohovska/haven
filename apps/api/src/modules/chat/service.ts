@@ -1,16 +1,16 @@
 import type { Db } from "@/db";
-import { resolveProfilePhotoUrl } from "@/lib/avatar-url";
-import { displayNameForCandidate } from "@/lib/candidate-display";
+import { errors } from "@/lib/http/service-errors";
 import {
 	CHAT_PROFILE_HEADER,
 	type ChatMessagePayload,
 	MESSAGE_PAGE_SIZE,
 	normalizeMessageBody,
 	syntheticOpener,
-} from "@/lib/chat";
-import { errors } from "@/lib/errors";
-import { type ProfileRow, sharedInterestLabels } from "@/lib/profile-view";
-import type { PushEnv } from "@/lib/push";
+} from "@/lib/messaging/chat";
+import type { PushEnv } from "@/lib/messaging/push";
+import { resolveProfilePhotoUrl } from "@/lib/profile/avatar-url";
+import { displayNameForCandidate } from "@/lib/profile/candidate-display";
+import { type ProfileRow, sharedInterestLabels } from "@/lib/profile/profile-view";
 import { notify } from "@/modules/notifications/service";
 import * as recommendationRepository from "@/modules/recommendations/repository";
 import type { ViewerContext } from "@/modules/recommendations/service";

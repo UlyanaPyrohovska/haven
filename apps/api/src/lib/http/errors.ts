@@ -1,6 +1,6 @@
 import type { Context } from "hono";
-import { errors, isServiceError, type ServiceError } from "@/lib/errors";
 import { fail } from "@/lib/http/fail";
+import { errors, isServiceError, type ServiceError } from "@/lib/http/service-errors";
 
 export const notFoundHandler = (c: Context) => fail(c, errors.not_found);
 

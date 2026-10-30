@@ -12,8 +12,8 @@ import { and, eq, notInArray, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { interactions, messages, recommendations, user, userProfiles } from "../src/db/schema";
-import { syntheticOpener } from "../src/lib/chat";
-import { haversineKm, sharedInterestLabels } from "../src/lib/profile-view";
+import { syntheticOpener } from "../src/lib/messaging/chat";
+import { haversineKm, sharedInterestLabels } from "../src/lib/profile/profile-view";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const apiRoot = resolve(scriptDir, "..");
