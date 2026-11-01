@@ -218,6 +218,21 @@ export const putMatchingConfigRoute = createRoute({
 	},
 });
 
+export const listWalkTargetsRoute = createRoute({
+	method: "get",
+	path: "/staff/walkers",
+	tags: ["Staff"],
+	summary: "Profiles that have location walkers, with counts (staff)",
+	responses: {
+		200: {
+			content: { "application/json": { schema: schemas.WalkTargetsResponseSchema } },
+			description: "Walk targets",
+		},
+		401: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Unauthenticated" },
+		403: { content: { "application/json": { schema: schemas.ErrorSchema } }, description: "Forbidden" },
+	},
+});
+
 export const getWalkersRoute = createRoute({
 	method: "get",
 	path: "/staff/users/{profileId}/walkers",

@@ -230,7 +230,7 @@ export function LocationWalkers({ profileId }: { profileId: number }) {
 							<Alert>
 								<AlertDescription>
 									This profile is itself a walker for{" "}
-									<Link to={`/users/${data.walkingFor.targetId}`} className="font-medium hover:underline">
+									<Link to={`/users/${data.walkingFor.targetId}/walkers`} className="font-medium hover:underline">
 										{data.walkingFor.name} #{data.walkingFor.targetId}
 									</Link>
 									.

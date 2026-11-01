@@ -464,6 +464,44 @@ async function walkersOverview(
 	};
 }
 
+/** One row per profile that has walkers, newest activity first. */
+export async function listWalkTargets(c: Context<{ Bindings: CloudflareBindings }>) {
+	await requireStaffAdmin(c);
+	const db = getDb(c.env.DATABASE_URL);
+
+	const walks = await simulationRepository.listWalkers(db);
+	const byTarget = new Map<number, { walkers: number; active: number; lastStepAt: Date | null }>();
+
+	for (const { walk } of walks) {
+		const entry = byTarget.get(walk.targetId) ?? { walkers: 0, active: 0, lastStepAt: null };
+		entry.walkers += 1;
+		if (walk.active) entry.active += 1;
+		if (walk.lastStepAt && (!entry.lastStepAt || walk.lastStepAt > entry.lastStepAt))
+			entry.lastStepAt = walk.lastStepAt;
+		byTarget.set(walk.targetId, entry);
+	}
+
+	const targets = byTarget.size > 0 ? await simulationRepository.findWalkerProfiles(db, [...byTarget.keys()]) : [];
+
+	return {
+		targets: targets
+			.map((target) => {
+				const entry = byTarget.get(target.id) ?? { walkers: 0, active: 0, lastStepAt: null };
+
+				return {
+					targetId: target.id,
+					name: profileName(target),
+					isSynthetic: target.isSynthetic,
+					lookingFor: target.lookingFor,
+					walkers: entry.walkers,
+					active: entry.active,
+					lastStepAt: entry.lastStepAt?.toISOString() ?? null,
+				};
+			})
+			.sort((a, b) => (b.lastStepAt ?? "").localeCompare(a.lastStepAt ?? "") || a.targetId - b.targetId),
+	};
+}
+
 export async function getWalkers(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
 	await requireStaffAdmin(c);
 

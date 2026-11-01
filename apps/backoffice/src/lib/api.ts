@@ -67,10 +67,24 @@ export type StaffUserDetail = {
 	auth: StaffAuthUser | null;
 };
 
-export function listUsers(params: { q?: string; limit?: number; offset?: number }) {
+export type UserTypeFilter = "real" | "synthetic";
+
+export function listUsers(params: {
+	q?: string;
+	type?: UserTypeFilter;
+	lookingFor?: number;
+	limit?: number;
+	offset?: number;
+}) {
 	const search = new URLSearchParams();
 	if (params.q) {
 		search.set("q", params.q);
+	}
+	if (params.type) {
+		search.set("type", params.type);
+	}
+	if (params.lookingFor !== undefined) {
+		search.set("lookingFor", String(params.lookingFor));
 	}
 	if (params.limit !== undefined) {
 		search.set("limit", String(params.limit));
@@ -126,13 +140,25 @@ export function backfillBioEmbeddings() {
 
 export type GraphEdgeFilter = "match" | "like" | "all";
 
+/** `real`: edges touching a real user; `realOnly`: both ends real. */
+export type GraphParticipants = "all" | "real" | "realOnly";
+
 export type InteractionGraph = {
 	nodes: { id: number; name: string; isSynthetic: boolean; lookingFor: number; degree: number }[];
 	edges: { source: number; target: number; decA: number | null; decB: number | null; match: boolean }[];
 };
 
-export function getInteractionGraph(params: { lookingFor: number; edges: GraphEdgeFilter; since?: string }) {
-	const search = new URLSearchParams({ lookingFor: String(params.lookingFor), edges: params.edges });
+export function getInteractionGraph(params: {
+	lookingFor: number;
+	edges: GraphEdgeFilter;
+	participants: GraphParticipants;
+	since?: string;
+}) {
+	const search = new URLSearchParams({
+		lookingFor: String(params.lookingFor),
+		edges: params.edges,
+		participants: params.participants,
+	});
 	if (params.since) search.set("since", params.since);
 
 	return request<InteractionGraph>(`/staff/graph?${search}`);
@@ -281,6 +307,20 @@ export type AssignWalkersInput = {
 	radiusM?: number;
 	stepM?: number;
 };
+
+export type WalkTarget = {
+	targetId: number;
+	name: string;
+	isSynthetic: boolean;
+	lookingFor: number;
+	walkers: number;
+	active: number;
+	lastStepAt: string | null;
+};
+
+export function listWalkTargets() {
+	return request<{ targets: WalkTarget[] }>("/staff/walkers");
+}
 
 export function getWalkers(profileId: number) {
 	return request<WalkersOverview>(`/staff/users/${profileId}/walkers`);

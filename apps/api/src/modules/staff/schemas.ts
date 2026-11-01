@@ -5,6 +5,8 @@ import { ProfileUpdateSchema } from "@/modules/profile/schemas";
 export const StaffUserListQuerySchema = z
 	.object({
 		q: z.string().trim().max(200).optional(),
+		type: z.enum(["real", "synthetic"]).optional(),
+		lookingFor: z.coerce.number().int().min(0).max(1).optional(),
 		limit: z.coerce.number().int().min(1).max(100).default(25),
 		offset: z.coerce.number().int().min(0).default(0),
 	})
@@ -99,6 +101,8 @@ export const InteractionGraphQuerySchema = z
 		lookingFor: z.coerce.number().int().min(0).max(1).default(1),
 		edges: z.enum(["match", "like", "all"]).default("match"),
 		since: z.string().datetime().optional(),
+		/** `real`: edges touching at least one real user; `realOnly`: both ends real. */
+		participants: z.enum(["all", "real", "realOnly"]).default("all"),
 		limit: z.coerce.number().int().min(1).max(5000).default(2000),
 	})
 	.openapi("InteractionGraphQuery");
@@ -255,6 +259,22 @@ const CrossingSchema = z.object({
 	lastCrossedAt: z.string().nullable(),
 	lastPlace: z.string().nullable(),
 });
+
+export const WalkTargetsResponseSchema = z
+	.object({
+		targets: z.array(
+			z.object({
+				targetId: z.number().int(),
+				name: z.string(),
+				isSynthetic: z.boolean(),
+				lookingFor: z.number().int(),
+				walkers: z.number().int(),
+				active: z.number().int(),
+				lastStepAt: z.string().nullable(),
+			}),
+		),
+	})
+	.openapi("WalkTargetsResponse");
 
 export const WalkersOverviewSchema = z
 	.object({

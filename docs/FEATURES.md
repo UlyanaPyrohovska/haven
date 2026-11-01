@@ -776,6 +776,17 @@ header and on the login card.
 
 **Where:** `HavenLogo`, `app-sidebar.tsx`, `LoginPage`, `public/favicon.svg`
 
+### Navigation and layout — live
+The sidebar groups pages into Overview (Dashboard, Users), Simulation (Interaction graph, Location
+walkers) and Settings (Matching rules, Staff). The signed-in email, role and **Sign out** sit in the
+sidebar footer; the top bar shows the current section and the theme toggle.
+
+**How it works:** `navGroups` in `components/app-sidebar.tsx` is the single list of pages; the
+layout (`components/backoffice-layout.tsx`) reads it for the breadcrumb. Pages share
+`components/page-header.tsx` (title, description, actions).
+
+**Where:** `app-sidebar.tsx`, `backoffice-layout.tsx`, `page-header.tsx`
+
 ### Dashboard — live
 The landing page after sign-in (`/` and unknown routes redirect here). Shows:
 - tiles: profiles (and how many are real), matches (and messages), today's mood check-ins (and
@@ -802,7 +813,7 @@ The landing page after sign-in (`/` and unknown routes redirect here). Shows:
 
 ### User management — live
 Staff can:
-- search and list profiles,
+- search and list profiles, filtered by type (real / synthetic) and pool,
 - view the full record,
 - edit profile and account fields,
 - delete a user,
@@ -810,7 +821,13 @@ Staff can:
 
 **How it works:**
 - Search, edit and delete go through `modules/staff`. Search runs `ilike` on display name, email
-  and auth id, and also matches a profile id typed as a number.
+  and auth id, and also matches a profile id typed as a number. `type` and `lookingFor` query params
+  filter on `is_synthetic` and the pool. The list keeps search, filters and page in the URL, so going
+  back from a user returns to the same list. Clicking a row opens the user.
+- User detail is a header (name, id, pool, type, banned, **Delete user**) over tabs that are nested
+  routes: **Profile** (`/users/:id`, edit form + read-only account card), **Recommendations**
+  (`/recommendations`), **Location walkers** (`/walkers`) and **Raw data** (`/raw`). The parent
+  route loads the user once and passes it to the tabs via `useOutletContext`.
 - An edit can change profile columns and the Better Auth name and email.
 
 - A teal "Friends" / rose "Dating" badge (`components/ModeBadge.tsx`) shows each profile's mode in
@@ -828,7 +845,8 @@ Staff can:
   replaces pending rows and keeps acted-on ones. The new rows get a fresh `shown_at`, so the user's
   feed cooldown restarts. The response is the updated list.
 
-**Where:** pages `UsersPage`, `UserDetailPage` (`components/RecommendationScores.tsx`); API
+**Where:** pages `UsersPage`, `UserDetailPage` (tabs `UserProfileTab`, `UserRecommendationsTab`,
+`UserWalkersTab`, `UserRawTab`; `components/RecommendationScores.tsx`); API
 `/staff/users`, `/staff/users/{profileId}`, `/staff/users/{profileId}/recommendations` (+ `/regenerate`)
 
 ### Exposure fairness reranking — live
@@ -939,7 +957,9 @@ history of changes, only the last one.
 
 ### Location walkers — partial
 A staff test tool for crossed paths: synthetic profiles walk around a user's area, so crossings can be
-tested with one phone. Shown as the **Location simulation** card on user detail.
+tested with one phone. The **Location walkers** page (`/walkers`) lists every profile that has walkers
+(active / paused counts, last step) and opens a profile's walker controls by id; the controls live on
+the user's **Location walkers** tab (`/users/:id/walkers`).
 
 **How it works:**
 - `location_walkers` has one row per walking synthetic profile (`walker_id` PK): the target, walk
@@ -965,11 +985,14 @@ tested with one phone. Shown as the **Location simulation** card on user detail.
 - The card draws an SVG plot in meters around the target (crossing radius, walk areas, walkers). There
   are no map tiles, so no coordinates go to a third party. Staff see exact coordinates here, as on user
   detail; the app never does.
+- `GET /staff/walkers` (`listWalkTargets` in `modules/staff/service.ts`) groups all walk rows by
+  target for the overview page. No coordinates.
 - `PATCH /staff/walkers/{id}` pauses, resumes or tunes a walker. `DELETE` restores its seeded
   location; crossings it made stay.
 
 **Where:** `src/modules/simulation/walkers.ts`, `src/modules/simulation/repository.ts`, staff routes
-in `src/modules/staff/`, `apps/backoffice/src/components/LocationWalkers.tsx`
+in `src/modules/staff/`, `apps/backoffice/src/components/LocationWalkers.tsx`,
+`apps/backoffice/src/pages/WalkersPage.tsx`
 
 **Missing:** `pnpm db:migrate` (migration `0023`) and a run against a real device. If the target
 is deleted, its walk rows go with it (cascade), but the walkers keep their walked location.
@@ -987,14 +1010,19 @@ A force-directed graph of one pool:
 - real users and agents in different colours,
 - a line for a match, an arrow for a one-way like.
 
-Hover or click a node to focus its neighbourhood. You can filter by pool, edge type and time
-window. A "Run tick" button runs the simulation and shows the tick's stats.
+Hover or click a node to focus its neighbourhood; real users and the focused node are labelled with
+their name. Filters: pool, edge type, time window, participants (everyone / involving real users /
+real users only), minimum connections, and "show only this profile's connections" on a selected
+node. **Find** selects a node by name or `#id` and zooms to it. A "Run simulation tick" button runs
+the simulation and shows the tick's stats.
 
 **How it works:**
 - `GET /staff/graph` returns at most `limit` interactions (newest first), filtered by:
   - pool (`looking_for` on `user_a`),
   - edge type (`match`, `like` or `all`),
-  - `since`.
+  - `since`,
+  - `participants`: `real` keeps edges with at least one real endpoint, `realOnly` both (joins
+    `user_profiles` twice).
 
   Nodes are the endpoints of those edges, with their degree computed on the server. Only ids and
   display names are returned, never coordinates.
@@ -1003,6 +1031,7 @@ window. A "Run tick" button runs the simulation and shows the tick's stats.
   - the focused node's neighbours are highlighted,
   - repulsion is stronger than the default so the nodes spread out,
   - colours come from theme CSS variables.
+- Minimum connections and the ego view filter on the client; nodes keep their server degree.
 - Historical dataset interactions keep their seed `created_at`, so `since` separates simulated
   activity from historical activity.
 
