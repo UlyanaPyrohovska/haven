@@ -62,6 +62,10 @@ staff.openapi(routes.putMatchingConfigRoute, async (c) => {
 	return c.json(await service.updateMatchingConfig(c, body), 200);
 });
 
+staff.openapi(routes.listWalkTargetsRoute, async (c) => {
+	return c.json(await service.listWalkTargets(c), 200);
+});
+
 staff.openapi(routes.getWalkersRoute, async (c) => {
 	const { profileId } = c.req.valid("param");
 	return c.json(await service.getWalkers(c, profileId), 200);

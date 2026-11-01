@@ -1,13 +1,15 @@
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph2D, { type ForceGraphMethods, type LinkObject } from "react-force-graph-2d";
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
 	type GraphEdgeFilter,
+	type GraphParticipants,
 	getInteractionGraph,
 	type InteractionGraph,
 	runSimulationTick,
@@ -60,6 +62,11 @@ export function GraphPage() {
 	const [lookingFor, setLookingFor] = useState("1");
 	const [edges, setEdges] = useState<GraphEdgeFilter>("match");
 	const [since, setSince] = useState<SinceFilter>("all");
+	const [participants, setParticipants] = useState<GraphParticipants>("all");
+	const [minDegree, setMinDegree] = useState("1");
+	const [egoOnly, setEgoOnly] = useState(false);
+	const [find, setFind] = useState("");
+	const [findError, setFindError] = useState<string | null>(null);
 
 	const [graph, setGraph] = useState<InteractionGraph | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -81,6 +88,7 @@ export function GraphPage() {
 				await getInteractionGraph({
 					lookingFor: Number(lookingFor),
 					edges,
+					participants,
 					since: hours ? new Date(Date.now() - hours * 3_600_000).toISOString() : undefined,
 				}),
 			);
@@ -89,7 +97,7 @@ export function GraphPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [lookingFor, edges, since]);
+	}, [lookingFor, edges, since, participants]);
 
 	useEffect(() => {
 		void load();
@@ -109,15 +117,6 @@ export function GraphPage() {
 		}
 	};
 
-	// force-graph mutates the objects it gets, so hand it fresh copies per fetch.
-	const data = useMemo(
-		() => ({
-			nodes: (graph?.nodes ?? []).map((node) => ({ ...node })),
-			links: (graph?.edges ?? []).map((edge) => ({ source: edge.source, target: edge.target, match: edge.match })),
-		}),
-		[graph],
-	);
-
 	const neighbours = useMemo(() => {
 		const map = new Map<number, Set<number>>();
 		for (const edge of graph?.edges ?? []) {
@@ -128,6 +127,46 @@ export function GraphPage() {
 		}
 		return map;
 	}, [graph]);
+
+	const egoId = egoOnly ? selectedId : null;
+
+	// force-graph mutates the objects it gets, so hand it fresh copies whenever the visible set changes.
+	const data = useMemo(() => {
+		const min = Number(minDegree);
+		const keep = new Set(
+			egoId != null
+				? [egoId, ...(neighbours.get(egoId) ?? [])]
+				: (graph?.nodes ?? []).filter((node) => node.degree >= min).map((node) => node.id),
+		);
+
+		return {
+			nodes: (graph?.nodes ?? []).filter((node) => keep.has(node.id)).map((node) => ({ ...node })),
+			links: (graph?.edges ?? [])
+				.filter((edge) => keep.has(edge.source) && keep.has(edge.target))
+				.map((edge) => ({ source: edge.source, target: edge.target, match: edge.match })),
+		};
+	}, [graph, neighbours, minDegree, egoId]);
+
+	function onFind(event: FormEvent) {
+		event.preventDefault();
+		const term = find.trim().replace(/^#/, "").toLowerCase();
+		if (!term) return;
+
+		const node =
+			data.nodes.find((n) => String(n.id) === term) ?? data.nodes.find((n) => n.name.toLowerCase().includes(term));
+		if (!node) {
+			setFindError("Not in the visible graph");
+			return;
+		}
+
+		setFindError(null);
+		setSelectedId(node.id);
+		const positioned = node as GraphNode & { x?: number; y?: number };
+		if (positioned.x != null && positioned.y != null) {
+			graphRef.current?.centerAt(positioned.x, positioned.y, 600);
+			graphRef.current?.zoom(4, 600);
+		}
+	}
 
 	// Re-read theme tokens when the theme flips.
 	const colors = useMemo(() => {
@@ -158,7 +197,8 @@ export function GraphPage() {
 		focusId != null && (endId(link.source) === focusId || endId(link.target) === focusId);
 	const selected = graph?.nodes.find((node) => node.id === selectedId) ?? null;
 
-	const matchCount = graph?.edges.filter((edge) => edge.match).length ?? 0;
+	const matchCount = data.links.filter((link) => link.match).length;
+	const realCount = data.nodes.filter((node) => !node.isSynthetic).length;
 
 	return (
 		<div className="flex flex-1 flex-col gap-4">
@@ -168,43 +208,82 @@ export function GraphPage() {
 					<p className="text-sm text-muted-foreground">
 						{loading
 							? "Loading…"
-							: `${graph?.nodes.length ?? 0} profiles · ${graph?.edges.length ?? 0} edges · ${matchCount} matches`}
+							: `${data.nodes.length} profiles (${realCount} real) · ${data.links.length} edges · ${matchCount} matches`}
 					</p>
 				</div>
-				<div className="flex flex-wrap items-center gap-2">
-					<Select value={lookingFor} onValueChange={setLookingFor}>
-						<SelectTrigger className="w-32" aria-label="Pool">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="1">Dating</SelectItem>
-							<SelectItem value="0">Friends</SelectItem>
-						</SelectContent>
-					</Select>
-					<Select value={edges} onValueChange={(value) => setEdges(value as GraphEdgeFilter)}>
-						<SelectTrigger className="w-32" aria-label="Edges">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="match">Matches</SelectItem>
-							<SelectItem value="like">Likes</SelectItem>
-							<SelectItem value="all">All</SelectItem>
-						</SelectContent>
-					</Select>
-					<Select value={since} onValueChange={(value) => setSince(value as SinceFilter)}>
-						<SelectTrigger className="w-32" aria-label="Since">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All time</SelectItem>
-							<SelectItem value="24h">Last 24h</SelectItem>
-							<SelectItem value="7d">Last 7 days</SelectItem>
-						</SelectContent>
-					</Select>
-					<Button type="button" onClick={onTick} disabled={ticking}>
-						{ticking ? "Running…" : "Run tick"}
+				<Button type="button" onClick={onTick} disabled={ticking}>
+					{ticking ? "Running…" : "Run simulation tick"}
+				</Button>
+			</div>
+
+			<div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-2">
+				<Select value={lookingFor} onValueChange={setLookingFor}>
+					<SelectTrigger className="w-32" aria-label="Pool">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="1">Dating</SelectItem>
+						<SelectItem value="0">Friends</SelectItem>
+					</SelectContent>
+				</Select>
+				<Select value={edges} onValueChange={(value) => setEdges(value as GraphEdgeFilter)}>
+					<SelectTrigger className="w-32" aria-label="Edges">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="match">Matches</SelectItem>
+						<SelectItem value="like">Likes</SelectItem>
+						<SelectItem value="all">All</SelectItem>
+					</SelectContent>
+				</Select>
+				<Select value={since} onValueChange={(value) => setSince(value as SinceFilter)}>
+					<SelectTrigger className="w-32" aria-label="Since">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">All time</SelectItem>
+						<SelectItem value="24h">Last 24h</SelectItem>
+						<SelectItem value="7d">Last 7 days</SelectItem>
+					</SelectContent>
+				</Select>
+				<Select value={participants} onValueChange={(value) => setParticipants(value as GraphParticipants)}>
+					<SelectTrigger className="w-44" aria-label="Participants">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">Everyone</SelectItem>
+						<SelectItem value="real">Involving real users</SelectItem>
+						<SelectItem value="realOnly">Real users only</SelectItem>
+					</SelectContent>
+				</Select>
+				<Select value={minDegree} onValueChange={setMinDegree}>
+					<SelectTrigger className="w-40" aria-label="Minimum connections">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{["1", "2", "3", "5", "10"].map((value) => (
+							<SelectItem key={value} value={value}>
+								{value === "1" ? "Any connections" : `${value}+ connections`}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<form className="flex items-center gap-2" onSubmit={onFind}>
+					<Input
+						className="w-44"
+						aria-label="Find profile"
+						placeholder="Find name or #id"
+						value={find}
+						onChange={(e) => {
+							setFind(e.target.value);
+							setFindError(null);
+						}}
+					/>
+					<Button type="submit" variant="outline">
+						Find
 					</Button>
-				</div>
+				</form>
+				{findError ? <span className="text-xs text-destructive">{findError}</span> : null}
 			</div>
 
 			{error ? (
@@ -233,7 +312,7 @@ export function GraphPage() {
 			<div className="flex items-center gap-4 text-xs text-muted-foreground">
 				<Legend color={REAL_NODE_COLOR} label="Real user" />
 				<Legend color={colors.synthetic} label="Synthetic agent" />
-				<span>Line = match · arrow = one-way like · size = degree · hover or click to focus</span>
+				<span>Line = match · arrow = one-way like · size = connections · click a node to focus</span>
 			</div>
 
 			<div ref={container.ref} className="relative min-h-[480px] flex-1 overflow-hidden rounded-lg border">
@@ -250,9 +329,23 @@ export function GraphPage() {
 							<Button type="button" size="sm" onClick={() => navigate(`/users/${selected.id}`)}>
 								Open profile
 							</Button>
-							<Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(null)}>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={() => {
+									setSelectedId(null);
+									setEgoOnly(false);
+								}}
+							>
 								Clear
 							</Button>
+						</CardContent>
+						<CardContent>
+							<label className="flex items-center gap-2 text-sm">
+								<input type="checkbox" checked={egoOnly} onChange={(event) => setEgoOnly(event.target.checked)} />
+								Show only this profile's connections
+							</label>
 						</CardContent>
 					</Card>
 				) : null}
@@ -283,7 +376,21 @@ export function GraphPage() {
 						linkDirectionalArrowRelPos={1}
 						onNodeHover={(node) => setHoverId(node ? (node.id as number) : null)}
 						onNodeClick={(node) => setSelectedId(node.id as number)}
-						onBackgroundClick={() => setSelectedId(null)}
+						onBackgroundClick={() => {
+							setSelectedId(null);
+							setEgoOnly(false);
+						}}
+						nodeCanvasObjectMode={() => "after"}
+						nodeCanvasObject={(node, ctx, globalScale) => {
+							// Label real users and the focused node; agents stay anonymous dots.
+							if ((node.isSynthetic && node.id !== focusId) || !isLit(node.id) || node.x == null || node.y == null)
+								return;
+							ctx.font = `${11 / globalScale}px sans-serif`;
+							ctx.fillStyle = colors.focus;
+							ctx.textAlign = "center";
+							ctx.textBaseline = "top";
+							ctx.fillText(node.name, node.x, node.y + 3 + Math.sqrt(1 + node.degree) * 3);
+						}}
 						autoPauseRedraw={false}
 						cooldownTicks={200}
 					/>

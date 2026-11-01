@@ -1,4 +1,5 @@
 import { and, count, desc, eq, getTableColumns, gte, ilike, inArray, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db";
 import {
 	dailyQuestionAnswers,
@@ -16,7 +17,7 @@ import type { InteractionGraphQuery, StaffUserListQuery } from "./schemas";
 const profileColumns = getTableColumns(userProfiles);
 
 export async function countProfiles(db: Db, query: StaffUserListQuery) {
-	const where = buildSearchWhere(query.q);
+	const where = buildListWhere(query);
 
 	const base = db.select({ total: count() }).from(userProfiles);
 	const [row] = where ? await base.where(where) : await base;
@@ -25,7 +26,7 @@ export async function countProfiles(db: Db, query: StaffUserListQuery) {
 }
 
 export async function listProfiles(db: Db, query: StaffUserListQuery) {
-	const where = buildSearchWhere(query.q);
+	const where = buildListWhere(query);
 
 	const base = db
 		.select({
@@ -113,6 +114,16 @@ export async function deleteAuthUserById(db: Db, authUserId: string) {
 	return row ?? null;
 }
 
+function buildListWhere(query: StaffUserListQuery) {
+	const conditions = [
+		buildSearchWhere(query.q),
+		query.type === undefined ? undefined : eq(userProfiles.isSynthetic, query.type === "synthetic"),
+		query.lookingFor === undefined ? undefined : eq(userProfiles.lookingFor, query.lookingFor),
+	].filter((condition) => condition !== undefined);
+
+	return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
 function buildSearchWhere(q?: string) {
 	if (!q?.trim()) {
 		return undefined;
@@ -134,8 +145,17 @@ function buildSearchWhere(q?: string) {
 	return or(...clauses);
 }
 
+const profileB = alias(userProfiles, "profile_b");
+
 export function listGraphEdges(db: Db, query: InteractionGraphQuery) {
 	const conditions = [eq(userProfiles.lookingFor, query.lookingFor)];
+
+	if (query.participants === "real") {
+		const real = or(eq(userProfiles.isSynthetic, false), eq(profileB.isSynthetic, false));
+		if (real) conditions.push(real);
+	} else if (query.participants === "realOnly") {
+		conditions.push(eq(userProfiles.isSynthetic, false), eq(profileB.isSynthetic, false));
+	}
 
 	if (query.edges === "match") {
 		conditions.push(eq(interactions.match, true));
@@ -159,6 +179,7 @@ export function listGraphEdges(db: Db, query: InteractionGraphQuery) {
 		})
 		.from(interactions)
 		.innerJoin(userProfiles, eq(userProfiles.id, interactions.userA))
+		.innerJoin(profileB, eq(profileB.id, interactions.userB))
 		.where(and(...conditions))
 		.orderBy(desc(interactions.createdAt))
 		.limit(query.limit);
