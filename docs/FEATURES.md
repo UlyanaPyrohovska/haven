@@ -167,7 +167,8 @@ Users can view and edit their profile, including a preview of how others see it.
     (`coarseDistanceLabel`: "Less than 1 km away", whole km up to 10, then 5 km steps). They get
     nothing if `shareLocation` is off.
 - **Photo:** resized on the device to at most 512 px (`expo-image-manipulator`) and stored on the
-  Better Auth `user.image`. When there is no photo, the API serves a deterministic portrait from a
+  Better Auth `user.image`. Candidate queries (`candidateProfileColumns` in
+  `modules/recommendations/repository.ts`) read `coalesce(photo_url, user.image)` as `photoUrl`. When there is no photo, the API serves a deterministic portrait from a
   hash of the profile id (`src/lib/profile/avatar-url.ts`), drawn from a gender-matched pool (gender 1 →
   male pool, otherwise female pool) of hand-checked Unsplash slugs. If an image fails to load, the
   mobile app shows a placeholder: initials in `UserAvatar`, a person icon on the candidate card.
