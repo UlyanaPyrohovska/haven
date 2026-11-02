@@ -28,6 +28,7 @@ import {
 	moodCheckins,
 	recommendationExposures,
 	recommendations,
+	user,
 	userEmbeddings,
 	userProfiles,
 } from "@/db/schema";
@@ -54,6 +55,14 @@ import { INTEREST_KEYS, type ProfileRow } from "@/lib/profile/profile-view";
 const { email: _email, passwordHash: _passwordHash, ...publicProfileColumns } = getTableColumns(userProfiles);
 
 export { publicProfileColumns };
+
+/** Public columns as other users see them: the uploaded photo lives on the auth `user.image`, not `photo_url`. */
+const candidateProfileColumns = {
+	...publicProfileColumns,
+	photoUrl: sql<
+		string | null
+	>`coalesce(${userProfiles.photoUrl}, (select ${user.image} from ${user} where ${user.id} = ${userProfiles.userId}))`,
+};
 
 export type ViewerProfile = ProfileRow & { id: number };
 
@@ -621,7 +630,7 @@ export function listPendingRecommendations(db: Db, viewerId: number) {
 	return db
 		.select({
 			recommendation: recommendations,
-			candidate: publicProfileColumns,
+			candidate: candidateProfileColumns,
 		})
 		.from(recommendations)
 		.innerJoin(userProfiles, eq(userProfiles.id, recommendations.candidateId))
@@ -639,7 +648,7 @@ export async function findRecommendationWithCandidate(db: Db, viewerId: number, 
 	const [row] = await db
 		.select({
 			recommendation: recommendations,
-			candidate: publicProfileColumns,
+			candidate: candidateProfileColumns,
 		})
 		.from(recommendations)
 		.innerJoin(userProfiles, eq(userProfiles.id, recommendations.candidateId))
@@ -658,7 +667,7 @@ export function listMatchInteractions(db: Db, viewerId: number) {
 
 export async function findCandidateProfile(db: Db, candidateId: number) {
 	const [candidate] = await db
-		.select(publicProfileColumns)
+		.select(candidateProfileColumns)
 		.from(userProfiles)
 		.where(eq(userProfiles.id, candidateId))
 		.limit(1);
