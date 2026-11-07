@@ -23,6 +23,19 @@ export async function requireUserId(c: Context<{ Bindings: CloudflareBindings }>
 	return userId;
 }
 
+/** Signed-in user's profile id; NO_PROFILE until onboarding saved one. */
+export async function requireProfileId(c: Context<{ Bindings: CloudflareBindings }>) {
+	const userId = await requireUserId(c);
+	const db = getDb(c.env);
+	const profileId = await repository.findProfileIdByUserId(db, userId);
+
+	if (!profileId) {
+		throw errors.no_profile;
+	}
+
+	return { db, profileId };
+}
+
 export async function getProfile(c: Context<{ Bindings: CloudflareBindings }>) {
 	const userId = await requireUserId(c);
 	const db = getDb(c.env);

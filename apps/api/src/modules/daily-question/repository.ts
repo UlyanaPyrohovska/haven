@@ -13,20 +13,11 @@ export async function findAnswerForDate(db: Db, profileId: number, answerDate: s
 }
 
 export async function upsertAnswerForDate(db: Db, profileId: number, answerDate: string, answer: string) {
-	const existing = await findAnswerForDate(db, profileId, answerDate);
-
-	if (existing) {
-		await db
-			.update(dailyQuestionAnswers)
-			.set({ answer, updatedAt: new Date() })
-			.where(and(eq(dailyQuestionAnswers.userProfileId, profileId), eq(dailyQuestionAnswers.answerDate, answerDate)));
-
-		return;
-	}
-
-	await db.insert(dailyQuestionAnswers).values({
-		userProfileId: profileId,
-		answer,
-		answerDate,
-	});
+	await db
+		.insert(dailyQuestionAnswers)
+		.values({ userProfileId: profileId, answer, answerDate })
+		.onConflictDoUpdate({
+			target: [dailyQuestionAnswers.userProfileId, dailyQuestionAnswers.answerDate],
+			set: { answer, updatedAt: new Date() },
+		});
 }

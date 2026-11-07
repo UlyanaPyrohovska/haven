@@ -38,7 +38,8 @@ export default {
 						notify: (profileId, notice) => notify(env, db, profileId, notice),
 					}),
 				)
-				.then((stats) => console.log("simulation tick", stats)),
+				.then((stats) => console.log("simulation tick", stats))
+				.catch((err) => console.error("simulation tick failed", err, err?.cause)),
 		);
 	},
 } satisfies ExportedHandler<CloudflareBindings>;

@@ -1,13 +1,11 @@
 # CLAUDE.md — Haven
 
-Read this first. Keep context small: read docs before code, and read code only for the specific symbol or file the task needs.
+Read this first. Keep context small: read code only for the specific symbol or file the task needs.
 
 ## Read order (before any code)
 1. This file.
-2. `docs/path-a-implementation.md` — implementation spec per task, with conventions and file paths.
-3. `apps/mobile/README.md` when touching the mobile app.
-4. `docs/FEATURES.md` for what already exists (one section per feature, with status and paths).
-5. `BACKLOG.md` only when you need ticket context. Status markers: `[ ]` todo, `[~]` in progress, `[x]` done.
+2. `apps/mobile/README.md` when touching the mobile app.
+3. `BACKLOG.md` only when you need ticket context. Status markers: `[ ]` todo, `[~]` in progress, `[x]` done.
 
 Do not scan the whole repo. Skip `node_modules/`, `.pnpm-store/`, `.turbo/`, `pnpm-lock.yaml`, `apps/backoffice/dist/`, `apps/mobile/ios|android/` (generated), and `drizzle/meta/*_snapshot.json` unless the task is about them.
 
@@ -29,8 +27,8 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
     - `auth/` — `auth.ts`, `session.ts`.
     - `http/` — `service-errors.ts` (`ServiceError`, `errors`), `errors.ts` (Hono handlers), `fail.ts`. `openapi/` — route doc helpers.
   - `src/db/schema.ts` (single source of schema), `src/db/index.ts`.
-  - `drizzle/` — generated SQL migrations, numbered `0000`–`0026`.
-  - `scripts/seed.ts`, `seed-demo-account.ts`, `seed-matches.ts`, `component-stats.ts` (read-only scoring calibration), `deploy.sh`.
+  - `drizzle/` — generated SQL migrations, numbered `0000`–`0027`.
+  - `scripts/seed.ts`, `seed-demo-account.ts`, `seed-matches.ts`, `component-stats.ts` (read-only scoring calibration).
   - Tests: `*.test.ts` next to the lib file, run with Vitest.
 - `apps/mobile` — Expo SDK 54, Expo Router, react-query, Better Auth client. Custom dev client, not Expo Go.
   - `app/` — routes. `(auth)/`, `(onboarding)/` (self, basics, interests, partner, bio, privacy), `(profile)/`, `index.tsx`, `home.tsx`, `matches.tsx`, `connections/`, `daily-question.tsx`.
@@ -46,9 +44,9 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - `pnpm dev` — API (wrangler, `localhost:8787`) + Metro via turbo.
 - `pnpm dev:backoffice`, `pnpm --filter haven-app dev:prod` (prod API).
 - `pnpm db:generate | db:migrate | db:studio | db:seed`
-- Deploy API: `pnpm --filter api deploy:dev | deploy:prod` — migrates that env file's DB, then deploys the Worker with only its `DATABASE_URL` (`db:migrate:dev|prod` to migrate alone).
+- Deploy API: `pnpm deploy:api` — migrates the prod DB (`.env.prod`), then deploys the Worker, which reaches Postgres through the `HYPERDRIVE` binding (prod only). `db:migrate:dev|prod` migrates alone.
 - Deploy backoffice: `pnpm deploy:backoffice` — builds with `VITE_API_URL=https://haven.pirogotter.dev`, deploys static assets to `admin.pirogotter.dev`.
-- Tests: `pnpm --filter api test` (Vitest). Single file: `pnpm --filter api exec vitest run src/lib/matching/scoring.test.ts`.
+- Typecheck: `pnpm typecheck` (all apps via turbo). Tests: `pnpm test`, or `pnpm --filter api test` (Vitest). Single file: `pnpm --filter api exec vitest run src/lib/matching/scoring.test.ts`.
 - Lint/format: `pnpm check` (Biome, writes fixes). Prefer running it on changed files only.
 - Mobile native rebuild: `cd apps/mobile && pnpm ios|android` (needed after native dep changes; `prebuild` regenerates native folders).
 
@@ -82,6 +80,4 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
 - Before editing a file, read only the relevant function or range (grep first).
 - Don't edit: generated `ios/`, `android/`, `dist/`, lockfile (unless adding deps), migration snapshots, `worker-configuration.d.ts`.
 - Don't run destructive git commands (reset --hard, force push, checkout of others' changes). The working tree may already have staged work in progress; don't stage, reset, or revert files you didn't touch.
-- When you finish a task from `docs/path-a-implementation.md`, mark its heading there in the same change: `## [x] W1.2 — …` (done), `[~]` (in progress or partial, with a one-line note under the heading saying what is missing), `[ ]` (todo). Also update the matching `BACKLOG.md` marker if the task is a ticket.
-- When you add or change a user-facing or staff-facing feature, update `docs/FEATURES.md` in the same change: add or edit its section (what it does, a **How it works** technical explanation — data flow, tables, key functions and design decisions —, screens/routes/code paths, status live/partial/planned, and what is missing when partial). If the change affects the cross-cutting design, update the Architecture overview there too. Removing a feature removes its section.
 - Keep answers short. Don't summarize the codebase back unless asked.

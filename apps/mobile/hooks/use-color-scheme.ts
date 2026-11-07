@@ -15,5 +15,5 @@ export function useColorScheme(): "light" | "dark" {
 		return "dark";
 	}
 
-	return system;
+	return system === "dark" ? "dark" : "light";
 }

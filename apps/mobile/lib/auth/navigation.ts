@@ -1,4 +1,6 @@
-import type { Router } from "expo-router";
+import type { router as expoRouter } from "expo-router";
+
+type Router = typeof expoRouter;
 
 import { fetchProfile } from "@/lib/api/profile";
 import { authClient } from "@/lib/auth/client";

@@ -421,9 +421,12 @@ export async function replaceRecommendations(db: Db, viewerId: number, rows: Rec
 			.values(insertRows)
 			.onConflictDoUpdate({
 				target: [recommendations.userId, recommendations.candidateId],
+				// Only rows retired by dismissPendingFilterMisfits conflict (decided pairs are out of the pool): revive them.
 				set: {
 					score: sql`excluded.score`,
 					rank: sql`excluded.rank`,
+					actedOn: false,
+					shownAt: sql`excluded.shown_at`,
 				},
 			});
 
@@ -732,12 +735,15 @@ export async function insertInteraction(
 		match: boolean;
 		distanceKm: number | null;
 	},
-) {
-	await db.insert(interactions).values({
-		...values,
-		scoreAToB: null,
-		scoreBToA: null,
-	});
+): Promise<boolean> {
+	// The pair index is order-free, so a concurrent insert of (B, A) conflicts too.
+	const inserted = await db
+		.insert(interactions)
+		.values({ ...values, scoreAToB: null, scoreBToA: null })
+		.onConflictDoNothing()
+		.returning({ id: interactions.id });
+
+	return inserted.length > 0;
 }
 
 export async function markRecommendationActedOn(db: Db, recommendationId: number) {

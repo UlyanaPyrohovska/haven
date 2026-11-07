@@ -108,10 +108,15 @@ export async function runTick(db: Db, opts: TickOptions): Promise<TickStats> {
 	}
 
 	for (const viewer of await repository.listRealProfiles(db)) {
-		const batch = await ensureBatch(db, viewer, opts.cooldownHours);
-		if (batch.status === "generated" && batch.count > 0) {
-			stats.realBatches++;
-			await opts.notify?.(viewer.id, { kind: "recommendations" });
+		// One bad profile must not cost everyone after it their drop.
+		try {
+			const batch = await ensureBatch(db, viewer, opts.cooldownHours);
+			if (batch.status === "generated" && batch.count > 0) {
+				stats.realBatches++;
+				await opts.notify?.(viewer.id, { kind: "recommendations" });
+			}
+		} catch (err) {
+			console.error("simulation tick: batch failed", viewer.id, err);
 		}
 	}
 

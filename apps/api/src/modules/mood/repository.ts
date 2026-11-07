@@ -14,20 +14,11 @@ export async function findCheckinForDate(db: Db, profileId: number, checkinDate:
 }
 
 export async function upsertCheckinForDate(db: Db, profileId: number, checkinDate: string, mood: MoodValue) {
-	const existing = await findCheckinForDate(db, profileId, checkinDate);
-
-	if (existing) {
-		await db
-			.update(moodCheckins)
-			.set({ mood, updatedAt: new Date() })
-			.where(and(eq(moodCheckins.userProfileId, profileId), eq(moodCheckins.checkinDate, checkinDate)));
-
-		return;
-	}
-
-	await db.insert(moodCheckins).values({
-		userProfileId: profileId,
-		mood,
-		checkinDate,
-	});
+	await db
+		.insert(moodCheckins)
+		.values({ userProfileId: profileId, mood, checkinDate })
+		.onConflictDoUpdate({
+			target: [moodCheckins.userProfileId, moodCheckins.checkinDate],
+			set: { mood, updatedAt: new Date() },
+		});
 }
