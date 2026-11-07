@@ -19,7 +19,7 @@ export default {
 			return;
 		}
 
-		const db = getDb(env.DATABASE_URL);
+		const db = getDb(env);
 
 		if (controller.cron === WALKER_CRON) {
 			ctx.waitUntil(

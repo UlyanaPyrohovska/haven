@@ -57,7 +57,7 @@ function serializeProfile(row: NonNullable<Awaited<ReturnType<typeof repository.
 
 export async function listUsers(c: Context<{ Bindings: CloudflareBindings }>, query: StaffUserListQuery) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const [users, total] = await Promise.all([repository.listProfiles(db, query), repository.countProfiles(db, query)]);
 
@@ -79,7 +79,7 @@ export async function listUsers(c: Context<{ Bindings: CloudflareBindings }>, qu
 
 export async function getUser(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const profile = await repository.findProfileById(db, profileId);
 	if (!profile) {
@@ -100,7 +100,7 @@ export async function updateUser(
 	body: StaffUserUpdate,
 ) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const existing = await repository.findProfileById(db, profileId);
 	if (!existing) {
@@ -148,7 +148,7 @@ export async function updateUser(
 
 export async function deleteUser(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const existing = await repository.findProfileById(db, profileId);
 	if (!existing) {
@@ -169,7 +169,7 @@ export async function deleteUser(c: Context<{ Bindings: CloudflareBindings }>, p
 export async function simulationTick(c: Context<{ Bindings: CloudflareBindings }>, limit?: number) {
 	await requireStaffAdmin(c);
 
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	return runTick(db, {
 		limit,
@@ -185,7 +185,7 @@ export async function simulationTick(c: Context<{ Bindings: CloudflareBindings }
  */
 export async function backfillBioEmbeddings(c: Context<{ Bindings: CloudflareBindings }>) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const removed = await profileRepository.deleteClearedBioEmbeddings(db);
 	const profiles = await profileRepository.listProfileBios(db);
@@ -208,7 +208,7 @@ export async function backfillBioEmbeddings(c: Context<{ Bindings: CloudflareBin
 /** Ids and display names only — never coordinates. */
 export async function interactionGraph(c: Context<{ Bindings: CloudflareBindings }>, query: InteractionGraphQuery) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const edges = await repository.listGraphEdges(db, query);
 	const degree = new Map<number, number>();
@@ -237,7 +237,7 @@ const STATS_DAYS = 30;
 /** Aggregates only — no per-user rows. */
 export async function stats(c: Context<{ Bindings: CloudflareBindings }>) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const today = utcToday();
 	const sinceDay = lastUtcDays(today, STATS_DAYS)[0];
@@ -268,7 +268,7 @@ export async function stats(c: Context<{ Bindings: CloudflareBindings }>) {
  */
 export async function userRecommendations(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const storedViewer = await recommendationsRepository.findScoringProfileById(db, profileId);
 
@@ -326,13 +326,13 @@ export async function userRecommendations(c: Context<{ Bindings: CloudflareBindi
 /** Same batch the feed would build; acted-on rows stay. Resets the user's feed cooldown (new `shown_at`). */
 export async function regenerateUserRecommendations(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
 	await requireStaffAdmin(c);
-	await generateRecommendations(getDb(c.env.DATABASE_URL), profileId);
+	await generateRecommendations(getDb(c.env), profileId);
 
 	return userRecommendations(c, profileId);
 }
 
 async function matchingConfigResponse(c: Context<{ Bindings: CloudflareBindings }>) {
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const row = await recommendationsRepository.findMatchingConfigRow(db);
 
 	return {
@@ -352,7 +352,7 @@ export async function getMatchingConfig(c: Context<{ Bindings: CloudflareBinding
 /** Applies to the next batch generated; existing recommendations keep their stored scores. */
 export async function updateMatchingConfig(c: Context<{ Bindings: CloudflareBindings }>, config: MatchingConfig) {
 	const session = await requireStaffAdmin(c);
-	await recommendationsRepository.saveMatchingConfig(getDb(c.env.DATABASE_URL), config, session.user.id);
+	await recommendationsRepository.saveMatchingConfig(getDb(c.env), config, session.user.id);
 
 	return matchingConfigResponse(c);
 }
@@ -467,7 +467,7 @@ async function walkersOverview(
 /** One row per profile that has walkers, newest activity first. */
 export async function listWalkTargets(c: Context<{ Bindings: CloudflareBindings }>) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	const walks = await simulationRepository.listWalkers(db);
 	const byTarget = new Map<number, { walkers: number; active: number; lastStepAt: Date | null }>();
@@ -505,7 +505,7 @@ export async function listWalkTargets(c: Context<{ Bindings: CloudflareBindings 
 export async function getWalkers(c: Context<{ Bindings: CloudflareBindings }>, profileId: number) {
 	await requireStaffAdmin(c);
 
-	return walkersOverview(getDb(c.env.DATABASE_URL), profileId);
+	return walkersOverview(getDb(c.env), profileId);
 }
 
 export async function assignWalkers(
@@ -514,7 +514,7 @@ export async function assignWalkers(
 	body: AssignWalkersBody,
 ) {
 	const session = await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const result = await walkers.assignWalkers(db, profileId, { ...body, createdBy: session.user.id });
 
 	return walkersOverview(db, profileId, result);
@@ -526,7 +526,7 @@ export async function stepWalkers(
 	body: { markTargetPresent?: boolean },
 ) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	if (body.markTargetPresent) {
 		const [target] = await simulationRepository.findWalkerProfiles(db, [profileId]);
@@ -552,7 +552,7 @@ export async function updateWalker(
 	body: UpdateWalkerBody,
 ) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const walk = await simulationRepository.findWalk(db, walkerId);
 
 	if (!walk) {
@@ -566,7 +566,7 @@ export async function updateWalker(
 
 export async function deleteWalker(c: Context<{ Bindings: CloudflareBindings }>, walkerId: number) {
 	await requireStaffAdmin(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const walk = await simulationRepository.findWalk(db, walkerId);
 
 	if (!walk) {

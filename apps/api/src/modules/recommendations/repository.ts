@@ -397,12 +397,11 @@ export async function listCandidatePool(
 
 /** `shownAt` set keeps the batch's original time, so a regenerated batch doesn't move the cooldown. */
 export async function replaceRecommendations(db: Db, viewerId: number, rows: RecommendationWriteRow[], shownAt?: Date) {
-	const deletePending = db
-		.delete(recommendations)
-		.where(and(eq(recommendations.userId, viewerId), eq(recommendations.actedOn, false)));
+	const deletePending = (tx: Pick<Db, "delete">) =>
+		tx.delete(recommendations).where(and(eq(recommendations.userId, viewerId), eq(recommendations.actedOn, false)));
 
 	if (rows.length === 0) {
-		await deletePending;
+		await deletePending(db);
 		return;
 	}
 
@@ -415,28 +414,24 @@ export async function replaceRecommendations(db: Db, viewerId: number, rows: Rec
 		...(shownAt ? { shownAt } : {}),
 	}));
 
-	const upsertPending = db
-		.insert(recommendations)
-		.values(insertRows)
-		.onConflictDoUpdate({
-			target: [recommendations.userId, recommendations.candidateId],
-			set: {
-				score: sql`excluded.score`,
-				rank: sql`excluded.rank`,
-			},
-		});
+	await db.transaction(async (tx) => {
+		await deletePending(tx);
+		await tx
+			.insert(recommendations)
+			.values(insertRows)
+			.onConflictDoUpdate({
+				target: [recommendations.userId, recommendations.candidateId],
+				set: {
+					score: sql`excluded.score`,
+					rank: sql`excluded.rank`,
+				},
+			});
 
-	// A regenerate reuses `shownAt` and isn't a fresh impression, so only new batches are logged.
-	if (shownAt) {
-		await db.batch([deletePending, upsertPending]);
-		return;
-	}
-
-	const logExposures = db
-		.insert(recommendationExposures)
-		.values(rows.map((row) => ({ viewerId, candidateId: row.candidateId })));
-
-	await db.batch([deletePending, upsertPending, logExposures]);
+		// A regenerate reuses `shownAt` and isn't a fresh impression, so only new batches are logged.
+		if (!shownAt) {
+			await tx.insert(recommendationExposures).values(rows.map((row) => ({ viewerId, candidateId: row.candidateId })));
+		}
+	});
 }
 
 /** Impressions per candidate since `since`, across all viewers (keyed by candidate id; absent = 0). */
