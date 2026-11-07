@@ -9,7 +9,7 @@ import type { PutMoodTodayBody } from "./schemas";
 
 async function requireProfileId(c: Context<{ Bindings: CloudflareBindings }>) {
 	const userId = await requireUserId(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const profileId = await profileRepository.findProfileIdByUserId(db, userId);
 
 	if (!profileId) {

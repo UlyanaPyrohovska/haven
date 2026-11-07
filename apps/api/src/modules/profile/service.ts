@@ -25,7 +25,7 @@ export async function requireUserId(c: Context<{ Bindings: CloudflareBindings }>
 
 export async function getProfile(c: Context<{ Bindings: CloudflareBindings }>) {
 	const userId = await requireUserId(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const profile = await repository.findProfileByUserId(db, userId);
 
 	return { profile };
@@ -47,7 +47,7 @@ function normalizeProfileUpdate(updates: ProfileUpdate): ProfileUpdate {
 
 export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>, updates: ProfileUpdate) {
 	const userId = await requireUserId(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const profileId = await repository.findProfileIdByUserId(db, userId);
 	const payload = normalizeProfileUpdate(updates);
 	const hasCoordinates = typeof payload.latitude === "number" && typeof payload.longitude === "number";
@@ -102,12 +102,12 @@ export async function patchProfile(c: Context<{ Bindings: CloudflareBindings }>,
 
 export async function deleteAccount(c: Context<{ Bindings: CloudflareBindings }>) {
 	const userId = await requireUserId(c);
-	await repository.deleteAccount(getDb(c.env.DATABASE_URL), userId);
+	await repository.deleteAccount(getDb(c.env), userId);
 }
 
 export async function searchCustomInterests(c: Context<{ Bindings: CloudflareBindings }>, query = "") {
 	await requireUserId(c);
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 
 	return { interests: await repository.searchCustomInterests(db, query) };
 }
@@ -120,7 +120,7 @@ export async function createCustomInterest(c: Context<{ Bindings: CloudflareBind
 		throw { status: 400, code: "INVALID_INTEREST", message } satisfies ServiceError;
 	}
 
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const [canonical] = await repository.upsertCustomInterests(db, [cleanCustomInterestLabel(label)]);
 
 	return { label: canonical };

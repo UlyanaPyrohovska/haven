@@ -1,9 +1,11 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 
-export function getDb(databaseUrl: string) {
-	const sql = neon(databaseUrl);
-	return drizzle(sql);
+export type DbEnv = { DATABASE_URL: string; HYPERDRIVE?: Hyperdrive };
+
+export function getDb(env: DbEnv) {
+	const pool = new Pool({ connectionString: env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL, max: 5 });
+	return drizzle(pool);
 }
 
 export type Db = ReturnType<typeof getDb>;

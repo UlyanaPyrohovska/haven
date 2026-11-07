@@ -55,7 +55,7 @@ async function main() {
 		throw new Error("Missing env variable: DATABASE_URL");
 	}
 
-	const db = getDb(databaseUrl);
+	const db = getDb({ DATABASE_URL: databaseUrl });
 	const rows = await db
 		.select({ id: userProfiles.id, lookingFor: userProfiles.lookingFor })
 		.from(userProfiles)

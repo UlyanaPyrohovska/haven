@@ -66,10 +66,10 @@ export async function insertProfile(
  * against it) and the auth user (cascading to sessions and accounts; the photo lives on `user.image`).
  */
 export async function deleteAccount(db: Db, userId: string) {
-	await db.batch([
-		db.delete(userProfiles).where(eq(userProfiles.userId, userId)),
-		db.delete(user).where(eq(user.id, userId)),
-	]);
+	await db.transaction(async (tx) => {
+		await tx.delete(userProfiles).where(eq(userProfiles.userId, userId));
+		await tx.delete(user).where(eq(user.id, userId));
+	});
 }
 
 /** Inserts or replaces bio vectors (bge-small, 384-d). */

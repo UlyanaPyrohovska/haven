@@ -43,7 +43,7 @@ export async function requireViewer(c: Context<{ Bindings: CloudflareBindings }>
 		throw errors.unauthorized;
 	}
 
-	const db = getDb(c.env.DATABASE_URL);
+	const db = getDb(c.env);
 	const viewer = await repository.findViewerByUserId(db, authUserId);
 
 	if (!viewer) {

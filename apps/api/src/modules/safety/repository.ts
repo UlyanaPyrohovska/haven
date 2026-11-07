@@ -9,22 +9,22 @@ import { findInteractionBetween } from "@/modules/recommendations/repository";
  */
 export async function blockPair(db: Db, viewerId: number, candidateId: number) {
 	const existing = await findInteractionBetween(db, viewerId, candidateId);
-	const writeInteraction = existing
-		? db
-				.update(interactions)
-				.set({ ...(existing.userA === viewerId ? { decA: 0 } : { decB: 0 }), match: false })
-				.where(eq(interactions.id, existing.id))
-		: db.insert(interactions).values({ userA: viewerId, userB: candidateId, decA: 0, match: false });
-	const dropRecommendations = db
-		.delete(recommendations)
-		.where(
-			or(
-				and(eq(recommendations.userId, viewerId), eq(recommendations.candidateId, candidateId)),
-				and(eq(recommendations.userId, candidateId), eq(recommendations.candidateId, viewerId)),
-			),
-		);
-
-	await db.batch([writeInteraction, dropRecommendations]);
+	await db.transaction(async (tx) => {
+		await (existing
+			? tx
+					.update(interactions)
+					.set({ ...(existing.userA === viewerId ? { decA: 0 } : { decB: 0 }), match: false })
+					.where(eq(interactions.id, existing.id))
+			: tx.insert(interactions).values({ userA: viewerId, userB: candidateId, decA: 0, match: false }));
+		await tx
+			.delete(recommendations)
+			.where(
+				or(
+					and(eq(recommendations.userId, viewerId), eq(recommendations.candidateId, candidateId)),
+					and(eq(recommendations.userId, candidateId), eq(recommendations.candidateId, viewerId)),
+				),
+			);
+	});
 }
 
 export async function insertReport(

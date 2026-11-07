@@ -10,7 +10,7 @@ import * as schema from "@/modules/auth/auth-schema";
 export const BACKOFFICE_ORIGIN = "https://admin.pirogotter.dev";
 
 export const createAuth = (bindings: CloudflareBindings) => {
-	const db = getDb(bindings.DATABASE_URL);
+	const db = getDb(bindings);
 
 	const sendEmail = async (to: string, content: EmailContent) => {
 		try {

@@ -5,7 +5,12 @@
 	"compatibility_date": "2026-06-28",
 	"compatibility_flags": ["nodejs_compat"],
 	// Custom domain; the workers.dev URL stays live so older app builds keep working.
-	"routes": [{ "pattern": "haven.pirogotter.dev", "custom_domain": true }],
+	"routes": [
+		{
+			"pattern": "haven.pirogotter.dev",
+			"custom_domain": true
+		}
+	],
 	"workers_dev": true,
 	"observability": {
 		"enabled": true
@@ -17,17 +22,40 @@
 	},
 	// Chat sockets: one ChatRoom per conversation, always created in the EU jurisdiction.
 	"durable_objects": {
-		"bindings": [{ "name": "CHAT", "class_name": "ChatRoom" }]
+		"bindings": [
+			{
+				"name": "CHAT",
+				"class_name": "ChatRoom"
+			}
+		]
 	},
-	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom"] }],
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["ChatRoom"]
+		}
+	],
 	// Verification emails via Cloudflare Email Sending. The sender domain must be onboarded:
 	// `npx wrangler email sending enable <domain>`. remote: true makes `wrangler dev` send real mail.
-	"send_email": [{ "name": "EMAIL", "remote": true }],
+	"send_email": [
+		{
+			"name": "EMAIL",
+			"remote": true
+		}
+	],
 	// Bio embeddings (@cf/baai/bge-small-en-v1.5). Workers AI is a DPO-approved subprocessor for bios (T9).
-	"ai": { "binding": "AI" },
+	"ai": {
+		"binding": "AI"
+	},
 	"vars": {
 		"SIMULATION_ENABLED": "true",
 		// Must be an address on the onboarded domain.
 		"EMAIL_FROM": "no-reply@pirogotter.dev"
-	}
+	},
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "2b6b3442b546473ebf02992d530c704d"
+		}
+	]
 }
