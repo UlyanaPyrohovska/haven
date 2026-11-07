@@ -155,13 +155,10 @@ export async function deleteUser(c: Context<{ Bindings: CloudflareBindings }>, p
 		throw errors.not_found;
 	}
 
-	const authUserId = existing.userId;
-
-	await repository.deleteProfileById(db, profileId);
-
-	if (authUserId) {
-		await repository.deleteAuthUserById(db, authUserId);
-	}
+	// Same transaction as self-service deletion, so a failure can't leave the login without its profile.
+	await (existing.userId
+		? profileRepository.deleteAccount(db, existing.userId)
+		: repository.deleteProfileById(db, profileId));
 
 	return { deleted: true, profileId };
 }

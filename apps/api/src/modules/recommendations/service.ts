@@ -303,7 +303,7 @@ export async function recordDecision(
 		otherProfile?.longitude ?? null,
 	);
 
-	await repository.insertInteraction(db, {
+	const inserted = await repository.insertInteraction(db, {
 		userA: actor.id,
 		userB: otherId,
 		decA: decisionValue,
@@ -312,7 +312,8 @@ export async function recordDecision(
 		distanceKm: distance ?? null,
 	});
 
-	return { matched: false };
+	// Lost a race (the other side decided at the same moment, or a double tap): the row exists now, so update it.
+	return inserted ? { matched: false } : recordDecision(db, actor, otherId, decisionValue);
 }
 
 /**

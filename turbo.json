@@ -7,22 +7,11 @@
 			"persistent": true
 		},
 		"build": {
-			"dependsOn": ["^build"],
-			"outputs": ["dist/**", ".next/**", "ios/**", "android/**"],
-			"cache": true
+			"outputs": ["dist/**"]
 		},
-		"lint": {
-			"dependsOn": ["^lint"]
-		},
-		"typecheck": {
-			"dependsOn": ["^typecheck"]
-		},
+		"typecheck": {},
 		"test": {
-			"dependsOn": ["^build"],
 			"outputs": []
-		},
-		"deploy": {
-			"cache": false
 		}
 	}
 }

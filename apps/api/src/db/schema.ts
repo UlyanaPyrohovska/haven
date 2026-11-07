@@ -220,7 +220,7 @@ export const userProfiles = pgTable(
 		updatedAt: timestamp("updated_at").defaultNow().notNull(),
 	},
 	(t) => [
-		index("user_profiles_user_id_idx").on(t.userId),
+		uniqueIndex("user_profiles_user_id_idx").on(t.userId),
 		index("user_profiles_synthetic_idx").on(t.isSynthetic),
 		index("user_profiles_looking_for_idx").on(t.lookingFor),
 		index("user_profiles_lat_lon_idx").on(t.latitude, t.longitude),
@@ -298,7 +298,8 @@ export const interactions = pgTable(
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(t) => [
-		uniqueIndex("interactions_pair_uniq").on(t.userA, t.userB),
+		// Order-free: (A, B) and (B, A) are the same pair, so a race can't create both rows.
+		uniqueIndex("interactions_pair_uniq").on(sql`least(${t.userA}, ${t.userB})`, sql`greatest(${t.userA}, ${t.userB})`),
 		index("interactions_user_a_idx").on(t.userA),
 		index("interactions_user_b_idx").on(t.userB),
 		index("interactions_match_idx").on(t.match),

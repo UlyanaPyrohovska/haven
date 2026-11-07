@@ -108,12 +108,6 @@ export async function deleteProfileById(db: Db, profileId: number) {
 	return row ?? null;
 }
 
-export async function deleteAuthUserById(db: Db, authUserId: string) {
-	const [row] = await db.delete(user).where(eq(user.id, authUserId)).returning({ id: user.id });
-
-	return row ?? null;
-}
-
 function buildListWhere(query: StaffUserListQuery) {
 	const conditions = [
 		buildSearchWhere(query.q),

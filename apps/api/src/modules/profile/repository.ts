@@ -53,9 +53,11 @@ export async function insertProfile(
 	userId: string,
 	updates: ProfileUpdate & { locationUpdatedAt?: Date | null },
 ) {
+	// A retried first save updates the profile the first request created instead of adding a second one.
 	const [row] = await db
 		.insert(userProfiles)
 		.values({ ...updates, userId, isSynthetic: false })
+		.onConflictDoUpdate({ target: userProfiles.userId, set: { ...updates, updatedAt: new Date() } })
 		.returning(publicProfileColumns);
 
 	return row ?? null;

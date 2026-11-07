@@ -5,7 +5,8 @@
 		"dev:backoffice": "pnpm --filter backoffice dev",
 		"dev:prod": "pnpm --filter haven-app dev:prod",
 		"build": "turbo build",
-		"deploy": "pnpm --filter api run deploy",
+		"typecheck": "turbo typecheck",
+		"test": "turbo test",
 		"deploy:api": "pnpm --filter api run deploy",
 		"deploy:backoffice": "pnpm --filter backoffice run deploy",
 		"release:ios": "pnpm --filter haven-app release:ios",
@@ -15,19 +16,14 @@
 		"db:seed": "pnpm --filter api db:seed",
 		"db:seed-demo": "pnpm --filter api db:seed-demo",
 		"db:visualizer": "pnpm --filter api db:visualizer",
-		"types": "turbo types",
-		"lint": "pnpm dlx @biomejs/biome lint --write",
-		"format": "pnpm dlx @biomejs/biome format --write",
-		"check": "pnpm dlx @biomejs/biome check --write"
+		"lint": "biome lint --write",
+		"format": "biome format --write",
+		"check": "biome check --write"
 	},
 	"private": true,
 	"packageManager": "pnpm@12.11.2",
 	"devDependencies": {
 		"@biomejs/biome": "2.5.1",
-		"@neondatabase/serverless": "^1.1.0",
-		"dotenv": "^17.4.2",
-		"drizzle-kit": "^0.31.10",
-		"drizzle-orm": "^0.45.2",
 		"turbo": "^2.10.0"
 	}
 }

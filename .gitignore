@@ -10,3 +10,5 @@ __pycache__
 # Apple push keys and certificates
 *.p8
 *.cer
+.DS_Store
+.turbo

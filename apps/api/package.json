@@ -3,23 +3,21 @@
 	"type": "module",
 	"scripts": {
 		"dev": "wrangler dev --ip 0.0.0.0 --env-file .env.dev",
-		"deploy": "wrangler deploy --minify",
-		"deploy:dev": "pnpm db:migrate:dev && sh scripts/deploy.sh .env.dev",
-		"deploy:prod": "pnpm db:migrate:prod && sh scripts/deploy.sh .env.prod",
+		"deploy": "pnpm db:migrate:prod && wrangler deploy --minify",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:migrate:dev": "ENV_FILE=.env.dev drizzle-kit migrate",
 		"db:migrate:prod": "ENV_FILE=.env.prod drizzle-kit migrate",
-		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"db:visualizer": "drizzle-lab visualizer -c drizzle.config.ts -e .env --ts-config tsconfig.json",
 		"db:seed": "tsx scripts/seed.ts",
 		"db:seed-demo": "tsx scripts/seed-demo-account.ts",
 		"db:seed-matches": "tsx scripts/seed-matches.ts",
-		"db:component-stats": "tsx scripts/component-stats.ts",
-		"test": "vitest run",
-		"test:watch": "vitest"
+		"db:component-stats": "tsx scripts/component-stats.ts"
 	},
 	"dependencies": {
 		"@better-auth/expo": "^1.6.23",
@@ -37,9 +35,11 @@
 		"@types/papaparse": "^5.5.2",
 		"@types/pg": "^8.20.0",
 		"dotenv": "^17.4.2",
+		"drizzle-kit": "^0.31.10",
 		"drizzle-lab": "^0.11.0",
 		"tsx": "^4.22.4",
+		"typescript": "~6.0.3",
 		"vitest": "^3.2.4",
-		"wrangler": "^4.4.0"
+		"wrangler": "^4.105.0"
 	}
 }

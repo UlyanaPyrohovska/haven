@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 /** Haven app icon (mobile `assets/images/icon.png`) as SVG. Keep in sync with `public/favicon.svg`. */
 export function HavenLogo({ className = "size-8" }: { className?: string }) {
