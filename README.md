@@ -88,6 +88,7 @@ Open the Haven dev client on the simulator or emulator, not Expo Go.
 | `pnpm db:seed` | Reloads synthetic profiles from the dataset |
 | `pnpm db:seed-demo` | Creates the App Review demo account (see the script header) |
 | `pnpm --filter api db:seed-matches -- <email> [count]` | Gives one account a few synthetic matches |
+| `pnpm --filter api db:export-eval` | Exports anonymised data for the thesis evaluation to `apps/api/eval-out/` (see `apps/api/eval/README.md`) |
 
 Schema changes: edit `schema.ts`, run `pnpm db:generate`, then `pnpm db:migrate`. Never edit applied migrations.
 

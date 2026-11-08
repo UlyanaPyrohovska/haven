@@ -18,7 +18,6 @@
 		"db:seed-demo": "tsx scripts/seed-demo-account.ts",
 		"db:seed-matches": "tsx scripts/seed-matches.ts",
 		"db:component-stats": "tsx scripts/component-stats.ts",
-		"db:weight-sensitivity": "tsx scripts/weight-sensitivity.ts",
 		"db:export-eval": "tsx scripts/export-eval-data.ts"
 	},
 	"dependencies": {
