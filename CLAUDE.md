@@ -28,7 +28,8 @@ pnpm workspace + Turborepo. Root `package.json` runs everything from the root.
     - `http/` — `service-errors.ts` (`ServiceError`, `errors`), `errors.ts` (Hono handlers), `fail.ts`. `openapi/` — route doc helpers.
   - `src/db/schema.ts` (single source of schema), `src/db/index.ts`.
   - `drizzle/` — generated SQL migrations, numbered `0000`–`0027`.
-  - `scripts/seed.ts`, `seed-demo-account.ts`, `seed-matches.ts`, `component-stats.ts` (read-only scoring calibration).
+  - `scripts/seed.ts`, `seed-demo-account.ts`, `seed-matches.ts`, `component-stats.ts` (read-only scoring calibration), `export-eval-data.ts`.
+  - `eval/` — thesis evaluation harness (offline, runs on the export; see `eval/README.md`). Output goes to git-ignored `eval-out/`.
   - Tests: `*.test.ts` next to the lib file, run with Vitest.
 - `apps/mobile` — Expo SDK 54, Expo Router, react-query, Better Auth client. Custom dev client, not Expo Go.
   - `app/` — routes. `(auth)/`, `(onboarding)/` (self, basics, interests, partner, bio, privacy), `(profile)/`, `index.tsx`, `home.tsx`, `matches.tsx`, `connections/`, `daily-question.tsx`.
