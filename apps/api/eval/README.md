@@ -2,7 +2,7 @@
 
 Scripts that produced the evaluation results of the thesis. They run offline on a read-only export of the database and call the engine's own pure functions from `src/lib` (scoring, fairness, preference learning, agent decision and utility) through the `@/lib/...` alias. They never query the database.
 
-Data exports, results, logs and figures are not in the repository. Put them in `apps/api/eval-out/`, which is git-ignored.
+Data exports, results and logs are not in the repository; only the weight-sensitivity figure (`figures/sens.png`, Figure 22) is. Put them in `apps/api/eval-out/`, which is git-ignored.
 
 ## Files
 
