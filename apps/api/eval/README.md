@@ -13,6 +13,9 @@ Data exports, results, logs and figures are not in the repository. Put them in `
 | `ablations.ts` | Same harness with one scoring component removed at a time |
 | `weight-sensitivity.ts` | Top-k overlap and Spearman correlation when one weight changes, plus random weight vectors |
 | `run-seed.sh` | One independent repetition of `sim.ts` with `SIM_SEED` set |
+| `extra-variants.ts` | Geometric mean, precision@20 and NDCG@50, and impression cap without penalty (`SIMV` picks the simulated variants) |
+| `run-extra.sh` | One run of `extra-variants.ts` for a seed (`orig` or `s1`..`s4`) and pool |
+| `aggregate-seeds.py` | Mean, standard deviation and paired differences over the five runs |
 | `live-study.py` | Participants' activity during the live study (reads `dev.json` in the working directory) |
 | `questionnaires.py` | Statistics from the two Google Forms CSV exports |
 | `charts.py` | Thesis figures from the result files |
@@ -46,9 +49,12 @@ Commands use `dev.json` for the thesis export. The pool argument is `0` (friends
 | Weight sensitivity, Figure 22 | `npx tsx eval/weight-sensitivity.ts dev.json sens-dev.json [viewersPerPool=100] [randomDraws=20]` | `sens-dev.json`, `sens-dev.log` |
 | Live study activity (section 6.4) | `python3 eval/live-study.py` (with `dev.json` in the working directory) | console output |
 | Questionnaires, Tables 13 and 14, Figure 25 | `python3 eval/questionnaires.py <first-session.csv> <follow-up.csv> questionnaires.json` | `questionnaires.json` |
-| All figures | `python3 charts.py` in the results folder | `fig/*.png` |
+| Five-seed repetitions (Table 12, Figure 23) | `eval/run-seed.sh <s1..s4> <pool>` | `seeds/sim-s<n>-<pool>.json`, `.log` |
+| Geometric mean, precision@20, NDCG@50 (Tables 10, 11, section 6.2.2), impression cap without penalty (Table 12, section 6.3.2) | `eval/run-extra.sh <orig or s1..s4> <pool>` | `extra/extra-<seed>-<pool>.json`, `.log` |
+| Mean, SD and paired differences over the five runs | `python3 aggregate-seeds.py` in the results folder | `seeds/agg.json` |
+| All figures | `python3 charts.py` in the results folder (Figure 23 uses `seeds/agg.json` if present) | `fig/*.png` |
 
-`charts.py` expects, in its working directory, `simc-0.json`, `simc-1.json`, `sens-dev.json`, `u/u.json` (the questionnaire output) and an existing `fig/` folder.
+`charts.py` expects, in its working directory, `simc-0.json`, `simc-1.json`, `sens-dev.json`, `u/u.json` (the questionnaire output), optionally `seeds/agg.json`, and an existing `fig/` folder.
 
 ## Randomness and seeds
 
