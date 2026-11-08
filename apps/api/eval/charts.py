@@ -21,15 +21,22 @@ for ax,p in zip(axs,'01'):
     ax.set_title(names[p],fontsize=10,color=T); ax.set_ylim(0,0.75); ax.yaxis.grid(True,color='#e6e5e0',lw=0.6); ax.set_axisbelow(True)
 axs[0].legend(frameon=False,fontsize=8,loc='upper right')
 fig.tight_layout(); fig.savefig('fig/offline.png'); plt.close()
-# Fig B: mu sweep trade-off
+# Fig B: mu sweep trade-off (mean over the five seeds, error bars = SD of matches; falls back to the single run)
+import os
+AG=json.load(open('seeds/agg.json')) if os.path.exists('seeds/agg.json') else None
 fig,axs=plt.subplots(1,2,figsize=(8,3.2))
 for ax,p,c in zip(axs,'01',[B,O]):
-    m=S[p]['muSweep'][p]; mus=sorted(m,key=float)
-    gx=[m[k]['giniExposure'] for k in mus]; my=[m[k]['matchesPerUser'] for k in mus]
-    ax.plot(gx,my,'-',color=c,lw=2); ax.plot(gx,my,'o',color=c,ms=6,mec='white',mew=1.5)
-    for i,(k,a,b) in enumerate(zip(mus,gx,my)): ax.annotate(f'μ = {float(k):g}',(a,b),textcoords='offset points',xytext=(0,8 if i%2==0 else -14),ha='center',fontsize=7,color=T)
+    if AG:
+        m=AG[p]['mu']; mus=sorted(m,key=float)
+        gx=[m[k]['giniExposure'][0] for k in mus]; my=[m[k]['matchesPerUser'][0] for k in mus]; sd=[m[k]['matchesPerUser'][1] for k in mus]
+    else:
+        m=S[p]['muSweep'][p]; mus=sorted(m,key=float)
+        gx=[m[k]['giniExposure'] for k in mus]; my=[m[k]['matchesPerUser'] for k in mus]; sd=[0]*len(mus)
+    ax.plot(gx,my,'-',color=c,lw=2)
+    ax.errorbar(gx,my,yerr=sd,fmt='o',color=c,ms=6,mec='white',mew=1.5,ecolor=c,elinewidth=1,capsize=3)
+    for i,(k,a,b,e) in enumerate(zip(mus,gx,my,sd)): ax.annotate(f'μ = {float(k):g}',(a,b+e if i%2==0 else b-e),textcoords='offset points',xytext=(0,6 if i%2==0 else -13),ha='center',fontsize=7,color=T)
     ax.set_xlabel('Gini coefficient of exposure'); ax.set_ylabel('Matches per user in 14 days')
-    lo=min(my); hi=max(my); ax.set_ylim(lo-(hi-lo)*1.5-0.5,hi+(hi-lo)*1.5+0.5)
+    lo=min(a-e for a,e in zip(my,sd)); hi=max(a+e for a,e in zip(my,sd)); r=hi-lo; ax.set_ylim(lo-r*0.6,hi+r*0.6)
     ax.set_title(names[p],fontsize=10,color=T); ax.invert_xaxis(); ax.grid(True,color='#e6e5e0',lw=0.6); ax.set_axisbelow(True)
 fig.tight_layout(); fig.savefig('fig/mu.png'); plt.close()
 # Fig C: weight sensitivity
@@ -44,9 +51,9 @@ for j,(suf,lab,c) in enumerate(labs):
     ax.bar(xs,vals,w,color=c,label=lab)
     for xx,v in zip(xs,vals): ax.text(xx,v+0.01,f'{v:.2f}',ha='center',va='bottom',fontsize=7,color=T)
 rnd=[r['o4'] for r in sens if r['variant'].startswith('random')]
-ax.axhline(sum(rnd)/len(rnd),color=G,lw=1.5,ls='--'); ax.text(-0.5,sum(rnd)/len(rnd)+0.015,'random weights (mean)',ha='left',fontsize=7,color='#52514e')
+ax.axhline(sum(rnd)/len(rnd),color=G,lw=1.5,ls='--',label='Random weights (mean)')
 ax.set_xticks(range(len(comp))); ax.set_xticklabels([c for _,c in comp]); ax.set_ylabel('Share of the batch of four kept'); ax.set_ylim(0,1)
-ax.legend(frameon=False,fontsize=8,ncol=3,loc='upper left',bbox_to_anchor=(0,1.12)); ax.yaxis.grid(True,color='#e6e5e0',lw=0.6); ax.set_axisbelow(True)
+ax.legend(frameon=False,fontsize=8,ncol=4,loc='upper left',bbox_to_anchor=(0,1.12)); ax.yaxis.grid(True,color='#e6e5e0',lw=0.6); ax.set_axisbelow(True)
 fig.tight_layout(); fig.savefig('fig/sens.png'); plt.close()
 # Fig D: eta sweep
 fig,axs=plt.subplots(1,2,figsize=(8,3.0),sharey=True)
